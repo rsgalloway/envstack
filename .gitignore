@@ -1,0 +1,14 @@
+*.pyc
+*.swp
+*~
+.DS_Store
+dist
+build
+*.egg-info/
+MANIFEST
+__pycache__
+tmp/
+.env
+.venv*/
+venv*/
+.vscode/
