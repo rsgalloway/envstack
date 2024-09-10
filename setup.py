@@ -38,7 +38,7 @@ with open(os.path.join(here, "README.md")) as f:
 
 setup(
     name="envstack",
-    version="0.1.0",
+    version="0.1.1",
     description="Stacked environment variable management system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -53,7 +53,7 @@ setup(
         ],
     },
     install_requires=[
-        "PyYAML==6.0.2",
+        "PyYAML>=5.1.2",
     ],
     zip_safe=False,
 )

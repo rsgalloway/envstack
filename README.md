@@ -17,7 +17,7 @@ all: &default
   FOO: bar
 ```
 
-To see the resolved environment for the `thing` stack, run:
+To see the resolved environment for the `thing` environment stack, run:
 
 ```bash
 $ envstack thing
@@ -77,13 +77,13 @@ To see the resolved environment for a given namespace.
 $ envstack <namespace> [OPTIONS]
 ```
 
-To resolve a $VAR declaration for a given namespace:
+To resolve a `$VAR` declaration for a given namespace:
 
 ```bash
 $ envstack <namespace> -r <VAR>
 ```
 
-To trace where a $VAR declaration is being set:
+To trace where a `$VAR` declaration is being set:
 
 ```bash
 $ envstack <namespace> -t <VAR>
