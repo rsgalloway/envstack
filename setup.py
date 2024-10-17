@@ -43,14 +43,17 @@ with open(os.path.join(here, "README.md")) as f:
 class PostInstallCommand(install):
     """Custom post-installation for copying stack.env."""
 
-    def initialize_options(self):
-        install.initialize_options(self)
-        self.original_cwd = os.getcwd()
-
     def run(self):
         install.run(self)
+        home_dir = os.getenv("HOME") or os.getenv("USERPROFILE")
+
+        if not home_dir:
+            print("Error: unable to determine home directory.")
+            return
+
         source = os.path.join(os.path.dirname(__file__), "stack.env")
-        destination = os.path.join(os.path.expanduser("~"), "stack.env")
+        destination = os.path.join(home_dir, "stack.env")
+
         if os.path.exists(source):
             shutil.copy(source, destination)
             print(f"Copied {source} to {destination}")
@@ -60,7 +63,7 @@ class PostInstallCommand(install):
 
 setup(
     name="envstack",
-    version="0.2.5",
+    version="0.2.6",
     description="Stacked environment variable management system.",
     long_description=long_description,
     long_description_content_type="text/markdown",

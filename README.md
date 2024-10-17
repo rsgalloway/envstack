@@ -11,10 +11,52 @@ a new `test` stack just create `test.env` files.
 
 Envstack works best combined with [siteconf](https://github.com/rsgalloway/siteconf).
 
+Installation
+------------
+
+The easiest way to install:
+
+```bash
+$ pip install envstack
+```
+
 ## Quickstart
 
+Copy the default stack file
+[`stack.env`](https://github.com/rsgalloway/envstack/blob/master/stack.env)
+to your current working directory, or the root of your project. This is the default
+environment stack. Running the `envstack` command should show you the resolved
+environment for your platform:
+
+```bash
+$ envstack
+ENV 'prod'
+HELLO 'world'
+FOO 'bar'
+PYVERSION 3.11
+LIB 'lib/python3.11'
+LOG_LEVEL 20
+ROOT '/mnt/tools/lib/python3.11'
+```
+
+Modify the environment stack by updating `stack.env` or by creating new contextual
+`stack.env` files up and down the project hierarchy.
+
+You can execute any command inside the default stacked environment like this:
+
+```bash
+$ enstack -- <command>
+```
+
+For example:
+
+```bash
+$ envstack -- python -c "import os; print(os.environ['HELLO'])"
+world
+```
+
 To create a new environment stack, create a new namespaced .env file.
-For example, here is a simple `thing.env` file (the stack namespace is "thing"):
+For example `thing.env` (the stack namespace is "thing"):
 
 ```yaml
 all: &default
@@ -56,15 +98,6 @@ linux:
 Environment files can include other namespaced environments:
 ```yaml
 include: ['other']
-```
-
-Installation
-------------
-
-The easiest way to install:
-
-```bash
-$ pip install envstack
 ```
 
 ## Usage
@@ -112,13 +145,13 @@ $ enstack <stack> -- <command>
 For example, running python in the default stack (reading from the default `stack.env` file):
 
 ```bash
-$ envstack -- python -c "from envstack.env import environ; print(environ['HELLO'])"
+$ envstack -- python -c "import os; print(os.environ['HELLO'])"
 world
 ```
 
 Same command but using the "thing" stack"
 
 ```bash
-$ envstack thing -- python -c "from envstack.env import environ; print(environ['FOO'])"
+$ envstack thing -- python -c "import os; print(os.environ['FOO'])"
 bar
 ```
