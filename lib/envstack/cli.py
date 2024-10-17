@@ -33,6 +33,7 @@ __doc__ = """
 Contains command line interface for envstack.
 """
 
+import argparse
 import os
 import sys
 import pprint
@@ -40,13 +41,24 @@ import traceback
 
 from envstack import __version__
 from envstack import config
-from envstack.env import expandvars, load_environ, trace_var
+from envstack.env import expandvars, load_environ, trace_var, build_sources
+from envstack.wrapper import run_command
 
 
 def parse_args():
-    """Command line argument parser."""
+    """Command line argument parser.
 
-    import argparse
+    Returns:
+        tuple: (args, command)
+    """
+
+    if "--" in sys.argv:
+        dash_index = sys.argv.index("--")
+        args_after_dash = sys.argv[dash_index + 1 :]
+        args_before_dash = sys.argv[1:dash_index]
+    else:
+        args_after_dash = []
+        args_before_dash = sys.argv[1:]
 
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
@@ -59,10 +71,10 @@ def parse_args():
     )
     parser.add_argument(
         "namespace",
-        metavar="NAMESPACE",
+        metavar="STACK",
         nargs="?",
         default=config.DEFAULT_NAMESPACE,
-        help="the namespace to use",
+        help="the environment stack to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
     parser.add_argument(
         "-p",
@@ -78,20 +90,25 @@ def parse_args():
         help="resolve an environment variable",
     )
     parser.add_argument(
+        "--sources",
+        action="store_true",
+        help="list the sources for a stack",
+    )
+    parser.add_argument(
         "-t",
         "--trace",
         metavar="VAR",
         help="trace where a variable is getting set",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(args_before_dash)
 
-    return args, parser
+    return args, args_after_dash
 
 
 def main():
     """Main thread."""
-    args, _ = parse_args()
+    args, command = parse_args()
 
     try:
         if args.resolve:
@@ -103,6 +120,12 @@ def main():
         elif args.trace:
             path = trace_var(args.namespace, args.trace)
             print("{0}: {1}".format(args.trace, path))
+        elif args.sources:
+            sources = build_sources(args.namespace)
+            for source in sources:
+                print(source)
+        elif command:
+            return run_command(args.namespace, command)
         else:
             env = load_environ(args.namespace, platform=args.platform, includes=True)
             for k, v in env.items():

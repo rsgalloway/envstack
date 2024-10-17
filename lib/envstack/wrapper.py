@@ -35,6 +35,7 @@ Contains executable wrapper classes and functions.
 
 import os
 import subprocess
+import traceback
 
 from envstack import logger
 from envstack.env import load_environ, expandvars
@@ -126,20 +127,19 @@ class Wrapper(object):
         """Launches the wrapped tool in a subprocess with env."""
         exitcode = 0
 
-        # expand command vars before passing to subprocess
+        # expand and resolve command and environment vars
         cmd = expandvars(self.executable(), self.env, recursive=True)
+        env = encode(self.get_subprocess_env())
 
         # run command in subprocess
         try:
             process = subprocess.Popen(
                 args=to_args(cmd) + self.args,
                 bufsize=0,
-                env=encode(self.get_subprocess_env()),
+                env=env,
             )
 
         except Exception as err:
-            import traceback
-
             traceback.print_exc()
             exitcode = 1
 
@@ -157,3 +157,29 @@ class Wrapper(object):
         is called on the wrapper.
         """
         return self.env
+
+
+class CommandWrapper(Wrapper):
+    """Wrapper class for running wrapped commands from the command-line."""
+
+    def __init__(self, name, args=[]):
+        super(CommandWrapper, self).__init__(name, args)
+        self.log.debug("running command [stack: %s] %s", name, args)
+        self.cmd = args[0]
+        self.args = args[1:]
+
+    def executable(self):
+        return self.cmd
+
+
+def run_command(namespace, command):
+    """
+    Runs a given command with the given stack namespace.
+
+    :param namespace: stack namespace
+    :param command: command to run as arg list
+    :returns: exit code
+    """
+    logger.setup_stream_handler()
+    cmd = CommandWrapper(namespace, command)
+    return cmd.launch()
