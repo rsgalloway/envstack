@@ -49,9 +49,8 @@ class PostInstallCommand(install):
 
     def run(self):
         install.run(self)
-        print("Installing stack.env file to %s" % os.getcwd())
         source = os.path.join(os.path.dirname(__file__), "stack.env")
-        destination = os.path.join(self.original_cwd, "stack.env")
+        destination = os.path.join(os.path.expanduser("~"), "stack.env")
         if os.path.exists(source):
             shutil.copy(source, destination)
             print(f"Copied {source} to {destination}")
@@ -61,7 +60,7 @@ class PostInstallCommand(install):
 
 setup(
     name="envstack",
-    version="0.2.4",
+    version="0.2.5",
     description="Stacked environment variable management system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
