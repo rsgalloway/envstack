@@ -35,13 +35,12 @@ Contains command line interface for envstack.
 
 import argparse
 import os
-import sys
 import pprint
+import sys
 import traceback
 
-from envstack import __version__
-from envstack import config
-from envstack.env import expandvars, load_environ, trace_var, build_sources
+from envstack import __version__, config
+from envstack.env import build_sources, expandvars, load_environ, trace_var
 from envstack.wrapper import run_command
 
 

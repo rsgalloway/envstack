@@ -37,9 +37,7 @@ import os
 import re
 import string
 
-from envstack import config
-from envstack import path
-from envstack import logger
+from envstack import config, logger, path
 from envstack.exceptions import *
 
 # named variable delimiter pattern

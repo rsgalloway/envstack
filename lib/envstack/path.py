@@ -36,8 +36,7 @@ Contains pathing classes and functions.
 import os
 import re
 
-from envstack import logger
-from envstack import config
+from envstack import config, logger
 from envstack.exceptions import *
 
 # template path field regex: extracts bracketed {keys}

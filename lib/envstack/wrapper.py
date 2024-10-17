@@ -38,7 +38,7 @@ import subprocess
 import traceback
 
 from envstack import logger
-from envstack.env import load_environ, expandvars
+from envstack.env import expandvars, load_environ
 
 
 def decode_value(value):

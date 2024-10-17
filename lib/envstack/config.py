@@ -34,8 +34,8 @@ Contains default configs and settings.
 """
 
 import os
-import sys
 import platform
+import sys
 
 DEBUG = os.getenv("DEBUG")
 DEFAULT_NAMESPACE = "stack"

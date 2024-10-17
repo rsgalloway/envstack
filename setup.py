@@ -30,25 +30,34 @@
 #
 
 import os
-from setuptools import setup, find_packages
 import shutil
+
+from setuptools import find_packages, setup
+from setuptools.command.install import install
 
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, "README.md")) as f:
     long_description = f.read()
 
-try:
-    source_file = os.path.join(here, "stack.env")
-    destination_file = os.path.join(os.getcwd(), "stack.env")
-    shutil.copy(source_file, destination_file)
-except FileNotFoundError:
-    print(f"The file {source_file} was not found.")
-except Exception as e:
-    print(f"Failed to copy {source_file}: {e}")
+
+class PostInstallCommand(install):
+    """Custom post-installation for copying stack.env."""
+
+    def run(self):
+        install.run(self)
+        print("Installing stack.env file to %s" % os.getcwd())
+        source = os.path.join(os.path.dirname(__file__), "stack.env")
+        destination = os.path.join(os.getcwd(), "stack.env")
+        if os.path.exists(source):
+            shutil.copy(source, destination)
+            print(f"Copied {source} to {destination}")
+        else:
+            print(f"{source} not found")
+
 
 setup(
     name="envstack",
-    version="0.2.2",
+    version="0.2.3",
     description="Stacked environment variable management system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -67,5 +76,6 @@ setup(
         "siteconf>=0.1.5",
     ],
     data_files=[(".", ["stack.env"])],
+    cmdclass={"install": PostInstallCommand},
     zip_safe=False,
 )
