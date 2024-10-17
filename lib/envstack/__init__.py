@@ -34,4 +34,4 @@ Stacked environment variable management system.
 """
 
 __prog__ = "envstack"
-__version__ = "0.2.0"
+__version__ = "0.2.1"
