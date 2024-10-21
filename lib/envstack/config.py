@@ -49,8 +49,8 @@ USERNAME = os.getenv("USERNAME", os.getenv("USER"))
 DEFAULT_ENV_DIR = os.getenv(
     "DEFAULT_ENV_DIR",
     {
-        "darwin": f"/etc/envstack",
-        "linux": f"/etc/envstack",
-        "windows": f"C:/ProgramData/envstack",
+        "darwin": "/etc/envstack",
+        "linux": "/etc/envstack",
+        "windows": "C:/ProgramData/envstack",
     }.get(PLATFORM),
 )
