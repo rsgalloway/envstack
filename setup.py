@@ -43,22 +43,30 @@ with open(os.path.join(here, "README.md")) as f:
 class PostInstallCommand(install):
     """Custom post-installation for copying stack.env."""
 
-    def run(self):
-        install.run(self)
-        home_dir = os.getenv("HOME") or os.getenv("USERPROFILE")
+    def install_default_stack(self):
+        """Copy the default stack.env file to the default location."""
+        from envstack.config import DEFAULT_ENV_DIR
 
-        if not home_dir:
-            print("Error: unable to determine home directory.")
-            return
+        if not os.path.isdir(DEFAULT_ENV_DIR):
+            os.makedirs(DEFAULT_ENV_DIR)
 
         source = os.path.join(os.path.dirname(__file__), "stack.env")
-        destination = os.path.join(home_dir, "stack.env")
+        destination = os.path.join(DEFAULT_ENV_DIR, "stack.env")
 
         if os.path.exists(source):
+            print(f"Copying {source} to {destination}")
             shutil.copy(source, destination)
-            print(f"Copied {source} to {destination}")
         else:
-            print(f"{source} not found")
+            print(f"{source} not found)")
+
+    def run(self):
+        """Run the default install and copy the default stack.env file."""
+        install.run(self)
+
+        try:
+            self.install_default_stack()
+        except Exception as e:
+            print(f"Error copying stack.env: {e}")
 
 
 setup(

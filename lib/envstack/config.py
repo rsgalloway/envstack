@@ -45,12 +45,12 @@ PLATFORM = platform.system().lower()
 PYTHON_VERSION = sys.version_info[0]
 USERNAME = os.getenv("USERNAME", os.getenv("USER"))
 
-# default location of the global environment directory by platform
+# default location of the global env stacks
 DEFAULT_ENV_DIR = os.getenv(
     "DEFAULT_ENV_DIR",
     {
-        "darwin": f"/etc/{DEFAULT_NAMESPACE}",
-        "linux": f"/etc/{DEFAULT_NAMESPACE}",
-        "windows": f"C:/ProgramData/{DEFAULT_NAMESPACE}",
+        "darwin": f"/etc/envstack",
+        "linux": f"/etc/envstack",
+        "windows": f"C:/ProgramData/envstack",
     }.get(PLATFORM),
 )

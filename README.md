@@ -24,9 +24,15 @@ $ pip install envstack
 
 Copy the default stack file
 [`stack.env`](https://github.com/rsgalloway/envstack/blob/master/stack.env)
-to your current working directory, or the root of your project. This is the default
-environment stack. Running the `envstack` command should show you the resolved
-environment for your platform:
+to your current working directory, the root of your project or /etc/envstack (the default location for env stack files).
+
+
+```bach
+cp stack.env /etc/envstack
+```
+
+The `stack` namespsace is the default environment stack. Running the `envstack` command should show
+you the resolved environment for your platform:
 
 ```bash
 $ envstack
