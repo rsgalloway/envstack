@@ -9,7 +9,7 @@ The default stack is `stack` and variables are declared in `stack.env`
 files. You can create any new stack by creating new `.env` files, e.g. creating
 a new `test` stack just create `test.env` files.
 
-Envstack works best combined with [siteconf](https://github.com/rsgalloway/siteconf).
+> **Note:** envstack works best combined with [siteconf](https://github.com/rsgalloway/siteconf).
 
 Installation
 ------------
@@ -31,8 +31,8 @@ to your current working directory, the root of your project or /etc/envstack (th
 cp stack.env /etc/envstack
 ```
 
-The `stack` namespsace is the default environment stack. Running the `envstack` command should show
-you the resolved environment for your platform:
+The `stack` namespace is the default environment stack. Running the `envstack` command
+should show you the resolved environment for your platform:
 
 ```bash
 $ envstack
@@ -136,6 +136,33 @@ To see an environment stack on another platform:
 
 ```bash
 $ envstack <stack> -p <platform>
+```
+
+Python API
+----------
+
+By default, `envstack.getenv` uses the resolved default env stack `stack` and can be
+a drop-in replacement for `os.getenv` 
+
+```python
+>>> import envstack
+>>> envstack.getenv("HELLO")
+'world'
+```
+
+To use a different stack, use the `init` function:
+
+```python
+>>> envstack.init("thing")
+>>> envstack.getenv("FOO")
+'bar'
+```
+
+The `init` function also updates the current environment for code that is not using envstack:
+
+```python
+>>> os.getenv("FOO")
+'bar'
 ```
 
 Running Commands

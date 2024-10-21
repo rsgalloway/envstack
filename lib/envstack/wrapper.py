@@ -38,47 +38,7 @@ import subprocess
 import traceback
 
 from envstack import logger
-from envstack.env import expandvars, load_environ
-
-
-def decode_value(value):
-    """Returns a decoded value that's been encoded by a wrapper.
-
-    Decoding encoded environments can be tricky. For example, it must account for path
-    templates that include curly braces, e.g. path templates string like this must be
-    preserved:
-
-        '/path/with/{variable}'
-
-    :param value: wrapper encoded env value
-    :returns: decoded value
-    """
-    # TODO: find a better way to encode/decode wrapper envs
-    return (
-        str(value)
-        .replace("'[", "[")
-        .replace("]'", "]")
-        .replace('"[', "[")
-        .replace(']"', "]")
-        .replace('"{"', "{'")
-        .replace('"}"', "'}")
-        .replace("'{'", "{'")
-        .replace("'}'", "'}")
-    )
-
-
-def encode(env, resolved=True):
-    """Returns environment as a dict with str encoded key/values for passing to
-    wrapper subprocesses.
-
-    :param env: `Env` instance or os.environ.
-    :param resolved: fully resolve values (default=True).
-    :returns: dict with bytestring key/values.
-    """
-    c = lambda v: str(v)
-    if resolved:
-        return dict((c(k), c(expandvars(v, env))) for k, v in env.items())
-    return dict((c(k), c(v)) for k, v in env.items())
+from envstack.env import encode, expandvars, load_environ
 
 
 def to_args(cmd):

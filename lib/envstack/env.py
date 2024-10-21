@@ -356,31 +356,44 @@ def clear_file_cache():
     load_file_cache = {}
 
 
-def safe_eval(value):
-    """Returns template value preserving original class.
-    Useful for preserving nested values in wrappers.
+def decode_value(value):
+    """Returns a decoded value that's been encoded by a wrapper.
+
+    Decoding encoded environments can be tricky. For example, it must account for path
+    templates that include curly braces, e.g. path templates string like this must be
+    preserved:
+
+        '/path/with/{variable}'
+
+    :param value: wrapper encoded env value
+    :returns: decoded value
     """
+    # TODO: find a better way to encode/decode wrapper envs
+    return (
+        str(value)
+        .replace("'[", "[")
+        .replace("]'", "]")
+        .replace('"[', "[")
+        .replace(']"', "]")
+        .replace('"{"', "{'")
+        .replace('"}"', "'}")
+        .replace("'{'", "{'")
+        .replace("'}'", "'}")
+    )
 
-    from envstack.wrapper import decode_value
 
-    try:
-        from ast import literal_eval
+def encode(env, resolved=True):
+    """Returns environment as a dict with str encoded key/values for passing to
+    wrapper subprocesses.
 
-        eval_func = literal_eval
-    except ImportError:
-        # warning: security issue
-        eval_func = eval
-
-    if type(value) == str:
-        try:
-            return eval_func(value)
-        except Exception:
-            try:
-                return eval_func(decode_value(value))
-            except Exception:
-                return value
-
-    return value
+    :param env: `Env` instance or os.environ.
+    :param resolved: fully resolve values (default=True).
+    :returns: dict with bytestring key/values.
+    """
+    c = lambda v: str(v)
+    if resolved:
+        return dict((c(k), c(expandvars(v, env))) for k, v in env.items())
+    return dict((c(k), c(v)) for k, v in env.items())
 
 
 def build_sources(
@@ -481,6 +494,15 @@ def expandvars(var, env=None, recursive=False):
     return EnvVar(var).expand(env, recursive=recursive)
 
 
+def init(name=config.DEFAULT_NAMESPACE):
+    """Initializes the environment for a given namespace.
+
+    :param name: namespace (basename of env files).
+    """
+    env = load_environ(name)
+    os.environ.update(encode(env))
+
+
 def load_environ(
     name=config.DEFAULT_NAMESPACE,
     sources=None,
@@ -560,6 +582,31 @@ def load_file(path):
     load_file_cache[path] = data
 
     return data
+
+
+def safe_eval(value):
+    """Returns template value preserving original class.
+    Useful for preserving nested values in wrappers.
+    """
+
+    try:
+        from ast import literal_eval
+
+        eval_func = literal_eval
+    except ImportError:
+        # warning: security issue
+        eval_func = eval
+
+    if type(value) == str:
+        try:
+            return eval_func(value)
+        except Exception:
+            try:
+                return eval_func(decode_value(value))
+            except Exception:
+                return value
+
+    return value
 
 
 def trace_var(name, var, scope=None):
