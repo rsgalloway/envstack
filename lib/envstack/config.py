@@ -37,12 +37,33 @@ import os
 import platform
 import sys
 
+
+def detect_shell():
+    """Detect the current shell."""
+    if PLATFORM == "windows":
+        comspec = os.environ.get("ComSpec")
+        if comspec:
+            if "cmd.exe" in comspec:
+                return "Command Prompt"
+            elif "powershell.exe" in comspec:
+                return "PowerShell"
+        else:
+            return "Unknown Windows shell"
+    else:
+        shell = os.environ.get("SHELL")
+        if shell:
+            return shell.split("/")[-1]
+        else:
+            return "Unknown Unix-like shell"
+
+
 DEBUG = os.getenv("DEBUG")
 DEFAULT_NAMESPACE = "stack"
 LOG_LEVEL = int(os.environ.get("LOG_LEVEL", 20))
 ON_POSIX = "posix" in sys.builtin_module_names
 PLATFORM = platform.system().lower()
 PYTHON_VERSION = sys.version_info[0]
+SHELL = detect_shell()
 USERNAME = os.getenv("USERNAME", os.getenv("USER"))
 
 # default location of the global env stacks

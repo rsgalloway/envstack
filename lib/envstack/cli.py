@@ -40,7 +40,7 @@ import sys
 import traceback
 
 from envstack import __version__, config
-from envstack.env import build_sources, expandvars, load_environ, trace_var
+from envstack.env import build_sources, expandvars, export, load_environ, trace_var
 from envstack.wrapper import run_command
 
 
@@ -74,6 +74,11 @@ def parse_args():
         nargs="?",
         default=config.DEFAULT_NAMESPACE,
         help="the environment stack to use (default '%s')" % config.DEFAULT_NAMESPACE,
+    )
+    parser.add_argument(
+        "--export",
+        action="store_true",
+        help="generate export commands for the current shell",
     )
     parser.add_argument(
         "-p",
@@ -123,6 +128,12 @@ def main():
             sources = build_sources(args.namespace)
             for source in sources:
                 print(source)
+        elif args.export:
+            exp = export(args.namespace, config.SHELL)
+            if exp:
+                print(exp)
+            else:
+                print(f"shell {args.export} not supported")
         elif command:
             return run_command(args.namespace, command)
         else:

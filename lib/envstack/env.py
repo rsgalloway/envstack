@@ -494,6 +494,37 @@ def expandvars(var, env=None, recursive=False):
     return EnvVar(var).expand(env, recursive=recursive)
 
 
+def export(name, shell="bash", resolve=False, scope=None):
+    """Returns environment commands that can be sourced.
+
+       $ source < envstack <name> --init
+
+    List of shell names: bash, tcsh, cmd, pwsh.
+
+    :param name: namespace
+    :param shell: name of shell
+    :param resolve: resolve values (default: True)
+    :param scope: environment scope (default: cwd)
+    :returns: shell commands as string
+    """
+    env = load_environ(name, scope=scope)
+    expList = list()
+    for k, v in env.items():
+        if resolve:
+            v = expandvars(v, env, recursive=False)
+        if shell == "bash":
+            expList.append('export {0}="{1}"'.format(k, v))
+        elif shell == "tcsh":
+            expList.append('setenv {0}:"{1}"'.format(k, v))
+        elif shell == "cmd":
+            expList.append('set {0}="{1}"'.format(k, v))
+        elif shell == "pwsh":
+            expList.append('$env:{0}="{1}"'.format(k, v))
+    expList.sort()
+    exp = "\n".join(expList)
+    return exp
+
+
 def init(name=config.DEFAULT_NAMESPACE):
     """Initializes the environment for a given namespace.
 
