@@ -24,7 +24,7 @@ $ pip install envstack
 
 Copy the default stack file
 [`stack.env`](https://github.com/rsgalloway/envstack/blob/master/stack.env)
-to your current working directory, the root of your project or /etc/envstack (the default location for env stack files).
+to your current working directory, the root of your project or /etc/envstack (the default location for envstack files).
 
 
 ```bach
@@ -51,7 +51,7 @@ Modify the environment stack by updating `stack.env` or by creating new contextu
 You can execute any command inside the default stacked environment like this:
 
 ```bash
-$ enstack -- <command>
+$ envstack -- <command>
 ```
 
 For example:
@@ -101,7 +101,8 @@ linux:
   HELLO: world
 ```
 
-Environment files can include other namespaced environments:
+Environment files can include other namespaced environments (all stacks inherit the default stack.env automatically).
+
 ```yaml
 include: ['other']
 ```
@@ -172,7 +173,7 @@ To run any command line executable inside of an environment stack, where `<comma
 is the command to run:
 
 ```bash
-$ enstack <stack> -- <command>
+$ envstack <stack> -- <command>
 ```
 
 For example, running python in the default stack (reading from the default `stack.env` file):
