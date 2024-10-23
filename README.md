@@ -189,3 +189,15 @@ Same command but using the "thing" stack"
 $ envstack thing -- python -c "import os; print(os.environ['FOO'])"
 bar
 ```
+
+To source the environment in your current shell, source the output of --export:
+
+```bash
+$ source <(envstack --export)
+```
+
+Create an alias for convenience:
+
+```bash
+$ alias esinit='source <(envstack $ARG --export)'
+```

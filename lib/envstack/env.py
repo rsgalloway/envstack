@@ -497,7 +497,7 @@ def expandvars(var, env=None, recursive=False):
 def export(name, shell="bash", resolve=False, scope=None):
     """Returns environment commands that can be sourced.
 
-       $ source < envstack <name> --init
+       $ source <(envstack --export)
 
     List of shell names: bash, tcsh, cmd, pwsh.
 
