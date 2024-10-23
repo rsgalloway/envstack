@@ -58,7 +58,7 @@ def detect_shell():
 
 
 DEBUG = os.getenv("DEBUG")
-DEFAULT_NAMESPACE = "stack"
+DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "stack")
 LOG_LEVEL = int(os.environ.get("LOG_LEVEL", 20))
 ON_POSIX = "posix" in sys.builtin_module_names
 PLATFORM = platform.system().lower()

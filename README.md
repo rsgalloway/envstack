@@ -11,8 +11,7 @@ a new `test` stack just create `test.env` files.
 
 > **Note:** envstack works best combined with [siteconf](https://github.com/rsgalloway/siteconf).
 
-Installation
-------------
+## Installation
 
 The easiest way to install:
 
@@ -24,7 +23,7 @@ $ pip install envstack
 
 Copy the default stack file
 [`stack.env`](https://github.com/rsgalloway/envstack/blob/master/stack.env)
-to your current working directory, the root of your project or /etc/envstack (the default location for envstack files).
+to your current working directory, the root of your project or `/etc/envstack` (the default location for envstack files, or `C:/ProgramData/envstack` on Windows).
 
 
 ```bach
@@ -139,8 +138,7 @@ To see an environment stack on another platform:
 $ envstack <stack> -p <platform>
 ```
 
-Python API
-----------
+## Python API
 
 By default, `envstack.getenv` uses the resolved default env stack `stack` and can be
 a drop-in replacement for `os.getenv` 
@@ -166,8 +164,7 @@ The `init` function also updates the current environment for code that is not us
 'bar'
 ```
 
-Running Commands
-----------------
+## Running Commands
 
 To run any command line executable inside of an environment stack, where `<command>`
 is the command to run:
@@ -203,3 +200,12 @@ In Windows command prompt:
 ```cmd
 for /f "usebackq" %i in (`envstack --export`) do %i
 ```
+
+## Config
+
+Default config settings are in the config.py module. The following environment variables are supported:
+
+| Variable            | Description |
+|---------------------|-------------|
+| $DEFAULT_ENV_DIR    | the folder containing the default env stack files |
+| $DEFAULT_ENV_STACK  | the name of the default env stack namespace (default "stack") |
