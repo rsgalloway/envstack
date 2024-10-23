@@ -190,14 +190,16 @@ $ envstack thing -- python -c "import os; print(os.environ['FOO'])"
 bar
 ```
 
-To source the environment in your current shell, source the output of --export:
+To source the environment in your current shell, source the output of --export (and create
+an alias for convenience):
 
 ```bash
 $ source <(envstack --export)
+$ alias esinit='source <(envstack $ARG --export)'
 ```
 
-Create an alias for convenience:
+In Windows command prompt:
 
-```bash
-$ alias esinit='source <(envstack $ARG --export)'
+```cmd
+for /f "usebackq" %i in (`envstack --export`) do %i
 ```

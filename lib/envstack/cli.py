@@ -129,11 +129,7 @@ def main():
             for source in sources:
                 print(source)
         elif args.export:
-            exp = export(args.namespace, config.SHELL)
-            if exp:
-                print(exp)
-            else:
-                print(f"shell {args.export} not supported")
+            print(export(args.namespace, config.SHELL))
         elif command:
             return run_command(args.namespace, command)
         else:

@@ -44,17 +44,17 @@ def detect_shell():
         comspec = os.environ.get("ComSpec")
         if comspec:
             if "cmd.exe" in comspec:
-                return "Command Prompt"
+                return "cmd"
             elif "powershell.exe" in comspec:
-                return "PowerShell"
+                return "pwsh"
         else:
-            return "Unknown Windows shell"
+            return "unknown"
     else:
         shell = os.environ.get("SHELL")
         if shell:
             return shell.split("/")[-1]
         else:
-            return "Unknown Unix-like shell"
+            return "unknown"
 
 
 DEBUG = os.getenv("DEBUG")

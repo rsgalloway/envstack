@@ -499,10 +499,11 @@ def export(name, shell="bash", resolve=False, scope=None):
 
        $ source <(envstack --export)
 
-    List of shell names: bash, tcsh, cmd, pwsh.
+    List of shell names: bash, tcsh, cmd, pwsh
+    (see output of config.detect_shell()).
 
-    :param name: namespace
-    :param shell: name of shell
+    :param name: stack namespace
+    :param shell: name of shell (default: bash)
     :param resolve: resolve values (default: True)
     :param scope: environment scope (default: cwd)
     :returns: shell commands as string
