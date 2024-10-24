@@ -67,6 +67,7 @@ SHELL = detect_shell()
 USERNAME = os.getenv("USERNAME", os.getenv("USER"))
 
 # default location of the global env stacks
+# set in sitecustomize.py using siteconf>=0.1.7
 DEFAULT_ENV_DIR = os.getenv(
     "DEFAULT_ENV_DIR",
     {

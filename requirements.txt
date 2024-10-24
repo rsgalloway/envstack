@@ -1,2 +1,2 @@
 PyYAML>=5.1.2
-siteconf>=0.1.6
+siteconf>=0.1.7
