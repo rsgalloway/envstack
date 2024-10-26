@@ -56,8 +56,8 @@ class Wrapper(object):
     Subclasses should override executable():
 
         class ToolWrapper(Wrapper):
-            def __init__(self, name, args):
-                super(ToolWrapper, self).__init__(name, args)
+            def __init__(self, namespace, args):
+                super(ToolWrapper, self).__init__(namespace, args)
             def executable(self):
                 return '$TOOL_ROOT/bin/tool'
 
@@ -72,12 +72,17 @@ class Wrapper(object):
         tool.log = MyLogger()
     """
 
-    def __init__(self, name, args=[]):
+    def __init__(self, namespace, args=[]):
+        """Initializes the wrapper with the given namespace and args.
+
+        :param namespace: namespace
+        :param args: command line arguments
+        """
         super(Wrapper, self).__init__()
         self.args = args
-        self.env = load_environ(name, environ=os.environ)
+        self.name = namespace
         self.log = logger.log
-        self.name = name
+        self.env = load_environ(namespace)
 
     def executable(self):
         """Returns the path to the executable."""
@@ -88,8 +93,8 @@ class Wrapper(object):
         exitcode = 0
 
         # expand and resolve command and environment vars
-        cmd = expandvars(self.executable(), self.env, recursive=True)
-        env = encode(self.get_subprocess_env())
+        env = self.get_subprocess_env()
+        cmd = expandvars(self.executable(), env, recursive=True)
 
         # run command in subprocess
         try:
@@ -113,18 +118,27 @@ class Wrapper(object):
         return exitcode
 
     def get_subprocess_env(self):
-        """Returns the environment that gets passed to the subprocess when launch()
+        """
+        Returns the environment that gets passed to the subprocess when launch()
         is called on the wrapper.
         """
-        return self.env
+        env = os.environ.copy()
+        env.update(encode(self.env))
+        return env
 
 
 class CommandWrapper(Wrapper):
     """Wrapper class for running wrapped commands from the command-line."""
 
-    def __init__(self, name, args=[]):
-        super(CommandWrapper, self).__init__(name, args)
-        self.log.debug("running command [stack: %s] %s", name, args)
+    def __init__(self, namespace, args=[]):
+        """
+        Initializes the command wrapper with the given namespace and args.
+
+        :param namespace: stack namespace
+        :param args: command line arguments
+        """
+        super(CommandWrapper, self).__init__(namespace, args)
+        self.log.debug("running command [stack: %s] %s", namespace, args)
         self.cmd = args[0]
         self.args = args[1:]
 

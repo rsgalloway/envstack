@@ -30,7 +30,7 @@
 #
 
 __doc__ = """
-Contains command line interface for envstack.
+Command line interface for envstack: stacked environment variable management.
 """
 
 import argparse
@@ -90,19 +90,21 @@ def parse_args():
     parser.add_argument(
         "-r",
         "--resolve",
+        nargs="*",
         metavar="VAR",
-        help="resolve an environment variable",
+        help="resolve environment variables",
+    )
+    parser.add_argument(
+        "-t",
+        "--trace",
+        nargs="*",
+        metavar="VAR",
+        help="trace where environment variables are being set",
     )
     parser.add_argument(
         "--sources",
         action="store_true",
         help="list the sources for a stack",
-    )
-    parser.add_argument(
-        "-t",
-        "--trace",
-        metavar="VAR",
-        help="trace where a variable is getting set",
     )
 
     args = parser.parse_args(args_before_dash)
@@ -115,15 +117,20 @@ def main():
     args, command = parse_args()
 
     try:
-        if args.resolve:
-            env = load_environ(
-                args.namespace, environ=os.environ, platform=args.platform
-            )
-            var = env.get(args.resolve)
-            print(pprint.pformat(expandvars(var, env, recursive=True)))
-        elif args.trace:
-            path = trace_var(args.namespace, args.trace)
-            print("{0}: {1}".format(args.trace, path))
+        if args.resolve is not None:
+            if len(args.resolve) == 0:
+                args.resolve = load_environ(args.namespace).keys()
+            env = load_environ(args.namespace, platform=args.platform)
+            for resolve in args.resolve:
+                var = env.get(resolve)
+                val = expandvars(var, env, recursive=True)
+                print(f"{resolve}={val}")
+        elif args.trace is not None:
+            if len(args.trace) == 0:
+                args.trace = load_environ(args.namespace).keys()
+            for trace in args.trace:
+                path = trace_var(args.namespace, trace)
+                print("{0}: {1}".format(trace, path))
         elif args.sources:
             sources = build_sources(args.namespace)
             for source in sources:
@@ -135,7 +142,7 @@ def main():
         else:
             env = load_environ(args.namespace, platform=args.platform, includes=True)
             for k, v in env.items():
-                print(f"{k} {pprint.pformat(v)}")
+                print(f"{k}={v}")
 
     except KeyboardInterrupt:
         print("Stopping...")

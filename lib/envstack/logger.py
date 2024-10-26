@@ -33,7 +33,17 @@ import logging
 
 from envstack.config import LOG_LEVEL
 
-log = logging.Logger("envstack")
+
+class Logger(logging.Logger):
+    """Custom logger class."""
+
+    def setLevel(self, level):
+        if isinstance(level, str):
+            level = getattr(logging, level.upper(), logging.NOTSET)
+        super().setLevel(level)
+
+
+log = Logger("envstack")
 log.setLevel(LOG_LEVEL)
 log.addHandler(logging.NullHandler())
 

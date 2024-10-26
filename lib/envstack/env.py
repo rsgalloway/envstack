@@ -260,18 +260,22 @@ class Env(dict):
         """Returns raw, unexpanded value of key, or None."""
         return self.get(key, resolved=False).template
 
-    def items(self):
-        """Returns list of (key, value) pairs, as 2-tuples."""
-        return [(k, EnvVar(self[k]).value()) for k in self]
-
     def merge(self, env):
-        """Merges another environ into this one, i.e.
-        env[k] will replace self[k].
+        """Merges another environ `env` into this one.
 
         :param env: env to merge into this one
         """
-        for k, v in env.items():
-            self[k] = v
+        merged = env.copy()
+        for key, value in self.items():
+            if isinstance(value, str):
+                # replace ${KEY} vars with values from env
+                value = re.sub(
+                    r"\${(\w+)}",
+                    lambda match: env.get(match.group(1), match.group(0)),
+                    value,
+                )
+            merged[key] = value
+        return merged
 
     def set_namespace(self, name):
         """Stores the namespace for this environment.
@@ -538,7 +542,7 @@ def init(name=config.DEFAULT_NAMESPACE):
 def load_environ(
     name=config.DEFAULT_NAMESPACE,
     sources=None,
-    environ=None,
+    environ=os.environ,
     platform=config.PLATFORM,
     scope=None,
     includes=True,
@@ -577,7 +581,7 @@ def load_environ(
     for source in sources:
         env.update(source.load(platform=platform))
 
-    # load values from local environment
+    # merge values from given environment
     if environ:
         env.merge(environ)
 
@@ -650,7 +654,7 @@ def trace_var(name, var, scope=None):
     :returns: source path
     """
     if var in os.environ:
-        return "local environment (unset to clear)"
+        return "local environment"
     sources = build_sources(name, scope=scope)
     sources.reverse()
     for source in sources:
@@ -660,6 +664,7 @@ def trace_var(name, var, scope=None):
             return source.path
 
 
+# default stack environment
 environ = load_environ(environ=os.environ)
 
 
