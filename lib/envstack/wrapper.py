@@ -92,16 +92,18 @@ class Wrapper(object):
         """Launches the wrapped tool in a subprocess with env."""
         exitcode = 0
 
-        # expand and resolve command and environment vars
+        # get subprocess env, cmd and args
         env = self.get_subprocess_env()
         cmd = expandvars(self.executable(), env, recursive=True)
+        args = " ".join(["\"%s\"" % arg for arg in to_args(cmd) + self.args])
 
         # run command in subprocess
         try:
             process = subprocess.Popen(
-                args=to_args(cmd) + self.args,
+                args=args,
                 bufsize=0,
                 env=env,
+                shell=True,
             )
 
         except Exception:

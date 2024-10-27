@@ -49,7 +49,15 @@ You can execute any command inside the default stacked environment like this:
 $ envstack -- [COMMAND]
 ```
 
-For example:
+For example, use the `echo` command to see the resolved value of `$HELLO` (note: we have to
+escape it first to it's not pre-expanded in the shell):
+
+```bash 
+$ envstack -- echo \$HELLO
+world
+```
+
+Any command can be run in an envstack environment by preceeding with `--`:
 
 ```bash
 $ envstack -- python -c "import os; print(os.environ['HELLO'])"
@@ -73,16 +81,6 @@ $ envstack thing
 FOO 'bar'
 ```
 
-Environment stacks are hierarchical, so values for `$FOO` defined in .env files lower
-in the filesystem (lower in scope) override those defined higher up (higher in scope):
-
-```
-/show/thing.env
-/show/seq/thing.env
-/show/seq/shot/thing.env
-/show/seq/shot/task/thing.env
-```
-
 Variables can reference other variables defined elsewhere (but cannot be circular):
 
 ```yaml
@@ -104,6 +102,19 @@ Environment files can include other namespaced environments (all stacks inherit 
 include: ['other']
 ```
 
+## Context
+
+Environment stacks are hierarchical, so values for `$FOO` defined in .env files lower
+in the filesystem (lower in scope) override those defined higher up (higher in scope):
+
+```
+/show/thing.env
+/show/seq/thing.env
+/show/seq/shot/thing.env
+/show/seq/shot/task/thing.env
+```
+
+
 ## Usage
 
 To see the default environment for any given stack:
@@ -124,7 +135,7 @@ To trace where one or more environment vars is being set:
 $ envstack [STACK] -t [VAR [VAR ...]]
 ```
 
-To get a list of stack sources:
+To get the list of source files for a given stack:
 
 ```bash
 $ envstack [STACK] --sources
