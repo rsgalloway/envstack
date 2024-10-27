@@ -27,6 +27,12 @@ Copy the default stack file stack.env to your current working directory, the roo
 $ cp stack.env $DEFAULT_ENV_DIR
 ```
 
+Or use [distman](https://github.com/rsgalloway/distman) to deploy it:
+
+```bash
+$ distman
+```
+
 The `stack` namespace is the default environment stack. Running the `envstack` command
 should show you the default environment stack:
 

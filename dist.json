@@ -1,0 +1,14 @@
+{
+    "version": "1",
+    "author": "ryan@rsg.io",
+    "targets": {
+        "env": {
+            "source": "stack.env",
+            "destination": "{DEPLOY_ROOT}/env/stack.env"
+        },
+        "lib": {
+            "source": "lib/envstack",
+            "destination": "{DEPLOY_ROOT}/lib/python/envstack"
+        }
+    }
+}
