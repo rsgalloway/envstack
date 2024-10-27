@@ -5,9 +5,9 @@ Stacked environment variable management system. The lightweight, easy to use
 "rez" alternative for production pipelines.
 
 Environment variables are declared in namespaced .env files using yaml syntax.
-The default stack is `stack` and variables are declared in `stack.env`
-files. You can create any new stack by creating new `.env` files, e.g. creating
-a new `test` stack just create `test.env` files.
+The default stack declares env variables in `stack.env` files. You can create any
+new stack by creating new `.env` files, e.g. to create a new `thing` stack just
+create `thing.env` files in any given context.
 
 > **Note:** envstack works best combined with [siteconf](https://github.com/rsgalloway/siteconf).
 
@@ -21,36 +21,32 @@ $ pip install envstack
 
 ## Quickstart
 
-Copy the default stack file
-[`stack.env`](https://github.com/rsgalloway/envstack/blob/master/stack.env)
-to your current working directory, the root of your project or $DEFAULT_ENV_DIR if defined (defaults: /etc/envstack on posix platforms and C:/ProgramData/envstack on Windows).
+Copy the default stack file stack.env to your current working directory, the root of your project or $DEFAULT_ENV_DIR:
 
-
-```bach
+```bash
 $ cp stack.env $DEFAULT_ENV_DIR
 ```
 
 The `stack` namespace is the default environment stack. Running the `envstack` command
-should show you the resolved environment for your platform:
+should show you the default environment stack:
 
 ```bash
 $ envstack
-ENV 'prod'
-HELLO 'world'
-FOO 'bar'
-PYVERSION 3.11
-LIB 'lib/python3.11'
-LOG_LEVEL 20
-ROOT '/mnt/tools/lib/python3.11'
+ENV=prod
+HELLO=world
+LOG_LEVEL=INFO
+DEFAULT_ENV_DIR=${DEPLOY_ROOT}/env
+DEPLOY_ROOT=${ROOT}/${ENV}
+ROOT=${HOME}/.local/envstack
 ```
 
-Modify the environment stack by updating `stack.env` or by creating new contextual
-`stack.env` files up and down the project hierarchy.
+Modify the environment stack by editing `stack.env` or by creating new contextual
+`stack.env` files up on the filesystem.
 
 You can execute any command inside the default stacked environment like this:
 
 ```bash
-$ envstack -- <command>
+$ envstack -- [COMMAND]
 ```
 
 For example:
@@ -59,6 +55,8 @@ For example:
 $ envstack -- python -c "import os; print(os.environ['HELLO'])"
 world
 ```
+
+## Creating Stacks
 
 To create a new environment stack, create a new namespaced .env file.
 For example `thing.env` (the stack namespace is "thing"):
@@ -108,39 +106,41 @@ include: ['other']
 
 ## Usage
 
-To see the default resolved environment for any given scope (directory):
+To see the default environment for any given stack:
 
 ```bash
-$ envstack
+$ envstack [STACK]
 ```
 
-To see the resolved environment for a given namespace.
+To resolve one or more environment vars for a given stack:
 
 ```bash
-$ envstack <stack> [OPTIONS]
+$ envstack [STACK] -r [VAR [VAR ...]]
 ```
 
-To resolve a `$VAR` declaration for a given environment stack:
+To trace where one or more environment vars is being set:
 
 ```bash
-$ envstack <stack> -r <VAR>
+$ envstack [STACK] -t [VAR [VAR ...]]
 ```
 
-To trace where a `$VAR` declaration is being set:
+To get a list of stack sources:
 
 ```bash
-$ envstack <stack> -t <VAR>
-```
-
-To see an environment stack on another platform:
-
-```bash
-$ envstack <stack> -p <platform>
+$ envstack [STACK] --sources
 ```
 
 ## Python API
 
-By default, `envstack.getenv` uses the resolved default env stack `stack` and can be
+To init the environment stack, use the `init` function:
+
+```python
+>>> envstack.init("thing")
+>>> os.getenv("FOO")
+'bar'
+```
+
+Alternatively, `envstack.getenv` uses the default environment stack `stack` and can be
 a drop-in replacement for `os.getenv` 
 
 ```python
@@ -149,28 +149,13 @@ a drop-in replacement for `os.getenv`
 'world'
 ```
 
-To use a different stack, use the `init` function:
-
-```python
->>> envstack.init("thing")
->>> envstack.getenv("FOO")
-'bar'
-```
-
-The `init` function also updates the current environment for code that is not using envstack:
-
-```python
->>> os.getenv("FOO")
-'bar'
-```
-
 ## Running Commands
 
-To run any command line executable inside of an environment stack, where `<command>`
+To run any command line executable inside of an environment stack, where `[COMMAND]`
 is the command to run:
 
 ```bash
-$ envstack <stack> -- <command>
+$ envstack [STACK] -- [COMMAND]
 ```
 
 For example, running python in the default stack (reading from the default `stack.env` file):

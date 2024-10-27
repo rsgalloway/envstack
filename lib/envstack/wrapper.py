@@ -104,7 +104,7 @@ class Wrapper(object):
                 env=env,
             )
 
-        except Exception as err:
+        except Exception:
             traceback.print_exc()
             exitcode = 1
 

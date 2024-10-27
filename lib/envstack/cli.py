@@ -85,7 +85,7 @@ def parse_args():
         "--platform",
         default=config.PLATFORM,
         metavar="PLATFORM",
-        help="specify the platform to resolve variables for",
+        help="platform to resolve variables for (linux, darwin, windows)",
     )
     parser.add_argument(
         "-r",
