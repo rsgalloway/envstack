@@ -34,8 +34,6 @@ Command line interface for envstack: stacked environment variable management.
 """
 
 import argparse
-import os
-import pprint
 import sys
 import traceback
 

@@ -9,8 +9,6 @@ The default stack declares env variables in `stack.env` files. You can create an
 new stack by creating new `.env` files, e.g. to create a new `thing` stack just
 create `thing.env` files in any given context.
 
-> **Note:** envstack works best combined with [siteconf](https://github.com/rsgalloway/siteconf).
-
 ## Installation
 
 The easiest way to install:
@@ -19,19 +17,25 @@ The easiest way to install:
 $ pip install envstack
 ```
 
-## Quickstart
-
-Copy the default stack file stack.env to your current working directory, the root of your project or $DEFAULT_ENV_DIR:
+Alternatively,
 
 ```bash
-$ cp stack.env $DEFAULT_ENV_DIR
+$ git clone https://github.com/rsgalloway/envstack
+$ cd envstack
+$ python setup.py install
 ```
 
-Or use [distman](https://github.com/rsgalloway/distman) to deploy it:
+The install process will automatically attempt to install the default `stack.env` file to the
+default env file directory defined `$DEFAULT_ENV_DIR`. **Note:** The [siteconf](https://github.com/rsgalloway/siteconf) sitecustomize.py module may override `$DEFAULT_ENV_DIR`.
+
+If installing from source, you can use [distman](https://github.com/rsgalloway/distman) to
+install envstack and the default `stack.env` file using the provided `dist.json` file:
 
 ```bash
 $ distman
 ```
+
+## Quickstart
 
 The `stack` namespace is the default environment stack. Running the `envstack` command
 should show you the default environment stack:
@@ -55,15 +59,16 @@ You can execute any command inside the default stacked environment like this:
 $ envstack -- [COMMAND]
 ```
 
-For example, use the `echo` command to see the resolved value of `$HELLO` (note: we have to
-escape it first to it's not pre-expanded in the shell):
+For example, use the `echo` command to see the resolved value of `$HELLO` (note: we
+have to escape it first to it's not pre-expanded in the shell):
 
 ```bash 
 $ envstack -- echo \$HELLO
 world
 ```
 
-Any command can be run in an envstack environment by preceeding with `--`:
+Any command can be run in an envstack environment by preceeding the command
+with `--`:
 
 ```bash
 $ envstack -- python -c "import os; print(os.environ['HELLO'])"
@@ -114,11 +119,16 @@ Environment stacks are hierarchical, so values for `$FOO` defined in .env files 
 in the filesystem (lower in scope) override those defined higher up (higher in scope):
 
 ```
-/show/thing.env
-/show/seq/thing.env
-/show/seq/shot/thing.env
-/show/seq/shot/task/thing.env
+${DEFAULT_ENV_DIR}
+/stack.env
+/show/stack.env
+/show/seq/stack.env
+/show/seq/shot/stack.env
+/show/seq/shot/task/stack.env
 ```
+
+If you are working in the task directory, those envstack $VARs will override the
+$VARs defined in the shot, seq, show and root directories.
 
 
 ## Usage

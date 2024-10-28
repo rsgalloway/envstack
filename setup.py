@@ -54,8 +54,11 @@ class PostInstallCommand(install):
         destination = os.path.join(DEFAULT_ENV_DIR, "stack.env")
 
         if os.path.exists(source):
-            print(f"Copying {source} to {destination}")
-            shutil.copy(source, destination)
+            if os.path.exists(destination):
+                print(f"WARNING: '{destination}' already exists, skipping")
+            else:
+                print(f"Copying {source} to {destination}")
+                shutil.copy(source, destination)
         else:
             print(f"{source} not found)")
 
@@ -87,7 +90,6 @@ setup(
     },
     install_requires=[
         "PyYAML>=5.1.2",
-        "siteconf>=0.1.7",
     ],
     data_files=[(".", ["stack.env"])],
     cmdclass={"install": PostInstallCommand},

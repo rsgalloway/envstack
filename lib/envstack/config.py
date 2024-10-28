@@ -59,6 +59,8 @@ def detect_shell():
 
 DEBUG = os.getenv("DEBUG")
 DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "stack")
+ENV = os.getenv("ENV", "prod")
+HOME = os.getenv("HOME")
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 ON_POSIX = "posix" in sys.builtin_module_names
 PLATFORM = platform.system().lower()
@@ -66,13 +68,21 @@ PYTHON_VERSION = sys.version_info[0]
 SHELL = detect_shell()
 USERNAME = os.getenv("USERNAME", os.getenv("USER"))
 
-# default location of the global env stacks
-# set in sitecustomize.py using siteconf>=0.1.7
+# set some default environment variables
+DEFAULT_ENV = {
+    "ENV": ENV,
+    "HOME": HOME,
+    "PLATFORM": PLATFORM,
+    "USER": USERNAME,
+}
+
+# default location of envstack files
+# NOTE: the siteconf sitecustomize.py module may override this
 DEFAULT_ENV_DIR = os.getenv(
     "DEFAULT_ENV_DIR",
     {
-        "darwin": "/etc/envstack",
-        "linux": "/etc/envstack",
-        "windows": "C:/ProgramData/envstack",
-    }.get(PLATFORM),
+        "darwin": "{HOME}/Library/Application Support/envstack",
+        "linux": "{HOME}/.local/envstack",
+        "windows": "C:\\ProgramData\\envstack",
+    }.get(PLATFORM).format(**DEFAULT_ENV),
 )
