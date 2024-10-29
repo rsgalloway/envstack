@@ -406,16 +406,17 @@ def build_sources(
     includes=True,
     default=config.DEFAULT_NAMESPACE,
 ):
-    """Builds the list of env source files for a given name.
-    Where the source is in the list of sources depends on its
-    position in the directory tree. Lower scope sources will
-    override higher scope sources, with the default source
-    at the lowest scope position:
+    """Builds the list of env source files for a given name. Where the source
+    is in the list of sources depends on its position in the directory tree.
+    Lower scope sources will override higher scope sources, with the default
+    source at the lowest scope position:
 
-        /show/envstack.env
-        /show/seq/envstack.env
-        /show/seq/shot/envstack.env
-        /show/seq/shot/task/envstack.env
+        $DEFAULT_ENV_DIR/stack.env
+        /stack.env
+        /show/stack.env
+        /show/seq/stack.env
+        /show/seq/shot/stack.env
+        /show/seq/shot/task/stack.env
 
     :param name: namespace (base name of .env file).
     :param scope: environment scope (default: cwd).
@@ -424,37 +425,47 @@ def build_sources(
     :returns: list of source files sorted by scope.
     """
 
-    # stores set of source env files
+    # list of source .env files
     sources = []
+
+    # list of included .env files
+    include_sources = []
 
     # scope, or root, of env tree
     path = scope or os.getcwd()
     scope = Scope(scope)
     level, levels = 0, len(scope.levels())
 
-    # the namespaced and default env file names
+    # the namespaced and default .env file names
     named_env = f"{name}.env"
     default_env = f"{default}.env"
 
     def add_source(path):
+        """Adds a source to the list of sources."""
         if not os.path.exists(path):
             return
         if not sources or (sources[0].path != path):
-            s = Source(path)
-            sources.insert(0, s)
-            return s
+            this_source = Source(path)
+            sources.insert(0, this_source)
+            return this_source
 
-    # walk up the directory tree looking for env files
+    def add_includes(src):
+        """Adds included sources to the list of sources and includes."""
+        included = [f"{i}.env" for i in src.includes()]
+        for include_env in included:
+            include_file = os.path.join(config.DEFAULT_ENV_DIR, include_env)
+            if include_env not in include_sources:
+                include_sources.append(include_env)
+            add_source(include_file)
+
+    # walk up the directory tree looking for .env files
     while level < levels:
         named_file = os.path.join(path, named_env)
         src = add_source(named_file)
         if src and includes:
-            included = [f"{i}.env" for i in src.includes()]
-            for include_env in included:
-                include_file = os.path.join(path, include_env)
-                add_source(include_file)
+            add_includes(src)
 
-        # look for a default env file in this scope
+        # look for a default .env file in this scope
         default_file = os.path.join(path, default_env)
         add_source(default_file)
 
@@ -464,18 +475,22 @@ def build_sources(
 
         level += 1
 
-    # check for default namespaced env file
-    named_default = os.path.join(config.DEFAULT_ENV_DIR, named_env)
-    src = add_source(named_default)
+    # look for default include .env files (and their includes)
+    for include_source in include_sources:
+        default_inc_src = add_source(
+            os.path.join(config.DEFAULT_ENV_DIR, include_source)
+        )
+        if default_inc_src and includes:
+            add_includes(default_inc_src)
+
+    # check for default .env file
+    default_src = add_source(os.path.join(config.DEFAULT_ENV_DIR, named_env))
 
     # add included sources
-    if src and includes:
-        included = ["{}.env".format(i) for i in src.includes()]
-        for include_env in included:
-            include_file = os.path.join(config.DEFAULT_ENV_DIR, include_env)
-            add_source(include_file)
+    if default_src and includes:
+        add_includes(default_src)
 
-    # check for global default env file
+    # check for global default .env file
     global_default = os.path.join(config.DEFAULT_ENV_DIR, default_env)
     add_source(global_default)
 

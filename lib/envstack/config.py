@@ -84,5 +84,7 @@ DEFAULT_ENV_DIR = os.getenv(
         "darwin": "{HOME}/Library/Application Support/envstack",
         "linux": "{HOME}/.local/envstack",
         "windows": "C:\\ProgramData\\envstack",
-    }.get(PLATFORM).format(**DEFAULT_ENV),
+    }
+    .get(PLATFORM)
+    .format(**DEFAULT_ENV),
 )

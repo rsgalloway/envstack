@@ -95,7 +95,7 @@ class Wrapper(object):
         # get subprocess env, cmd and args
         env = self.get_subprocess_env()
         cmd = expandvars(self.executable(), env, recursive=True)
-        args = " ".join(["\"%s\"" % arg for arg in to_args(cmd) + self.args])
+        args = " ".join(['"%s"' % arg for arg in to_args(cmd) + self.args])
 
         # run command in subprocess
         try:
