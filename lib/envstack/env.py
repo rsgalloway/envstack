@@ -261,21 +261,12 @@ class Env(dict):
         return self.get(key, resolved=False).template
 
     def merge(self, env):
-        """Merges another environ `env` into this one.
+        """Merges another env into this one, i.e. env[k] will replace self[k].
 
         :param env: env to merge into this one
         """
-        merged = env.copy()
-        for key, value in self.items():
-            if isinstance(value, str):
-                # replace ${KEY} vars with values from env
-                value = re.sub(
-                    r"\${(\w+)}",
-                    lambda match: env.get(match.group(1), match.group(0)),
-                    value,
-                )
-            merged[key] = value
-        return merged
+        for k, v in env.items():
+            self[k] = v
 
     def set_namespace(self, name):
         """Stores the namespace for this environment.
@@ -598,7 +589,7 @@ def load_environ(
 
     # merge values from given environment
     if environ:
-        env.merge(environ)
+        return merge(env, environ)
 
     return env
 
@@ -635,11 +626,31 @@ def load_file(path):
     return data
 
 
+def merge(env, other):
+    """Merges values from other into env. For example, to merge values from
+    the local environment into an env instance:
+
+        >>> merge(env, os.environ)
+
+    To merge values from env into the local environment:
+
+        >>> merge(os.environ, env)
+
+    :param env: source env
+    :param other: env to merge
+    :returns: merged env
+    """
+    merged = env.copy()
+    for key in merged:
+        if key in other:
+            merged[key] = other.get(key)
+    return merged
+
+
 def safe_eval(value):
     """Returns template value preserving original class.
     Useful for preserving nested values in wrappers.
     """
-
     try:
         from ast import literal_eval
 
