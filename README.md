@@ -212,7 +212,7 @@ To source the environment in your current shell, source the output of --export
 
 ```bash
 $ source <(envstack --export)
-$ alias stack='source <(envstack $ARG --export)'
+$ alias stack='f() { source <(envstack "$1" --export); }; f'
 ```
 
 In Windows command prompt:
