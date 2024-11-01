@@ -207,18 +207,49 @@ $ envstack thing -- python -c "import os; print(os.environ['FOO'])"
 bar
 ```
 
-To source the environment in your current shell, source the output of --export
-(and create an alias for convenience):
+## Shells
 
+In order to set an environment stack in your current shell, the stack must be
+sourced (that's because Python processes and subshells cannot alter the
+environment of the parent process).
+
+To source the environment in your current shell, create an alias that sources
+the output of the `--export` command:
+
+#### bash
 ```bash
-$ source <(envstack --export)
-$ alias stack='f() { source <(envstack "$1" --export); }; f'
+alias envstack-set='source <(envstack "$1" --export)';
 ```
 
-In Windows command prompt:
-
+#### cmd
 ```cmd
-for /f "usebackq" %i in (`envstack --export`) do %i
+doskey envstack-set=for /f "usebackq" %%i in (`envstack --export $*`) do %%i
+```
+
+Then you can set the environment stack in your shell with the `envstack-set`
+command. To clear the environment in your current shell, create an alias that
+sources the output of the `--clear` command:
+
+#### bash
+```bash
+alias envstack-clear='source <(envstack "$1" --clear)';
+```
+
+#### cmd
+```cmd
+doskey envstack-clear=for /f "usebackq" %%i in (`envstack --clear $*`) do %%i
+```
+
+Create a function for convenience that does both in one command:
+
+#### bash
+```bash
+envstack-init() { envstack-clear "$1"; envstack-set "$1"; }
+```
+
+#### cmd
+```cmd
+doskey envstack-init=envstack-clear $* & envstack-set $*
 ```
 
 ## Config

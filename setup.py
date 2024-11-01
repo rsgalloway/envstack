@@ -74,7 +74,7 @@ class PostInstallCommand(install):
 
 setup(
     name="envstack",
-    version="0.5.2",
+    version="0.5.3",
     description="Stacked environment variable management system.",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -85,7 +85,7 @@ setup(
     packages=find_packages("lib"),
     entry_points={
         "console_scripts": [
-            "envstack = envstack.cli:main",
+            "envstack=envstack.cli:main",
         ],
     },
     install_requires=[

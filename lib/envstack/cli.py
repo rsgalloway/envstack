@@ -74,9 +74,14 @@ def parse_args():
         help="the environment stack to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
     parser.add_argument(
+        "--clear",
+        action="store_true",
+        help="generate shell unset commands for a given stack",
+    )
+    parser.add_argument(
         "--export",
         action="store_true",
-        help="generate export commands for the current shell",
+        help="generate shell export commands for a given stack",
     )
     parser.add_argument(
         "-p",
@@ -133,6 +138,8 @@ def main():
             sources = build_sources(args.namespace)
             for source in sources:
                 print(source)
+        elif args.clear:
+            print(export(args.namespace, config.SHELL, clear=True))
         elif args.export:
             print(export(args.namespace, config.SHELL))
         elif command:

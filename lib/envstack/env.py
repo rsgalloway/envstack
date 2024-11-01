@@ -504,33 +504,50 @@ def expandvars(var, env=None, recursive=False):
     return EnvVar(var).expand(env, recursive=recursive)
 
 
-def export(name, shell="bash", resolve=False, scope=None):
+def export(name, shell="bash", resolve=False, scope=None, clear=False):
     """Returns environment commands that can be sourced.
 
        $ source <(envstack --export)
 
-    List of shell names: bash, tcsh, cmd, pwsh
+    or to clear existing values:
+
+        $ source <(envstack --clear)
+
+    List of shell names: bash, sh, tcsh, cmd, pwsh
     (see output of config.detect_shell()).
 
-    :param name: stack namespace
-    :param shell: name of shell (default: bash)
-    :param resolve: resolve values (default: True)
-    :param scope: environment scope (default: cwd)
-    :returns: shell commands as string
+    :param name: stack namespace.
+    :param shell: name of shell (default: bash).
+    :param resolve: resolve values (default: True).
+    :param scope: environment scope (default: cwd).
+    :param clear: clear existing values (default: False).
+    :returns: shell commands as string.
     """
     env = load_environ(name, scope=scope)
     expList = list()
     for k, v in env.items():
         if resolve:
             v = expandvars(v, env, recursive=False)
-        if shell == "bash":
-            expList.append('export {0}="{1}"'.format(k, v))
+        if shell == "bash" or shell == "sh":
+            if clear:
+                expList.append(f"unset {k}")
+            else:
+                expList.append(f'export {k}="{v}"')
         elif shell == "tcsh":
-            expList.append('setenv {0}:"{1}"'.format(k, v))
+            if clear:
+                expList.append(f"unsetenv {k}")
+            else:
+                expList.append(f'setenv {k}:"{v}"')
         elif shell == "cmd":
-            expList.append('set {0}="{1}"'.format(k, v))
+            if clear:
+                expList.append(f"set {k}=")
+            else:
+                expList.append(f'set {k}="{v}"')
         elif shell == "pwsh":
-            expList.append('$env:{0}="{1}"'.format(k, v))
+            if clear:
+                expList.append(f"Remove-Item Env:{k}")
+            else:
+                expList.append(f'$env:{k}="{v}"')
     expList.sort()
     exp = "\n".join(expList)
     return exp
