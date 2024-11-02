@@ -528,7 +528,7 @@ def export(name, shell="bash", resolve=False, scope=None, clear=False):
     for k, v in env.items():
         if resolve:
             v = expandvars(v, env, recursive=False)
-        if shell == "bash" or shell == "sh":
+        if shell in ["bash", "sh", "zsh"]:
             if clear:
                 expList.append(f"unset {k}")
             else:
@@ -548,6 +548,8 @@ def export(name, shell="bash", resolve=False, scope=None, clear=False):
                 expList.append(f"Remove-Item Env:{k}")
             else:
                 expList.append(f'$env:{k}="{v}"')
+        elif shell == "unknown":
+            raise Exception("unknown shell")
     expList.sort()
     exp = "\n".join(expList)
     return exp

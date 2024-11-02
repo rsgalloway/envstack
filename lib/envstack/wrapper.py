@@ -37,6 +37,7 @@ import os
 import subprocess
 import traceback
 
+from envstack import config
 from envstack import logger
 from envstack.env import encode, expandvars, load_environ
 
@@ -91,13 +92,10 @@ class Wrapper(object):
     def launch(self):
         """Launches the wrapped tool in a subprocess with env."""
         exitcode = 0
-
-        # get subprocess env, cmd and args
         env = self.get_subprocess_env()
         cmd = expandvars(self.executable(), env, recursive=True)
         args = " ".join(['"%s"' % arg for arg in to_args(cmd) + self.args])
 
-        # run command in subprocess
         try:
             process = subprocess.Popen(
                 args=args,
@@ -145,6 +143,26 @@ class CommandWrapper(Wrapper):
         self.args = args[1:]
 
     def executable(self):
+        """Returns the command to run."""
+        return self.cmd
+
+
+class ShellWrapper(CommandWrapper):
+    """Wrapper class for running wrapped shell scripts in bash, sh, or zsh."""
+
+    def __init__(self, namespace, args=[]):
+        """
+        Initializes the shell wrapper with the given namespace and script.
+
+        :param namespace: stack namespace
+        :param args: command line arguments
+        """
+        super(ShellWrapper, self).__init__(namespace, args)
+
+    def executable(self):
+        """Returns the shell command to run the script."""
+        self.args = ["-i", "-c", "%s" % " ".join([self.cmd] + self.args)]
+        self.cmd = config.SHELL
         return self.cmd
 
 
@@ -157,5 +175,8 @@ def run_command(namespace, command):
     :returns: exit code
     """
     logger.setup_stream_handler()
-    cmd = CommandWrapper(namespace, command)
+    if config.SHELL in ["bash", "sh", "zsh"]:
+        cmd = ShellWrapper(namespace, command)
+    else:
+        cmd = CommandWrapper(namespace, command)
     return cmd.launch()
