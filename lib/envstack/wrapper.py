@@ -43,8 +43,8 @@ from envstack.env import encode, expandvars, load_environ
 
 
 def to_args(cmd):
-    """Converts a command line string to an arg list to be passed to subprocess.Popen
-    that preserves args with quotes."""
+    """Converts a command line string to an arg list to be passed to
+    subprocess.Popen that preserves args with quotes."""
 
     import shlex
 
@@ -130,12 +130,18 @@ class Wrapper(object):
 class CommandWrapper(Wrapper):
     """Wrapper class for running wrapped commands from the command-line."""
 
-    def __init__(self, namespace, args=[]):
+    def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
         """
-        Initializes the command wrapper with the given namespace and args.
+        Initializes the command wrapper with the given namespace and args, e.g.:
 
-        :param namespace: stack namespace
-        :param args: command line arguments
+            >>> cmd = CommandWrapper('stack', ['ls', '-al'])
+            >>> print(cmd.executable())
+            ls
+            >>> print(cmd.args)
+            ['-al']
+
+        :param namespace: stack namespace (default: 'stack')
+        :param args: command and arguments as a list
         """
         super(CommandWrapper, self).__init__(namespace, args)
         self.log.debug("running command [stack: %s] %s", namespace, args)
@@ -150,28 +156,41 @@ class CommandWrapper(Wrapper):
 class ShellWrapper(CommandWrapper):
     """Wrapper class for running wrapped shell scripts in bash, sh, or zsh."""
 
-    def __init__(self, namespace, args=[]):
+    def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
         """
-        Initializes the shell wrapper with the given namespace and script.
+        Initializes the command wrapper with the given namespace and args,
+        replacing the original command with the shell command, e.g.:
 
-        :param namespace: stack namespace
-        :param args: command line arguments
+            >>> cmd = ShellWrapper('stack', ['ls', '-l'])
+            >>> print(cmd.executable())
+            bash
+            >>> print(cmd.args)
+            ['-i', '-c', 'ls -l']
+
+        :param namespace: stack namespace (default: 'stack')
+        :param args: command and arguments as a list
         """
         super(ShellWrapper, self).__init__(namespace, args)
 
     def executable(self):
-        """Returns the shell command to run the script."""
+        """Returns the shell command to run the original command."""
         self.args = ["-i", "-c", "%s" % " ".join([self.cmd] + self.args)]
         self.cmd = config.SHELL
         return self.cmd
 
 
-def run_command(namespace, command):
+def run_command(command, namespace=config.DEFAULT_NAMESPACE):
     """
     Runs a given command with the given stack namespace.
 
-    :param namespace: stack namespace
-    :param command: command to run as arg list
+        >>> run_command(['ls', '-l'])
+
+    Or to run in a specific stack namespace:
+
+        >>> run_command(['ls', '-l'], 'my-stack')
+
+    :param command: command to run as a list of arguments
+    :param namespace: environment stack namespace (default: 'stack')
     :returns: exit code
     """
     logger.setup_stream_handler()
