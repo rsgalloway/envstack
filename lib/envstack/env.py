@@ -645,7 +645,7 @@ def load_file(path):
     return data
 
 
-def merge(env, other):
+def merge(env, other, strict=False):
     """Merges values from other into env. For example, to merge values from
     the local environment into an env instance:
 
@@ -657,12 +657,23 @@ def merge(env, other):
 
     :param env: source env
     :param other: env to merge
+    :param strict: env value takes precedence (default: False)
     :returns: merged env
     """
     merged = env.copy()
-    for key in merged:
+    for key, value in merged.items():
         if key in other:
-            merged[key] = other.get(key)
+            # append value from other
+            if os.pathsep in str(value):
+                value = re.sub(
+                    r"\${(\w+)}",
+                    lambda match: other.get(match.group(1), match.group(0)),
+                    value,
+                )
+            # replace value from other
+            elif not strict:
+                value = other.get(key)
+            merged[key] = value
     return merged
 
 

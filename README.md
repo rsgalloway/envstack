@@ -161,8 +161,8 @@ To init the environment stack, use the `init` function:
 'bar'
 ```
 
-Alternatively, `envstack.getenv` uses the default environment stack `stack` and
-can be a drop-in replacement for `os.getenv` 
+Alternatively, `envstack.getenv` can be a drop-in replacement for `os.getenv`
+for the default environment stack:
 
 ```python
 >>> import envstack
