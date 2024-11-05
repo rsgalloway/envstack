@@ -223,7 +223,7 @@ alias envstack-set='source <(envstack "$1" --export)';
 
 #### cmd
 ```cmd
-doskey envstack-set=for /f "usebackq" %%i in (`envstack --export $*`) do %%i
+doskey envstack-set=for /f "usebackq" %i in (`envstack --export $*`) do %%i
 ```
 
 Then you can set the environment stack in your shell with the `envstack-set`
@@ -237,7 +237,7 @@ alias envstack-clear='source <(envstack "$1" --clear)';
 
 #### cmd
 ```cmd
-doskey envstack-clear=for /f "usebackq" %%i in (`envstack --clear $*`) do %%i
+doskey envstack-clear=for /f "usebackq" %i in (`envstack --clear $*`) do %%i
 ```
 
 Create a function for convenience that does both in one command:
