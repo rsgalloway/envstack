@@ -37,13 +37,14 @@ import os
 import subprocess
 import traceback
 
+from envstack import config
 from envstack import logger
 from envstack.env import encode, expandvars, load_environ
 
 
 def to_args(cmd):
-    """Converts a command line string to an arg list to be passed to subprocess.Popen
-    that preserves args with quotes."""
+    """Converts a command line string to an arg list to be passed to
+    subprocess.Popen that preserves args with quotes."""
 
     import shlex
 
@@ -81,6 +82,7 @@ class Wrapper(object):
         super(Wrapper, self).__init__()
         self.args = args
         self.name = namespace
+        self.shell = True
         self.log = logger.log
         self.env = load_environ(namespace)
 
@@ -91,19 +93,16 @@ class Wrapper(object):
     def launch(self):
         """Launches the wrapped tool in a subprocess with env."""
         exitcode = 0
-
-        # get subprocess env, cmd and args
         env = self.get_subprocess_env()
         cmd = expandvars(self.executable(), env, recursive=True)
-        args = " ".join(['"%s"' % arg for arg in to_args(cmd) + self.args])
+        args = self.get_subprocess_args(cmd)
 
-        # run command in subprocess
         try:
             process = subprocess.Popen(
                 args=args,
                 bufsize=0,
                 env=env,
-                shell=True,
+                shell=self.shell,
             )
 
         except Exception:
@@ -119,6 +118,10 @@ class Wrapper(object):
 
         return exitcode
 
+    def get_subprocess_args(self, cmd):
+        """Returns the arguments to be passed to the subprocess."""
+        return self.args
+
     def get_subprocess_env(self):
         """
         Returns the environment that gets passed to the subprocess when launch()
@@ -132,30 +135,109 @@ class Wrapper(object):
 class CommandWrapper(Wrapper):
     """Wrapper class for running wrapped commands from the command-line."""
 
-    def __init__(self, namespace, args=[]):
+    def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
         """
-        Initializes the command wrapper with the given namespace and args.
+        Initializes the command wrapper with the given namespace and args, e.g.:
 
-        :param namespace: stack namespace
-        :param args: command line arguments
+            >>> cmd = CommandWrapper('stack', ['ls', '-al'])
+            >>> print(cmd.executable())
+            ls
+            >>> print(cmd.args)
+            ['-al']
+
+        :param namespace: stack namespace (default: 'stack')
+        :param args: command and arguments as a list
         """
         super(CommandWrapper, self).__init__(namespace, args)
         self.log.debug("running command [stack: %s] %s", namespace, args)
         self.cmd = args[0]
         self.args = args[1:]
 
+    def get_subprocess_args(self, cmd):
+        """Returns the arguments to be passed to the subprocess."""
+        return " ".join(['"%s"' % arg for arg in to_args(cmd) + self.args])
+
     def executable(self):
+        """Returns the command to run."""
         return self.cmd
 
 
-def run_command(namespace, command):
+class ShellWrapper(CommandWrapper):
+    """Wrapper class for running wrapped commands in bash, sh, or zsh."""
+
+    def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
+        """
+        Initializes the command wrapper with the given namespace and args,
+        replacing the original command with the shell command, e.g.:
+
+            >>> cmd = ShellWrapper('stack', ['ls', '-l'])
+            >>> print(cmd.executable())
+            bash
+            >>> print(cmd.args)
+            ['-i', '-c', 'ls -l']
+
+        :param namespace: stack namespace (default: 'stack')
+        :param args: command and arguments as a list
+        """
+        super(ShellWrapper, self).__init__(namespace, args)
+        self.args = ["-i", "-c", "%s" % " ".join([self.cmd] + self.args)]
+
+    def executable(self):
+        """Returns the shell command to run the original command."""
+        self.cmd = config.SHELL
+        return self.cmd
+
+
+class CmdWrapper(CommandWrapper):
+    """Wrapper class for running wrapped commands in command prompt."""
+
+    def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
+        """
+        Initializes the command wrapper with the given namespace and args,
+        replacing the original command with the shell command, e.g.:
+
+            >>> cmd = CmdWrapper('stack', ['ls', '-l'])
+            >>> print(cmd.executable())
+            bash
+            >>> print(cmd.args)
+            ['-i', '-c', 'ls -l']
+
+        :param namespace: stack namespace (default: 'stack')
+        :param args: command and arguments as a list
+        """
+        super(CmdWrapper, self).__init__(namespace, args)
+        self.args = ["/c", "%s" % " ".join([self.cmd] + self.args)]
+        self.shell = False
+
+    def get_subprocess_args(self, cmd):
+        """Returns the arguments to be passed to the subprocess."""
+        return [cmd] + self.args
+
+    def executable(self):
+        """Returns the shell command to run the original command."""
+        self.cmd = config.SHELL
+        return self.cmd
+
+
+def run_command(command, namespace=config.DEFAULT_NAMESPACE):
     """
     Runs a given command with the given stack namespace.
 
-    :param namespace: stack namespace
-    :param command: command to run as arg list
+        >>> run_command(['ls', '-l'])
+
+    Or to run in a specific stack namespace:
+
+        >>> run_command(['ls', '-l'], 'my-stack')
+
+    :param command: command to run as a list of arguments
+    :param namespace: environment stack namespace (default: 'stack')
     :returns: exit code
     """
     logger.setup_stream_handler()
-    cmd = CommandWrapper(namespace, command)
+    if config.SHELL in ["bash", "sh", "zsh"]:
+        cmd = ShellWrapper(namespace, command)
+    elif config.SHELL in ["cmd"]:
+        cmd = CmdWrapper(namespace, command)
+    else:
+        cmd = CommandWrapper(namespace, command)
     return cmd.launch()
