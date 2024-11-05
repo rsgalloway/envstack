@@ -82,6 +82,7 @@ class Wrapper(object):
         super(Wrapper, self).__init__()
         self.args = args
         self.name = namespace
+        self.shell = True
         self.log = logger.log
         self.env = load_environ(namespace)
 
@@ -94,14 +95,18 @@ class Wrapper(object):
         exitcode = 0
         env = self.get_subprocess_env()
         cmd = expandvars(self.executable(), env, recursive=True)
-        args = " ".join(['"%s"' % arg for arg in to_args(cmd) + self.args])
+
+        if config.SHELL == "cmd":
+            args = [cmd] + self.args
+        else:
+            args = " ".join(['"%s"' % arg for arg in to_args(cmd) + self.args])
 
         try:
             process = subprocess.Popen(
                 args=args,
                 bufsize=0,
                 env=env,
-                shell=True,
+                shell=self.shell,
             )
 
         except Exception:
@@ -154,7 +159,7 @@ class CommandWrapper(Wrapper):
 
 
 class ShellWrapper(CommandWrapper):
-    """Wrapper class for running wrapped shell scripts in bash, sh, or zsh."""
+    """Wrapper class for running wrapped commands in bash, sh, or zsh."""
 
     def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
         """
@@ -179,6 +184,33 @@ class ShellWrapper(CommandWrapper):
         return self.cmd
 
 
+class CmdWrapper(CommandWrapper):
+    """Wrapper class for running wrapped commands in command prompt."""
+
+    def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
+        """
+        Initializes the command wrapper with the given namespace and args,
+        replacing the original command with the shell command, e.g.:
+
+            >>> cmd = CmdWrapper('stack', ['ls', '-l'])
+            >>> print(cmd.executable())
+            bash
+            >>> print(cmd.args)
+            ['-i', '-c', 'ls -l']
+
+        :param namespace: stack namespace (default: 'stack')
+        :param args: command and arguments as a list
+        """
+        super(CmdWrapper, self).__init__(namespace, args)
+        self.shell = False
+
+    def executable(self):
+        """Returns the shell command to run the original command."""
+        self.args = ["/c", "%s" % " ".join([self.cmd] + self.args)]
+        self.cmd = config.SHELL
+        return self.cmd
+
+
 def run_command(command, namespace=config.DEFAULT_NAMESPACE):
     """
     Runs a given command with the given stack namespace.
@@ -196,6 +228,8 @@ def run_command(command, namespace=config.DEFAULT_NAMESPACE):
     logger.setup_stream_handler()
     if config.SHELL in ["bash", "sh", "zsh"]:
         cmd = ShellWrapper(namespace, command)
+    elif config.SHELL in ["cmd"]:
+        cmd = CmdWrapper(namespace, command)
     else:
         cmd = CommandWrapper(namespace, command)
     return cmd.launch()
