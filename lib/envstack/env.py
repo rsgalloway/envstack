@@ -662,18 +662,19 @@ def merge(env, other, strict=False):
     """
     merged = env.copy()
     for key, value in merged.items():
+        var = "${%s}" % key
         if key in other:
-            # append value from other
-            if os.pathsep in str(value):
+            if var in str(value):
                 value = re.sub(
                     r"\${(\w+)}",
                     lambda match: other.get(match.group(1), match.group(0)),
                     value,
                 )
-            # replace value from other
             elif not strict:
                 value = other.get(key)
-            merged[key] = value
+        else:
+            value = value.replace(var, "")
+        merged[key] = value
     return merged
 
 
