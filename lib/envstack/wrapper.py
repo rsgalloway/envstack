@@ -95,11 +95,7 @@ class Wrapper(object):
         exitcode = 0
         env = self.get_subprocess_env()
         cmd = expandvars(self.executable(), env, recursive=True)
-
-        if config.SHELL == "cmd":
-            args = [cmd] + self.args
-        else:
-            args = " ".join(['"%s"' % arg for arg in to_args(cmd) + self.args])
+        args = self.get_subprocess_args(cmd)
 
         try:
             process = subprocess.Popen(
@@ -121,6 +117,10 @@ class Wrapper(object):
             exitcode = process.poll()
 
         return exitcode
+
+    def get_subprocess_args(self, cmd):
+        """Returns the arguments to be passed to the subprocess."""
+        return self.args
 
     def get_subprocess_env(self):
         """
@@ -153,6 +153,10 @@ class CommandWrapper(Wrapper):
         self.cmd = args[0]
         self.args = args[1:]
 
+    def get_subprocess_args(self, cmd):
+        """Returns the arguments to be passed to the subprocess."""
+        return " ".join(['"%s"' % arg for arg in to_args(cmd) + self.args])
+
     def executable(self):
         """Returns the command to run."""
         return self.cmd
@@ -176,10 +180,10 @@ class ShellWrapper(CommandWrapper):
         :param args: command and arguments as a list
         """
         super(ShellWrapper, self).__init__(namespace, args)
+        self.args = ["-i", "-c", "%s" % " ".join([self.cmd] + self.args)]
 
     def executable(self):
         """Returns the shell command to run the original command."""
-        self.args = ["-i", "-c", "%s" % " ".join([self.cmd] + self.args)]
         self.cmd = config.SHELL
         return self.cmd
 
@@ -202,11 +206,15 @@ class CmdWrapper(CommandWrapper):
         :param args: command and arguments as a list
         """
         super(CmdWrapper, self).__init__(namespace, args)
+        self.args = ["/c", "%s" % " ".join([self.cmd] + self.args)]
         self.shell = False
+
+    def get_subprocess_args(self, cmd):
+        """Returns the arguments to be passed to the subprocess."""
+        return [cmd] + self.args
 
     def executable(self):
         """Returns the shell command to run the original command."""
-        self.args = ["/c", "%s" % " ".join([self.cmd] + self.args)]
         self.cmd = config.SHELL
         return self.cmd
 
