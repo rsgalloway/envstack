@@ -391,32 +391,12 @@ def encode(env, resolved=True):
     return dict((c(k), c(v)) for k, v in env.items())
 
 
-def build_sources(
+def _build_sources(
     name=config.DEFAULT_NAMESPACE,
     scope=None,
     includes=True,
     default=config.DEFAULT_NAMESPACE,
 ):
-    """Builds the list of env source files for a given name. Where the source
-    is in the list of sources depends on its position in the directory tree.
-    Lower scope sources will override higher scope sources, with the default
-    source at the lowest scope position:
-
-        $DEFAULT_ENV_DIR/stack.env
-        /stack.env
-        /show/stack.env
-        /show/seq/stack.env
-        /show/seq/shot/stack.env
-        /show/seq/shot/task/stack.env
-
-    :param name: namespace (base name of .env file).
-    :param scope: environment scope (default: cwd).
-    :param includes: add sources specified in includes.
-    :param default: name of default environment namespace.
-    :returns: list of source files sorted by scope.
-    """
-
-    # list of source .env files
     sources = []
 
     # list of included .env files
@@ -484,6 +464,51 @@ def build_sources(
     # check for global default .env file
     global_default = os.path.join(config.DEFAULT_ENV_DIR, default_env)
     add_source(global_default)
+
+    return sources
+
+
+def build_sources(
+    name=config.DEFAULT_NAMESPACE,
+    scope=None,
+    includes=True,
+    default=config.DEFAULT_NAMESPACE,
+):
+    """Builds the list of env source files for a given name. Where the source
+    is in the list of sources depends on its position in the directory tree.
+    Lower scope sources will override higher scope sources, with the default
+    source at the lowest scope position:
+
+        $DEFAULT_ENV_DIR/stack.env
+        /stack.env
+        /show/stack.env
+        /show/seq/stack.env
+        /show/seq/shot/stack.env
+        /show/seq/shot/task/stack.env
+
+    :param name: list of .env file basenames.
+    :param scope: environment scope (default: cwd).
+    :param includes: add sources specified in includes.
+    :param default: name of default environment namespace.
+    :returns: list of source files sorted by scope.
+    """
+
+    sources = []
+
+    if type(name) == str:
+        namespaces = [name]
+    else:
+        namespaces = name
+
+    for namespace in namespaces:
+        named_sources = _build_sources(
+            name=namespace,
+            scope=scope,
+            includes=includes,
+            default=default,
+        )
+        if named_sources:
+            sources.extend(named_sources)
 
     return sources
 
@@ -592,7 +617,7 @@ def load_environ(
     :returns: dict of environment variables.
     """
 
-    # build list of sources from scope
+    # build list of sources from namespace(s) and scope
     if not sources:
         sources = build_sources(name, scope=scope, includes=includes)
 

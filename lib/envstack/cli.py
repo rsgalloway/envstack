@@ -69,8 +69,8 @@ def parse_args():
     parser.add_argument(
         "namespace",
         metavar="STACK",
-        nargs="?",
-        default=config.DEFAULT_NAMESPACE,
+        nargs="*",
+        default=[config.DEFAULT_NAMESPACE],
         help="the environment stack to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
     parser.add_argument(
