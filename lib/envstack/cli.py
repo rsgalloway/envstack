@@ -145,7 +145,9 @@ def main():
         elif command:
             return run_command(command, args.namespace)
         else:
-            env = load_environ(args.namespace, platform=args.platform, includes=True)
+            env = load_environ(
+                args.namespace, environ=None, platform=args.platform, includes=True
+            )
             for k, v in env.items():
                 print(f"{k}={v}")
 

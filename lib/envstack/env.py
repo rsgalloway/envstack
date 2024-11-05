@@ -179,7 +179,7 @@ class EnvVar(string.Template, str):
 
     def value(self):
         """Returns EnvVar value."""
-        return safe_eval(self.template)
+        return re.sub(r"(?<!\b[A-Za-z]):", os.pathsep, safe_eval(self.template))
 
     def vars(self):
         """Returns a list of embedded, named variables, e.g.: ::
