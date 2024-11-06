@@ -40,8 +40,11 @@ import string
 from envstack import config, logger, path
 from envstack.exceptions import *
 
-# named variable delimiter pattern
+# value delimiter pattern (splits values by colons or semicolons)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
+
+# delimiter substitution pattern (replaces colons with os.pathsep)
+delimiter_sub_pattern = re.compile("(?<!\b[A-Za-z]):")
 
 # stores cached file data in memory
 load_file_cache = {}
@@ -179,7 +182,7 @@ class EnvVar(string.Template, str):
 
     def value(self):
         """Returns EnvVar value."""
-        return re.sub(r"(?<!\b[A-Za-z]):", os.pathsep, safe_eval(self.template))
+        return safe_eval(self.template)
 
     def vars(self):
         """Returns a list of embedded, named variables, e.g.: ::
@@ -698,14 +701,19 @@ def merge(env, other, strict=False):
             elif not strict:
                 value = other.get(key)
         else:
-            value = value.replace(var, "")
-        merged[key] = value
+            value = str(value).replace(var, "")
+        merged[key] = delimiter_sub_pattern.sub(os.pathsep, value)
     return merged
 
 
 def safe_eval(value):
-    """Returns template value preserving original class.
-    Useful for preserving nested values in wrappers.
+    """
+    Returns template value preserving original class. Useful for preserving
+    nested values in wrappers. For example, a value of "1.0" returns 1.0, and a
+    value of "['a', 'b']" returns ['a', 'b'].
+
+    :param value: value to evaluate
+    :returns: evaluated value
     """
     try:
         from ast import literal_eval
