@@ -636,7 +636,7 @@ def load_environ(
 
     # merge values from given environment
     if environ:
-        return merge(env, environ)
+        return merge(env, environ, platform=platform)
 
     return env
 
@@ -673,7 +673,7 @@ def load_file(path):
     return data
 
 
-def merge(env, other, strict=False):
+def merge(env, other, strict=False, platform=config.PLATFORM):
     """Merges values from other into env. For example, to merge values from
     the local environment into an env instance:
 
@@ -685,7 +685,8 @@ def merge(env, other, strict=False):
 
     :param env: source env
     :param other: env to merge
-    :param strict: env value takes precedence (default: False)
+    :param strict: value from env takes precedence (default: False)
+    :param platform: name of platform (linux, darwin, windows)
     :returns: merged env
     """
     merged = env.copy()
@@ -702,7 +703,14 @@ def merge(env, other, strict=False):
                 value = other.get(key)
         else:
             value = str(value).replace(var, "")
-        merged[key] = delimiter_sub_pattern.sub(os.pathsep, value)
+        # replace colons in env value with os.pathsep
+        pathsep = os.pathsep
+        if platform == "windows":
+            pathsep = ";"
+        merged[key] = delimiter_sub_pattern.sub(pathsep, value)
+        # remove trailing path separator
+        if key in ("PATH", "PYTHONPATH"):
+            merged[key] = merged[key].rstrip(pathsep)
     return merged
 
 
