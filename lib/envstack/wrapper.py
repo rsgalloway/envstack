@@ -34,7 +34,9 @@ Contains executable wrapper classes and functions.
 """
 
 import os
+import re
 import subprocess
+import shlex
 import traceback
 
 from envstack import config
@@ -45,9 +47,6 @@ from envstack.env import encode, expandvars, load_environ
 def to_args(cmd):
     """Converts a command line string to an arg list to be passed to
     subprocess.Popen that preserves args with quotes."""
-
-    import shlex
-
     return shlex.split(cmd)
 
 
@@ -94,12 +93,11 @@ class Wrapper(object):
         """Launches the wrapped tool in a subprocess with env."""
         exitcode = 0
         env = self.get_subprocess_env()
-        cmd = expandvars(self.executable(), env, recursive=True)
-        args = self.get_subprocess_args(cmd)
+        command = self.get_subprocess_command(env)
 
         try:
             process = subprocess.Popen(
-                args=args,
+                args=command,
                 bufsize=0,
                 env=env,
                 shell=self.shell,
@@ -121,6 +119,12 @@ class Wrapper(object):
     def get_subprocess_args(self, cmd):
         """Returns the arguments to be passed to the subprocess."""
         return self.args
+
+    def get_subprocess_command(self, env):
+        """Returns the command to be passed to the subprocess."""
+        cmd = expandvars(self.executable(), env, recursive=True)
+        args = self.get_subprocess_args(cmd)
+        return " ".join([cmd] + args)
 
     def get_subprocess_env(self):
         """
@@ -149,17 +153,11 @@ class CommandWrapper(Wrapper):
         :param args: command and arguments as a list
         """
         super(CommandWrapper, self).__init__(namespace, args)
-        self.log.debug("running command [stack: %s] %s", namespace, args)
-        self.cmd = args[0]
-        self.args = args[1:]
-
-    def get_subprocess_args(self, cmd):
-        """Returns the arguments to be passed to the subprocess."""
-        return " ".join(['"%s"' % arg for arg in to_args(cmd) + self.args])
+        self.cmd = args
 
     def executable(self):
         """Returns the command to run."""
-        return self.cmd
+        return config.SHELL
 
 
 class ShellWrapper(CommandWrapper):
@@ -180,11 +178,18 @@ class ShellWrapper(CommandWrapper):
         :param args: command and arguments as a list
         """
         super(ShellWrapper, self).__init__(namespace, args)
-        self.args = ["-i", "-c", "%s" % " ".join([self.cmd] + self.args)]
+
+    def get_subprocess_command(self, env):
+        """Returns the command to be passed to the shell in a subprocess."""
+        self.cmd = expandvars(self.cmd, env, recursive=True)
+        if re.search(r"\$\w+", self.cmd):
+            return f'{config.SHELL} -i -c "{self.cmd}"'
+        else:
+            escaped_command = shlex.quote(self.cmd)
+            return f"{config.SHELL} -i -c {escaped_command}"
 
     def executable(self):
         """Returns the shell command to run the original command."""
-        self.cmd = config.SHELL
         return self.cmd
 
 
@@ -234,6 +239,7 @@ def run_command(command, namespace=config.DEFAULT_NAMESPACE):
     :returns: exit code
     """
     logger.setup_stream_handler()
+    command = shlex.join(command)
     if config.SHELL in ["bash", "sh", "zsh"]:
         cmd = ShellWrapper(namespace, command)
     elif config.SHELL in ["cmd"]:
