@@ -201,17 +201,17 @@ class CmdWrapper(CommandWrapper):
         Initializes the command wrapper with the given namespace and args,
         replacing the original command with the shell command, e.g.:
 
-            >>> cmd = CmdWrapper('stack', ['ls', '-l'])
+            >>> cmd = CmdWrapper('stack', ['dir'])
             >>> print(cmd.executable())
-            bash
+            cmd
             >>> print(cmd.args)
-            ['-i', '-c', 'ls -l']
+            ['/c', 'dir']
 
         :param namespace: stack namespace (default: 'stack')
         :param args: command and arguments as a list
         """
         super(CmdWrapper, self).__init__(namespace, args)
-        self.args = ["/c", "%s" % " ".join([self.cmd] + self.args)]
+        self.args = ["/c", self.cmd]
         self.shell = False
 
     def get_subprocess_args(self, cmd):
@@ -239,11 +239,10 @@ def run_command(command, namespace=config.DEFAULT_NAMESPACE):
     :returns: exit code
     """
     logger.setup_stream_handler()
-    command = shlex.join(command)
     if config.SHELL in ["bash", "sh", "zsh"]:
-        cmd = ShellWrapper(namespace, command)
+        cmd = ShellWrapper(namespace, shlex.join(command))
     elif config.SHELL in ["cmd"]:
-        cmd = CmdWrapper(namespace, command)
+        cmd = CmdWrapper(namespace, " ".join(command))
     else:
         cmd = CommandWrapper(namespace, command)
     return cmd.launch()
