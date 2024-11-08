@@ -309,7 +309,7 @@ class Source(object):
     def __eq__(self, other):
         if not isinstance(other, Source):
             return False
-        return str(self) == str(other)
+        return self.path == other.path
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -318,7 +318,7 @@ class Source(object):
         return hash(self.__repr__())
 
     def __repr__(self):
-        return '<Source "{}">'.format(self.path)
+        return f'<Source "{self.path}">'
 
     def __str__(self):
         return self.path

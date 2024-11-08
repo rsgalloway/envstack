@@ -104,7 +104,7 @@ Environment files can include other namespaced environments (all stacks inherit
 the default stack.env automatically).
 
 ```yaml
-include: ['other']
+include: [other]
 ```
 
 ## Context
