@@ -701,7 +701,7 @@ def merge(env, other, strict=False, platform=config.PLATFORM):
         else:
             value = str(value).replace(var, "")
         if platform == "windows":
-            result = re.sub(r"(?<!\b[A-Za-z]):", ";", value)
+            result = re.sub(r"(?<!\b[A-Za-z]):", ";", str(value))
             value = result.rstrip(";")
         merged[key] = value
     return merged

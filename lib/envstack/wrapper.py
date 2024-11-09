@@ -35,12 +35,11 @@ Contains executable wrapper classes and functions.
 
 import os
 import re
-import subprocess
 import shlex
+import subprocess
 import traceback
 
-from envstack import config
-from envstack import logger
+from envstack import config, logger
 from envstack.env import encode, expandvars, load_environ
 
 
