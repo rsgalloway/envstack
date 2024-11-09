@@ -40,7 +40,7 @@ import string
 from envstack import config, logger, path
 from envstack.exceptions import *
 
-# named variable delimiter pattern
+# value delimiter pattern (splits values by colons or semicolons)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
 
 # stores cached file data in memory
@@ -179,7 +179,7 @@ class EnvVar(string.Template, str):
 
     def value(self):
         """Returns EnvVar value."""
-        return re.sub(r"(?<!\b[A-Za-z]):", os.pathsep, safe_eval(self.template))
+        return safe_eval(self.template)
 
     def vars(self):
         """Returns a list of embedded, named variables, e.g.: ::
@@ -306,7 +306,7 @@ class Source(object):
     def __eq__(self, other):
         if not isinstance(other, Source):
             return False
-        return str(self) == str(other)
+        return self.path == other.path
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -315,7 +315,7 @@ class Source(object):
         return hash(self.__repr__())
 
     def __repr__(self):
-        return '<Source "{}">'.format(self.path)
+        return f'<Source "{self.path}">'
 
     def __str__(self):
         return self.path
@@ -391,32 +391,12 @@ def encode(env, resolved=True):
     return dict((c(k), c(v)) for k, v in env.items())
 
 
-def build_sources(
+def _build_sources(
     name=config.DEFAULT_NAMESPACE,
     scope=None,
     includes=True,
     default=config.DEFAULT_NAMESPACE,
 ):
-    """Builds the list of env source files for a given name. Where the source
-    is in the list of sources depends on its position in the directory tree.
-    Lower scope sources will override higher scope sources, with the default
-    source at the lowest scope position:
-
-        $DEFAULT_ENV_DIR/stack.env
-        /stack.env
-        /show/stack.env
-        /show/seq/stack.env
-        /show/seq/shot/stack.env
-        /show/seq/shot/task/stack.env
-
-    :param name: namespace (base name of .env file).
-    :param scope: environment scope (default: cwd).
-    :param includes: add sources specified in includes.
-    :param default: name of default environment namespace.
-    :returns: list of source files sorted by scope.
-    """
-
-    # list of source .env files
     sources = []
 
     # list of included .env files
@@ -484,6 +464,51 @@ def build_sources(
     # check for global default .env file
     global_default = os.path.join(config.DEFAULT_ENV_DIR, default_env)
     add_source(global_default)
+
+    return sources
+
+
+def build_sources(
+    name=config.DEFAULT_NAMESPACE,
+    scope=None,
+    includes=True,
+    default=config.DEFAULT_NAMESPACE,
+):
+    """Builds the list of env source files for a given name. Where the source
+    is in the list of sources depends on its position in the directory tree.
+    Lower scope sources will override higher scope sources, with the default
+    source at the lowest scope position:
+
+        $DEFAULT_ENV_DIR/stack.env
+        /stack.env
+        /show/stack.env
+        /show/seq/stack.env
+        /show/seq/shot/stack.env
+        /show/seq/shot/task/stack.env
+
+    :param name: list of .env file basenames.
+    :param scope: environment scope (default: cwd).
+    :param includes: add sources specified in includes.
+    :param default: name of default environment namespace.
+    :returns: list of source files sorted by scope.
+    """
+
+    sources = []
+
+    if type(name) == str:
+        namespaces = [name]
+    else:
+        namespaces = name
+
+    for namespace in namespaces:
+        named_sources = _build_sources(
+            name=namespace,
+            scope=scope,
+            includes=includes,
+            default=default,
+        )
+        if named_sources:
+            sources.extend(named_sources)
 
     return sources
 
@@ -592,7 +617,7 @@ def load_environ(
     :returns: dict of environment variables.
     """
 
-    # build list of sources from scope
+    # build list of sources from namespace(s) and scope
     if not sources:
         sources = build_sources(name, scope=scope, includes=includes)
 
@@ -608,7 +633,7 @@ def load_environ(
 
     # merge values from given environment
     if environ:
-        return merge(env, environ)
+        return merge(env, environ, platform=platform)
 
     return env
 
@@ -645,7 +670,7 @@ def load_file(path):
     return data
 
 
-def merge(env, other, strict=False):
+def merge(env, other, strict=False, platform=config.PLATFORM):
     """Merges values from other into env. For example, to merge values from
     the local environment into an env instance:
 
@@ -657,7 +682,8 @@ def merge(env, other, strict=False):
 
     :param env: source env
     :param other: env to merge
-    :param strict: env value takes precedence (default: False)
+    :param strict: value from env takes precedence (default: False)
+    :param platform: name of platform (linux, darwin, windows)
     :returns: merged env
     """
     merged = env.copy()
@@ -673,14 +699,22 @@ def merge(env, other, strict=False):
             elif not strict:
                 value = other.get(key)
         else:
-            value = value.replace(var, "")
+            value = str(value).replace(var, "")
+        if platform == "windows":
+            result = re.sub(r"(?<!\b[A-Za-z]):", ";", str(value))
+            value = result.rstrip(";")
         merged[key] = value
     return merged
 
 
 def safe_eval(value):
-    """Returns template value preserving original class.
-    Useful for preserving nested values in wrappers.
+    """
+    Returns template value preserving original class. Useful for preserving
+    nested values in wrappers. For example, a value of "1.0" returns 1.0, and a
+    value of "['a', 'b']" returns ['a', 'b'].
+
+    :param value: value to evaluate
+    :returns: evaluated value
     """
     try:
         from ast import literal_eval

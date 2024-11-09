@@ -30,13 +30,15 @@ The install process will automatically attempt to install the default
 **Note:** The [siteconf](https://github.com/rsgalloway/siteconf)
 sitecustomize.py module may override `$DEFAULT_ENV_DIR`.
 
-If installing from source, you can use
+#### distman
+
+If installing from source to a network location, you can use
 [distman](https://github.com/rsgalloway/distman) to
 install envstack and the default `stack.env` file using the provided
 `dist.json` file:
 
 ```bash
-$ distman
+$ distman [-d]
 ```
 
 ## Quickstart
@@ -104,7 +106,7 @@ Environment files can include other namespaced environments (all stacks inherit
 the default stack.env automatically).
 
 ```yaml
-include: ['other']
+include: [other]
 ```
 
 ## Context
@@ -127,10 +129,10 @@ $VARs defined in the shot, seq, show and root directories.
 
 ## Usage
 
-To see the default environment for any given stack:
+To see the unresolved environment for one or more environment stacks:
 
 ```bash
-$ envstack [STACK]
+$ envstack [STACK [STACK ...]]
 ```
 
 To resolve one or more environment vars for a given stack:
@@ -205,6 +207,45 @@ Same command but using the "thing" stack"
 ```bash
 $ envstack thing -- python -c "import os; print(os.environ['FOO'])"
 bar
+```
+
+## Wrappers
+
+Wrappers are command line executable scripts that automatically run a given
+command in the environment stack.
+
+Here is a simple example that runs a `python -c` command in the `hello`
+environment stack that sets a value for `${PYEXE}`:
+
+#### hello.env
+```yaml
+all: &default
+  PYEXE: python
+```
+
+#### bin/hello
+```python
+import sys
+from envstack.wrapper import Wrapper
+
+class HelloWrapper(Wrapper):
+    def __init__(self, *args, **kwargs):
+        super(HelloWrapper, self).__init__(*args, **kwargs)
+
+    def executable(self):
+        """Return the command to run."""
+        return "${PYEXE} -c 'import os,sys;print(os.getenv(sys.argv[1]))'"
+
+if __name__ == "__main__":
+    hello = HelloWrapper("hello", sys.argv[1:])
+    hello.launch()
+```
+
+Running the wrapper:
+
+```bash
+$ hello HELLO
+world
 ```
 
 ## Shells
