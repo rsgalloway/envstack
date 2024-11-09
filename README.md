@@ -30,13 +30,15 @@ The install process will automatically attempt to install the default
 **Note:** The [siteconf](https://github.com/rsgalloway/siteconf)
 sitecustomize.py module may override `$DEFAULT_ENV_DIR`.
 
-If installing from source, you can use
+#### distman
+
+If installing from source to a network location, you can use
 [distman](https://github.com/rsgalloway/distman) to
 install envstack and the default `stack.env` file using the provided
 `dist.json` file:
 
 ```bash
-$ distman
+$ distman [-d]
 ```
 
 ## Quickstart
@@ -127,10 +129,10 @@ $VARs defined in the shot, seq, show and root directories.
 
 ## Usage
 
-To see the default environment for any given stack:
+To see the unresolved environment for one or more environment stacks:
 
 ```bash
-$ envstack [STACK]
+$ envstack [STACK [STACK ...]]
 ```
 
 To resolve one or more environment vars for a given stack:
