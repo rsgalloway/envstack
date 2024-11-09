@@ -43,9 +43,6 @@ from envstack.exceptions import *
 # value delimiter pattern (splits values by colons or semicolons)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
 
-# delimiter substitution pattern (replaces colons with os.pathsep)
-delimiter_sub_pattern = re.compile("(?<!\b[A-Za-z]):")
-
 # stores cached file data in memory
 load_file_cache = {}
 
@@ -703,14 +700,10 @@ def merge(env, other, strict=False, platform=config.PLATFORM):
                 value = other.get(key)
         else:
             value = str(value).replace(var, "")
-        # replace colons in env value with os.pathsep
-        pathsep = os.pathsep
         if platform == "windows":
-            pathsep = ";"
-        merged[key] = delimiter_sub_pattern.sub(pathsep, value)
-        # remove trailing path separator
-        if key in ("PATH", "PYTHONPATH"):
-            merged[key] = merged[key].rstrip(pathsep)
+            result = re.sub(r"(?<!\b[A-Za-z]):", ";", value)
+            value = result.rstrip(";")
+        merged[key] = value
     return merged
 
 
