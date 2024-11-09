@@ -38,8 +38,7 @@ import sys
 import traceback
 
 from envstack import __version__, config
-from envstack.env import (build_sources, expandvars, export, load_environ,
-                          trace_var)
+from envstack.env import build_sources, expandvars, export, load_environ, trace_var
 from envstack.wrapper import run_command
 
 
@@ -72,17 +71,17 @@ def parse_args():
         metavar="STACK",
         nargs="*",
         default=[config.DEFAULT_NAMESPACE],
-        help="the environment stack to use (default '%s')" % config.DEFAULT_NAMESPACE,
+        help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
     parser.add_argument(
         "--clear",
         action="store_true",
-        help="generate shell unset commands for a given stack",
+        help="generate unset commands for %s" % config.SHELL,
     )
     parser.add_argument(
         "--export",
         action="store_true",
-        help="generate shell export commands for a given stack",
+        help="generate export commands for %s" % config.SHELL,
     )
     parser.add_argument(
         "-p",
@@ -108,7 +107,7 @@ def parse_args():
     parser.add_argument(
         "--sources",
         action="store_true",
-        help="list the sources for a stack",
+        help="list the env stack file sources",
     )
 
     args = parser.parse_args(args_before_dash)
