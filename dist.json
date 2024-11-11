@@ -13,6 +13,10 @@
             "source": "bin/envstack",
             "destination": "{DEPLOY_ROOT}/bin/envstack"
         },
+        "bat-envstack": {
+            "source": "bin/envstack.bat",
+            "destination": "{DEPLOY_ROOT}/bin/envstack.bat"
+        },
         "bin-hello": {
             "source": "bin/hello",
             "destination": "{DEPLOY_ROOT}/bin/hello"
