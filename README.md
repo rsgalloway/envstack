@@ -34,12 +34,14 @@ sitecustomize.py module may override `$DEFAULT_ENV_DIR`.
 
 If installing from source to a network location, you can use
 [distman](https://github.com/rsgalloway/distman) to
-install envstack and the default `stack.env` file using the provided
-`dist.json` file:
+install envstack using the provided `dist.json` file:
 
 ```bash
 $ distman [-d]
 ```
+
+Using distman will deploy the targets defined in the `dist.json` file to the
+root folder defined by `$DEPLOY_ROOT` (defined in `stack.env`).
 
 ## Quickstart
 
@@ -53,21 +55,25 @@ HELLO=world
 LOG_LEVEL=INFO
 DEFAULT_ENV_DIR=${DEPLOY_ROOT}/env
 DEPLOY_ROOT=${ROOT}/${ENV}
-ROOT=${HOME}/.local/envstack
+ROOT=${HOME}/.local/pipe
+BIN=${DEPLOY_ROOT}/bin
+LIB=${DEPLOY_ROOT}/lib/python
+PATH=${BIN}:${PATH}
+PYTHONPATH=${LIB}:${PYTHONPATH}
 ```
 
 You can override anything in the environment stack by setting values in the
 local environment first:
 
 ```bash
-$ envstack -- echo \$ENV
-prod
-$ ENV=dev envstack -- echo \$ENV
-dev
+$ envstack -- echo \$HELLO
+world
+$ HELLO=goodbye envstack -- echo \$HELLO
+goodbye
 ```
 
-Modify the environment stack by editing `stack.env` or by creating new
-contextual `stack.env` files up on the filesystem.
+Modify the environment stack by editing `stack.env` or by creating additional
+contextual `stack.env` files in parent folders on the filesystem.
 
 ## Creating Stacks
 

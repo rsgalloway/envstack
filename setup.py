@@ -74,7 +74,7 @@ class PostInstallCommand(install):
 
 setup(
     name="envstack",
-    version="0.6.0",
+    version="0.6.1",
     description="Stacked environment variable management system",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -91,7 +91,7 @@ setup(
     install_requires=[
         "PyYAML>=5.1.2",
     ],
-    data_files=[(".", ["stack.env"])],
+    data_files=[(".", ["stack.env", "dev.env", "dist.json"])],
     cmdclass={"install": PostInstallCommand},
     zip_safe=False,
 )

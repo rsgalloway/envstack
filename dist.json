@@ -1,12 +1,23 @@
 {
-    "version": "1",
     "author": "ryan@rsg.io",
     "targets": {
-        "env": {
+        "env-envstack": {
             "source": "stack.env",
             "destination": "{DEPLOY_ROOT}/env/stack.env"
         },
-        "lib": {
+        "env-dev": {
+            "source": "dev.env",
+            "destination": "{DEPLOY_ROOT}/env/dev.env"
+        },
+        "bin-envstack": {
+            "source": "bin/envstack",
+            "destination": "{DEPLOY_ROOT}/bin/envstack"
+        },
+        "bin-hello": {
+            "source": "bin/hello",
+            "destination": "{DEPLOY_ROOT}/bin/hello"
+        },
+        "lib-envstack": {
             "source": "lib/envstack",
             "destination": "{DEPLOY_ROOT}/lib/python/envstack"
         }

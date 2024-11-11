@@ -6,9 +6,11 @@ dist
 build
 *.egg-info/
 MANIFEST
+.pytest_cache
 __pycache__
 tmp/
 .env
 .venv*/
+*.spec
 venv*/
 .vscode/
