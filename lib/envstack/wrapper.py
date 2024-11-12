@@ -233,15 +233,20 @@ def run_command(command, namespace=config.DEFAULT_NAMESPACE):
 
         >>> run_command(['ls', '-l'], 'my-stack')
 
+     - Automatically detects the shell to use based on the config.SHELL value.
+     - Converts {VAR} to $VAR for bash, sh, zsh, and %VAR% for cmd.
+
     :param command: command to run as a list of arguments
     :param namespace: environment stack namespace (default: 'stack')
-    :returns: exit code
+    :returns: command exit code
     """
     logger.setup_stream_handler()
     if config.SHELL in ["bash", "sh", "zsh"]:
-        cmd = ShellWrapper(namespace, shlex.join(command))
+        command = re.sub(r"\{(\w+)\}", r"${\1}", shlex.join(command))
+        cmd = ShellWrapper(namespace, command)
     elif config.SHELL in ["cmd"]:
-        cmd = CmdWrapper(namespace, " ".join(command))
+        command = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(command))
+        cmd = CmdWrapper(namespace, command)
     else:
         cmd = CommandWrapper(namespace, command)
     return cmd.launch()

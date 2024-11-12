@@ -66,9 +66,9 @@ You can override anything in the environment stack by setting values in the
 local environment first:
 
 ```bash
-$ envstack -- echo \$HELLO
+$ envstack -- echo {HELLO}
 world
-$ HELLO=goodbye envstack -- echo \$HELLO
+$ HELLO=goodbye envstack -- echo {HELLO}
 goodbye
 ```
 
@@ -190,7 +190,7 @@ $ envstack [STACK] -- [COMMAND]
 For example:
 
 ```bash 
-$ envstack -- echo \$HELLO
+$ envstack -- echo {HELLO}
 world
 ```
 
