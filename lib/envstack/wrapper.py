@@ -49,6 +49,14 @@ def to_args(cmd):
     return shlex.split(cmd)
 
 
+def shell_join(args):
+    """Joins a list of arguments into a single quoted shell string."""
+    try:
+        return shlex.join(args)
+    except AttributeError:
+        return " ".join(shlex.quote(arg) for arg in args)
+
+
 class Wrapper(object):
     """Wrapper class for executables. Subprocessed with preconfigured environment.
 
@@ -233,15 +241,22 @@ def run_command(command, namespace=config.DEFAULT_NAMESPACE):
 
         >>> run_command(['ls', '-l'], 'my-stack')
 
+     - Automatically detects the shell to use based on the config.SHELL value.
+     - Converts {VAR} to $VAR for bash, sh, zsh, and %VAR% for cmd.
+
     :param command: command to run as a list of arguments
     :param namespace: environment stack namespace (default: 'stack')
-    :returns: exit code
+    :returns: command exit code
     """
     logger.setup_stream_handler()
     if config.SHELL in ["bash", "sh", "zsh"]:
-        cmd = ShellWrapper(namespace, shlex.join(command))
+        # convert {VAR} to ${VAR}, e.g. 'echo {VAR}' -> 'echo ${VAR}'
+        command = re.sub(r"\{(\w+)\}", r"${\1}", shell_join(command))
+        cmd = ShellWrapper(namespace, command)
     elif config.SHELL in ["cmd"]:
-        cmd = CmdWrapper(namespace, " ".join(command))
+        # convert {VAR} to %VAR%, e.g. 'echo {VAR}' -> 'echo %VAR%'
+        command = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(command))
+        cmd = CmdWrapper(namespace, command)
     else:
         cmd = CommandWrapper(namespace, command)
     return cmd.launch()
