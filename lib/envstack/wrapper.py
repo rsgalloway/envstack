@@ -49,6 +49,14 @@ def to_args(cmd):
     return shlex.split(cmd)
 
 
+def shell_join(args):
+    """Joins a list of arguments into a single quoted shell string."""
+    try:
+        return shlex.join(args)
+    except AttributeError:
+        return " ".join(shlex.quote(arg) for arg in args)
+
+
 class Wrapper(object):
     """Wrapper class for executables. Subprocessed with preconfigured environment.
 
@@ -242,7 +250,7 @@ def run_command(command, namespace=config.DEFAULT_NAMESPACE):
     """
     logger.setup_stream_handler()
     if config.SHELL in ["bash", "sh", "zsh"]:
-        command = re.sub(r"\{(\w+)\}", r"${\1}", shlex.join(command))
+        command = re.sub(r"\{(\w+)\}", r"${\1}", shell_join(command))
         cmd = ShellWrapper(namespace, command)
     elif config.SHELL in ["cmd"]:
         command = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(command))
