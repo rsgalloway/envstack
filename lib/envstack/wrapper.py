@@ -250,9 +250,11 @@ def run_command(command, namespace=config.DEFAULT_NAMESPACE):
     """
     logger.setup_stream_handler()
     if config.SHELL in ["bash", "sh", "zsh"]:
+        # convert {VAR} to ${VAR}, e.g. 'echo {VAR}' -> 'echo ${VAR}'
         command = re.sub(r"\{(\w+)\}", r"${\1}", shell_join(command))
         cmd = ShellWrapper(namespace, command)
     elif config.SHELL in ["cmd"]:
+        # convert {VAR} to %VAR%, e.g. 'echo {VAR}' -> 'echo %VAR%'
         command = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(command))
         cmd = CmdWrapper(namespace, command)
     else:
