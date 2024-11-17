@@ -582,26 +582,33 @@ def export(name, shell=config.SHELL, resolve=False, scope=None, clear=False):
 
 
 def clear(name=config.DEFAULT_NAMESPACE):
-    """Clears the environment for a given namespace.
+    """Clears environment of env vars for a given namespace. Restores sys.path
+    from _ES_OLD_PYTHONPATH.
 
     :param name: stack namespace (default stack).
     """
-    logger.log.debug("clear stack: %s", name)
-
-    # remove env stack paths from PYTHONPATH
+    # clear all paths from PYTHONPATH
     for path in util.get_paths_from_var("PYTHONPATH"):
         if path and path in sys.path:
             sys.path.remove(path)
 
-    # restore sys.path from _OLD_PYTHONPATH
-    for path in util.get_paths_from_var("_OLD_PYTHONPATH"):
-        if path and path not in sys.path:
-            sys.path.insert(0, path)
-
+    # get keys from the current environment and clear them
     env = load_environ(name)
     for key in env.keys():
         if key in os.environ:
             del os.environ[key]
+
+    # restore sys.path values from the previous environment
+    for path in util.get_paths_from_var("_ES_OLD_PYTHONPATH"):
+        if path and path not in sys.path:
+            sys.path.insert(0, path)
+
+    # restore non-sys.path values from previous environment
+    for key, value in os.environ.items():
+        if key and value and key.startswith("_ES_OLD_"):
+            del os.environ[key]
+            key = key.replace("_ES_OLD_", "", 1)
+            os.environ[key] = value
 
 
 def init(name=config.DEFAULT_NAMESPACE):
@@ -610,14 +617,19 @@ def init(name=config.DEFAULT_NAMESPACE):
 
     :param name: stack namespace (default stack).
     """
-    logger.log.debug("init stack: %s", name)
+    logger.log.debug("initializing env stack: %s", name)
 
     # clear the current environment
     clear(name)
 
-    # store the current PYTHONPATH to restore later
-    os.environ["_OLD_PYTHONPATH"] = os.environ.get("PYTHONPATH", "")
+    # store the name of the environment stack
+    os.environ["ENVSTACK"] = name
 
+    # save some values so we can restore them later
+    for key, value in os.environ.items():
+        os.environ[f"_ES_OLD_{key}"] = value
+
+    # load the new environment
     env = load_environ(name)
     os.environ.update(encode(env))
 
