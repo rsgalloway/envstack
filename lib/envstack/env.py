@@ -36,8 +36,9 @@ Contains functions and classes for processing scoped .env files.
 import os
 import re
 import string
+import sys
 
-from envstack import config, logger, path
+from envstack import config, logger, path, util
 from envstack.exceptions import *
 
 # value delimiter pattern (splits values by colons or semicolons)
@@ -529,7 +530,7 @@ def expandvars(var, env=None, recursive=False):
     return EnvVar(var).expand(env, recursive=recursive)
 
 
-def export(name, shell="bash", resolve=False, scope=None, clear=False):
+def export(name, shell=config.SHELL, resolve=False, scope=None, clear=False):
     """Returns environment commands that can be sourced.
 
        $ source <(envstack --export)
@@ -542,7 +543,7 @@ def export(name, shell="bash", resolve=False, scope=None, clear=False):
     (see output of config.detect_shell()).
 
     :param name: stack namespace.
-    :param shell: name of shell (default: bash).
+    :param shell: name of shell (default: current shell).
     :param resolve: resolve values (default: True).
     :param scope: environment scope (default: cwd).
     :param clear: clear existing values (default: False).
@@ -580,13 +581,51 @@ def export(name, shell="bash", resolve=False, scope=None, clear=False):
     return exp
 
 
+def clear(name=config.DEFAULT_NAMESPACE):
+    """Clears the environment for a given namespace.
+
+    :param name: stack namespace (default stack).
+    """
+    logger.log.debug("clear stack: %s", name)
+
+    # remove env stack paths from PYTHONPATH
+    for path in util.get_paths_from_var("PYTHONPATH"):
+        if path and path in sys.path:
+            logger.log.debug("removing path: %s", path)
+            sys.path.remove(path)
+
+    # update sys.path from _OLD_PYTHONPATH
+    for path in util.get_paths_from_var("_OLD_PYTHONPATH"):
+        if path and path not in sys.path:
+            logger.log.debug("restoring path: %s", path)
+            sys.path.insert(0, path)
+
+    env = load_environ(name)
+    for key in env.keys():
+        if key in os.environ:
+            del os.environ[key]
+
+
 def init(name=config.DEFAULT_NAMESPACE):
     """Initializes the environment for a given namespace.
 
-    :param name: namespace (basename of env files).
+    :param name: stack namespace (default stack).
     """
+    logger.log.debug("init stack: %s", name)
+
+    # clear the current environment
+    clear(name)
+
+    # store the current PYTHONPATH to restore later
+    os.environ["_OLD_PYTHONPATH"] = os.environ.get("PYTHONPATH", "")
+
     env = load_environ(name)
     os.environ.update(encode(env))
+
+    # update sys.path from PYTHONPATH
+    for path in util.get_paths_from_var("PYTHONPATH"):
+        if path and path not in sys.path:
+            sys.path.insert(0, path)
 
 
 def load_environ(
@@ -688,9 +727,11 @@ def merge(env, other, strict=False, platform=config.PLATFORM):
     """
     merged = env.copy()
     for key, value in merged.items():
-        var = "${%s}" % key
+        varstr = "${%s}" % key
+        # replace variables in other with values from env
         if key in other:
-            if var in str(value):
+            # replace variables in value with values from other
+            if varstr in str(value):
                 value = re.sub(
                     r"\${(\w+)}",
                     lambda match: other.get(match.group(1), match.group(0)),
@@ -699,7 +740,8 @@ def merge(env, other, strict=False, platform=config.PLATFORM):
             elif not strict:
                 value = other.get(key)
         else:
-            value = str(value).replace(var, "")
+            value = str(value).replace(varstr, "")
+        # replace colons with semicolons on windows
         if platform == "windows":
             result = re.sub(r"(?<!\b[A-Za-z]):", ";", str(value))
             value = result.rstrip(";")

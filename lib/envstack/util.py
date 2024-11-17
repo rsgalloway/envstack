@@ -30,10 +30,29 @@
 #
 
 __doc__ = """
-Stacked environment variable management system.
+Contains common utility functions and classes.
 """
 
-__prog__ = "envstack"
-__version__ = "0.6.2"
+import os
 
-from envstack.env import Env, getenv, clear, init, load_file
+
+def get_paths_from_var(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
+    """Returns a list of paths from a given pathsep separated environment
+    variable.
+
+    :param var: The environment variable to get paths from.
+    :param pathsep: The path separator to use.
+    :param reverse: Reverse the order of the paths.
+    :returns: A list of paths.
+    """
+
+    paths = []
+    value = os.environ.get(var)
+
+    if value:
+        paths = value.split(pathsep)
+
+        if reverse:
+            paths.reverse()
+
+    return paths
