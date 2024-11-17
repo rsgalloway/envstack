@@ -591,13 +591,11 @@ def clear(name=config.DEFAULT_NAMESPACE):
     # remove env stack paths from PYTHONPATH
     for path in util.get_paths_from_var("PYTHONPATH"):
         if path and path in sys.path:
-            logger.log.debug("removing path: %s", path)
             sys.path.remove(path)
 
-    # update sys.path from _OLD_PYTHONPATH
+    # restore sys.path from _OLD_PYTHONPATH
     for path in util.get_paths_from_var("_OLD_PYTHONPATH"):
         if path and path not in sys.path:
-            logger.log.debug("restoring path: %s", path)
             sys.path.insert(0, path)
 
     env = load_environ(name)
@@ -607,7 +605,8 @@ def clear(name=config.DEFAULT_NAMESPACE):
 
 
 def init(name=config.DEFAULT_NAMESPACE):
-    """Initializes the environment for a given namespace.
+    """Initializes the environment for a given namespace. Modifies sys.path
+    from PYTHONPATH.
 
     :param name: stack namespace (default stack).
     """
