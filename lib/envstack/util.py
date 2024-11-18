@@ -36,6 +36,29 @@ Contains common utility functions and classes.
 import os
 
 
+def dict_diff(dict1, dict2):
+    """
+    Compare two dictionaries and return their differences.
+
+    :param dict1: First dictionary.
+    :param dict2: Second dictionary.
+    :returns: diff dict: 'added', 'removed', 'changed', and 'unchanged'.
+    """
+    added = {k: dict2[k] for k in dict2 if k not in dict1}
+    removed = {k: dict1[k] for k in dict1 if k not in dict2}
+    changed = {
+        k: (dict1[k], dict2[k]) for k in dict1 if k in dict2 and dict1[k] != dict2[k]
+    }
+    unchanged = {k: dict1[k] for k in dict1 if k in dict2 and dict1[k] == dict2[k]}
+
+    return {
+        "added": added,
+        "removed": removed,
+        "changed": changed,
+        "unchanged": unchanged,
+    }
+
+
 def get_paths_from_var(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
     """Returns a list of paths from a given pathsep separated environment
     variable.
