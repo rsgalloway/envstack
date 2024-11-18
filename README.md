@@ -161,19 +161,34 @@ $ envstack [STACK] --sources
 
 ## Python API
 
-To init the environment stack, use the `init` function:
+To initialize the environment stack in Python, use the `init` function:
 
 ```python
->>> envstack.init("thing")
->>> os.getenv("FOO")
-'bar'
+>>> envstack.init()
+>>> os.getenv("HELLO")
+'world'
+```
+
+To initialize the "dev" stack:
+
+```python
+>>> envstack.init("dev")
+>>> os.getenv("ENV")
+'dev'
+```
+
+To revert the original environment:
+
+```python
+>>> envstack.revert()
+>>> os.getenv("HELLO")
+>>> 
 ```
 
 Alternatively, `envstack.getenv` can be a drop-in replacement for `os.getenv`
 for the default environment stack:
 
 ```python
->>> import envstack
 >>> envstack.getenv("HELLO")
 'world'
 ```

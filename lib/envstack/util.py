@@ -30,60 +30,52 @@
 #
 
 __doc__ = """
-Contains default configs and settings.
+Contains common utility functions and classes.
 """
 
 import os
-import platform
-import sys
 
 
-def detect_shell():
-    """Detect the current shell."""
-    if PLATFORM == "windows":
-        comspec = os.environ.get("ComSpec")
-        if comspec:
-            if "cmd.exe" in comspec:
-                return "cmd"
-            elif "powershell.exe" in comspec:
-                return "pwsh"
-        else:
-            return "unknown"
-    else:
-        shell = os.environ.get("SHELL")
-        if shell:
-            return shell.split("/")[-1]
-        else:
-            return "unknown"
+def dict_diff(dict1, dict2):
+    """
+    Compare two dictionaries and return their differences.
 
-
-DEBUG = os.getenv("DEBUG")
-DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "stack")
-ENV = os.getenv("ENV", "prod")
-HOME = os.getenv("HOME")
-LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
-ON_POSIX = "posix" in sys.builtin_module_names
-PLATFORM = platform.system().lower()
-PYTHON_VERSION = sys.version_info[0]
-SHELL = detect_shell()
-USERNAME = os.getenv("USERNAME", os.getenv("USER"))
-
-# set some default environment variables
-DEFAULT_ENV = {
-    "ENV": ENV,
-    "HOME": HOME,
-    "PLATFORM": PLATFORM,
-    "USER": USERNAME,
-}
-
-# default location of env stack .env files
-DEFAULT_ENV_DIR = os.getenv(
-    "DEFAULT_ENV_DIR",
-    {
-        "darwin": "{HOME}/Library/Application Support/pipe/{ENV}/env",
-        "linux": "{HOME}/.local/pipe/{ENV}/env",
-        "windows": "C:\\ProgramData\\pipe\\{ENV}\\env",
+    :param dict1: First dictionary.
+    :param dict2: Second dictionary.
+    :returns: diff dict: 'added', 'removed', 'changed', and 'unchanged'.
+    """
+    added = {k: dict2[k] for k in dict2 if k not in dict1}
+    removed = {k: dict1[k] for k in dict1 if k not in dict2}
+    changed = {
+        k: (dict1[k], dict2[k]) for k in dict1 if k in dict2 and dict1[k] != dict2[k]
     }
-    .get(PLATFORM)
-    .format(**DEFAULT_ENV),
-)
+    unchanged = {k: dict1[k] for k in dict1 if k in dict2 and dict1[k] == dict2[k]}
+
+    return {
+        "added": added,
+        "removed": removed,
+        "changed": changed,
+        "unchanged": unchanged,
+    }
+
+
+def get_paths_from_var(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
+    """Returns a list of paths from a given pathsep separated environment
+    variable.
+
+    :param var: The environment variable to get paths from.
+    :param pathsep: The path separator to use.
+    :param reverse: Reverse the order of the paths.
+    :returns: A list of paths.
+    """
+
+    paths = []
+    value = os.environ.get(var)
+
+    if value:
+        paths = value.split(pathsep)
+
+        if reverse:
+            paths.reverse()
+
+    return paths

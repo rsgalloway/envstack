@@ -36,8 +36,9 @@ Contains functions and classes for processing scoped .env files.
 import os
 import re
 import string
+import sys
 
-from envstack import config, logger, path
+from envstack import config, logger, path, util
 from envstack.exceptions import *
 
 # value delimiter pattern (splits values by colons or semicolons)
@@ -48,6 +49,9 @@ load_file_cache = {}
 
 # value for unresolvable variables
 null = ""
+
+# stores the original environment
+SAVED_ENVIRONMENT = None
 
 
 class EnvVar(string.Template, str):
@@ -529,7 +533,7 @@ def expandvars(var, env=None, recursive=False):
     return EnvVar(var).expand(env, recursive=recursive)
 
 
-def export(name, shell="bash", resolve=False, scope=None, clear=False):
+def export(name, shell=config.SHELL, resolve=False, scope=None, clear=False):
     """Returns environment commands that can be sourced.
 
        $ source <(envstack --export)
@@ -542,7 +546,7 @@ def export(name, shell="bash", resolve=False, scope=None, clear=False):
     (see output of config.detect_shell()).
 
     :param name: stack namespace.
-    :param shell: name of shell (default: bash).
+    :param shell: name of shell (default: current shell).
     :param resolve: resolve values (default: True).
     :param scope: environment scope (default: cwd).
     :param clear: clear existing values (default: False).
@@ -580,13 +584,65 @@ def export(name, shell="bash", resolve=False, scope=None, clear=False):
     return exp
 
 
-def init(name=config.DEFAULT_NAMESPACE):
-    """Initializes the environment for a given namespace.
+def save():
+    """Saves the current environment."""
+    global SAVED_ENVIRONMENT
+    if not SAVED_ENVIRONMENT:
+        SAVED_ENVIRONMENT = dict(os.environ.copy())
+        return SAVED_ENVIRONMENT
 
-    :param name: namespace (basename of env files).
+
+def revert():
+    """Reverts the environment to the saved environment."""
+    global SAVED_ENVIRONMENT
+    if SAVED_ENVIRONMENT is None:
+        return
+    os.environ.clear()
+    os.environ.update(SAVED_ENVIRONMENT)
+
+
+def init(name=config.DEFAULT_NAMESPACE):
+    """Initializes the environment for a given namespace. Modifies sys.path
+    from PYTHONPATH.
+
+        # initialize the default environemnt
+        >>> envstack.init()
+
+        # initialize the dev environment
+        >>> envstack.init('dev')
+
+        # revert to the original environment
+        >>> envstack.revert()
+
+    :param name: stack namespace (default stack).
     """
+    logger.log.debug("initializing env stack: %s", name)
+
+    # save the current environment
+    save()
+
+    # clear old sys.path values
+    for path in util.get_paths_from_var("PYTHONPATH"):
+        if path and path in sys.path:
+            sys.path.remove(path)
+
+    # clear vars from stack namespace
+    env = load_environ(name, environ=None)
+    for key in env.keys():
+        if key in os.environ:
+            del os.environ[key]
+
+    # store the name of the environment stack (e.g. for $PS1)
+    os.environ["ENVSTACK"] = name
+
+    # load the new environment
     env = load_environ(name)
     os.environ.update(encode(env))
+
+    # update sys.path from PYTHONPATH
+    for path in util.get_paths_from_var("PYTHONPATH"):
+        if path and path not in sys.path:
+            sys.path.insert(0, path)
 
 
 def load_environ(
@@ -688,9 +744,11 @@ def merge(env, other, strict=False, platform=config.PLATFORM):
     """
     merged = env.copy()
     for key, value in merged.items():
-        var = "${%s}" % key
+        varstr = "${%s}" % key
+        # replace variables in other with values from env
         if key in other:
-            if var in str(value):
+            # replace variables in value with values from other
+            if varstr in str(value):
                 value = re.sub(
                     r"\${(\w+)}",
                     lambda match: other.get(match.group(1), match.group(0)),
@@ -699,7 +757,8 @@ def merge(env, other, strict=False, platform=config.PLATFORM):
             elif not strict:
                 value = other.get(key)
         else:
-            value = str(value).replace(var, "")
+            value = str(value).replace(varstr, "")
+        # replace colons with semicolons on windows
         if platform == "windows":
             result = re.sub(r"(?<!\b[A-Za-z]):", ";", str(value))
             value = result.rstrip(";")
