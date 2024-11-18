@@ -74,7 +74,7 @@ class PostInstallCommand(install):
 
 setup(
     name="envstack",
-    version="0.6.2",
+    version="0.6.3",
     description="Stacked environment variable management system",
     long_description=long_description,
     long_description_content_type="text/markdown",
