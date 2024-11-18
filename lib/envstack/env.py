@@ -533,7 +533,13 @@ def expandvars(var, env=None, recursive=False):
     return EnvVar(var).expand(env, recursive=recursive)
 
 
-def export(name, shell=config.SHELL, resolve=False, scope=None, clear=False):
+def export(
+    name=config.DEFAULT_NAMESPACE,
+    shell=config.SHELL,
+    resolve=False,
+    scope=None,
+    clear=False,
+):
     """Returns environment commands that can be sourced.
 
        $ source <(envstack --export)
@@ -552,35 +558,61 @@ def export(name, shell=config.SHELL, resolve=False, scope=None, clear=False):
     :param clear: clear existing values (default: False).
     :returns: shell commands as string.
     """
-    env = load_environ(name, scope=scope)
-    expList = list()
-    for k, v in env.items():
+    env = load_environ(name, environ=None, scope=scope)
+
+    export_vars = dict(env.items())
+    export_list = list()
+
+    # TODO: save old environment to restore later
+    # (unset new vars not in old env, and restore old vars)
+    if clear:
+        export_list.append("export PS1=${_ES_OLD_PS1}")
+        export_list.append("export PATH=${_ES_OLD_PATH}")
+        export_list.append("export PYTHONPATH=${_ES_OLD_PYTHONPATH}")
+        del export_vars["PATH"]
+        del export_vars["PYTHONPATH"]
+    # TODO: save current environment with _ES_OLD_ prefix
+    # ... for k, v in os.environ.items():
+    # ...     export_vars[f"_ES_OLD_{k}"] = v
+    else:
+        export_vars.update(
+            {
+                "_ES_OLD_PS1": os.getenv("PS1"),
+                "_ES_OLD_PATH": os.getenv("PATH"),
+                "_ES_OLD_PYTHONPATH": os.getenv("PYTHONPATH"),
+                "PS1": "[${ENV}] ${PS1-}",
+            }
+        )
+
+    for k, v in export_vars.items():
         if resolve:
             v = expandvars(v, env, recursive=False)
         if shell in ["bash", "sh", "zsh"]:
             if clear:
-                expList.append(f"unset {k}")
+                export_list.append(f"unset {k}")
             else:
-                expList.append(f'export {k}="{v}"')
+                export_list.append(f'export {k}="{v}"')
         elif shell == "tcsh":
             if clear:
-                expList.append(f"unsetenv {k}")
+                export_list.append(f"unsetenv {k}")
             else:
-                expList.append(f'setenv {k}:"{v}"')
+                export_list.append(f'setenv {k}:"{v}"')
         elif shell == "cmd":
             if clear:
-                expList.append(f"set {k}=")
+                export_list.append(f"set {k}=")
             else:
-                expList.append(f'set {k}="{v}"')
+                export_list.append(f'set {k}="{v}"')
         elif shell == "pwsh":
             if clear:
-                expList.append(f"Remove-Item Env:{k}")
+                export_list.append(f"Remove-Item Env:{k}")
             else:
-                expList.append(f'$env:{k}="{v}"')
+                export_list.append(f'$env:{k}="{v}"')
         elif shell == "unknown":
             raise Exception("unknown shell")
-    expList.sort()
-    exp = "\n".join(expList)
+
+    export_list.sort()
+    exp = "\n".join(export_list)
+
     return exp
 
 
