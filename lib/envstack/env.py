@@ -50,6 +50,9 @@ load_file_cache = {}
 # value for unresolvable variables
 null = ""
 
+# stores the original environment
+SAVED_ENVIRONMENT = None
+
 
 class EnvVar(string.Template, str):
     """A string class for supporting $-substitutions, e.g.: ::
@@ -581,34 +584,21 @@ def export(name, shell=config.SHELL, resolve=False, scope=None, clear=False):
     return exp
 
 
-def clear(name=config.DEFAULT_NAMESPACE):
-    """Clears environment of env vars for a given namespace. Restores sys.path
-    from _ES_OLD_PYTHONPATH.
+def save():
+    """Saves the current environment."""
+    global SAVED_ENVIRONMENT
+    if not SAVED_ENVIRONMENT:
+        SAVED_ENVIRONMENT = dict(os.environ.copy())
+        return SAVED_ENVIRONMENT
 
-    :param name: stack namespace (default stack).
-    """
-    # clear all paths from PYTHONPATH
-    for path in util.get_paths_from_var("PYTHONPATH"):
-        if path and path in sys.path:
-            sys.path.remove(path)
 
-    # get keys from the current environment and clear them
-    env = load_environ(name)
-    for key in env.keys():
-        if key in os.environ:
-            del os.environ[key]
-
-    # restore sys.path values from the previous environment
-    for path in util.get_paths_from_var("_ES_OLD_PYTHONPATH"):
-        if path and path not in sys.path:
-            sys.path.insert(0, path)
-
-    # restore non-sys.path values from previous environment
-    for key, value in os.environ.items():
-        if key and value and key.startswith("_ES_OLD_"):
-            del os.environ[key]
-            key = key.replace("_ES_OLD_", "", 1)
-            os.environ[key] = value
+def revert():
+    """Reverts the environment to the saved environment."""
+    global SAVED_ENVIRONMENT
+    if SAVED_ENVIRONMENT is None:
+        return
+    os.environ.clear()
+    os.environ.update(SAVED_ENVIRONMENT)
 
 
 def init(name=config.DEFAULT_NAMESPACE):
@@ -619,15 +609,22 @@ def init(name=config.DEFAULT_NAMESPACE):
     """
     logger.log.debug("initializing env stack: %s", name)
 
-    # clear the current environment
-    clear(name)
+    # save the current environment
+    save()
 
-    # store the name of the environment stack
+    # clear old sys.path values
+    for path in util.get_paths_from_var("PYTHONPATH"):
+        if path and path in sys.path:
+            sys.path.remove(path)
+
+    # clear vars from stack namespace
+    env = load_environ(name, environ=None)
+    for key in env.keys():
+        if key in os.environ:
+            del os.environ[key]
+
+    # store the name of the environment stack (e.g. for $PS1)
     os.environ["ENVSTACK"] = name
-
-    # save some values so we can restore them later
-    for key, value in os.environ.items():
-        os.environ[f"_ES_OLD_{key}"] = value
 
     # load the new environment
     env = load_environ(name)
