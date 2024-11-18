@@ -605,6 +605,15 @@ def init(name=config.DEFAULT_NAMESPACE):
     """Initializes the environment for a given namespace. Modifies sys.path
     from PYTHONPATH.
 
+        # initialize the default environemnt
+        >>> envstack.init()
+
+        # initialize the dev environment
+        >>> envstack.init('dev')
+
+        # revert to the original environment
+        >>> envstack.revert()
+
     :param name: stack namespace (default stack).
     """
     logger.log.debug("initializing env stack: %s", name)
