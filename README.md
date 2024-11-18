@@ -161,7 +161,7 @@ $ envstack [STACK] --sources
 
 ## Python API
 
-To init the environment stack, use the `init` function:
+To initialize the environment stack in Python, use the `init` function:
 
 ```python
 >>> envstack.init()
