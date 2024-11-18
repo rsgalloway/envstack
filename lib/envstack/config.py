@@ -76,14 +76,13 @@ DEFAULT_ENV = {
     "USER": USERNAME,
 }
 
-# default location of envstack files
-# NOTE: the siteconf sitecustomize.py module may override this
+# default location of env stack .env files
 DEFAULT_ENV_DIR = os.getenv(
     "DEFAULT_ENV_DIR",
     {
-        "darwin": "{HOME}/Library/Application Support/envstack",
-        "linux": "{HOME}/.local/envstack",
-        "windows": "C:\\ProgramData\\envstack",
+        "darwin": "{HOME}/Library/Application Support/pipe/{ENV}/env",
+        "linux": "{HOME}/.local/pipe/{ENV}/env",
+        "windows": "C:\\ProgramData\\pipe\\{ENV}\\env",
     }
     .get(PLATFORM)
     .format(**DEFAULT_ENV),
