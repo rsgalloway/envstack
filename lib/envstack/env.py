@@ -536,7 +536,7 @@ def expandvars(var, env=None, recursive=False):
 def export(
     name=config.DEFAULT_NAMESPACE,
     shell=config.SHELL,
-    resolve=False,
+    resolve=True,
     scope=None,
     clear=False,
 ):
@@ -558,40 +558,27 @@ def export(
     :param clear: clear existing values (default: False).
     :returns: shell commands as string.
     """
-    env = load_environ(name, environ=None, scope=scope)
-
+    env = load_environ(name, scope=scope)
     export_vars = dict(env.items())
     export_list = list()
 
-    # TODO: save old environment to restore later
-    # (unset new vars not in old env, and restore old vars)
-    if clear:
-        export_list.append("export PS1=${_ES_OLD_PS1}")
-        export_list.append("export PATH=${_ES_OLD_PATH}")
-        export_list.append("export PYTHONPATH=${_ES_OLD_PYTHONPATH}")
-        del export_vars["PATH"]
-        del export_vars["PYTHONPATH"]
-    # TODO: save current environment with _ES_OLD_ prefix
-    # ... for k, v in os.environ.items():
-    # ...     export_vars[f"_ES_OLD_{k}"] = v
-    else:
-        export_vars.update(
-            {
-                "_ES_OLD_PS1": os.getenv("PS1"),
-                "_ES_OLD_PATH": os.getenv("PATH"),
-                "_ES_OLD_PYTHONPATH": os.getenv("PYTHONPATH"),
-                "PS1": "[${ENV}] ${PS1-}",
-            }
-        )
-
     for k, v in export_vars.items():
+        old_key = f"_ES_OLD_{k}"
+        old_value = os.environ.get(old_key)
         if resolve:
             v = expandvars(v, env, recursive=False)
         if shell in ["bash", "sh", "zsh"]:
             if clear:
-                export_list.append(f"unset {k}")
+                if old_key in os.environ:
+                    export_list.append("export %s=%s" % (k, old_value))
+                    export_list.append("unset %s" % (old_key))
+                else:
+                    export_list.append(f"unset {k}")
             else:
-                export_list.append(f'export {k}="{v}"')
+                export_list.append(f"export {k}={v}")
+                if k in os.environ:
+                    old_value = os.environ[k]
+                    export_list.append(f"export _ES_OLD_{k}={old_value}")
         elif shell == "tcsh":
             if clear:
                 export_list.append(f"unsetenv {k}")
