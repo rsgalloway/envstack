@@ -106,7 +106,7 @@ setup(
         ],
     },
     install_requires=[
-        "PyYAML>=5.1.2",
+        "PyYAML==5.1.2",
     ],
     python_requires=">=3.6",
     data_files=[(".", ["stack.env", "dev.env", "dist.json"])],
