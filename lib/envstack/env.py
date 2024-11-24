@@ -533,67 +533,84 @@ def expandvars(var, env=None, recursive=False):
     return EnvVar(var).expand(env, recursive=recursive)
 
 
-def export(
+def clear(
     name=config.DEFAULT_NAMESPACE,
     shell=config.SHELL,
-    resolve=True,
     scope=None,
-    clear=False,
 ):
-    """Returns environment commands that can be sourced.
-
-       $ source <(envstack --export)
-
-    or to clear existing values:
-
-        $ source <(envstack --clear)
+    """Returns shell commands that can be sourced to unset or restore env stack
+    environment variables.
 
     List of shell names: bash, sh, tcsh, cmd, pwsh
     (see output of config.detect_shell()).
 
     :param name: stack namespace.
     :param shell: name of shell (default: current shell).
-    :param resolve: resolve values (default: True).
     :param scope: environment scope (default: cwd).
-    :param clear: clear existing values (default: False).
     :returns: shell commands as string.
     """
     env = load_environ(name, scope=scope)
     export_vars = dict(env.items())
     export_list = list()
 
-    for k, v in export_vars.items():
-        old_key = f"_ES_OLD_{k}"
-        old_value = os.environ.get(old_key)
-        if resolve:
-            v = expandvars(v, env, recursive=False)
+    for key in export_vars:
+        old_key = f"_ES_OLD_{key}"
+        old_val = os.environ.get(old_key)
         if shell in ["bash", "sh", "zsh"]:
-            if clear:
-                if old_key in os.environ:
-                    export_list.append("export %s=%s" % (k, old_value))
-                    export_list.append("unset %s" % (old_key))
-                else:
-                    export_list.append(f"unset {k}")
-            else:
-                export_list.append(f"export {k}={v}")
-                if k in os.environ:
-                    old_value = os.environ[k]
-                    export_list.append(f"export _ES_OLD_{k}={old_value}")
+            if old_key in os.environ:
+                export_list.append("export %s=%s" % (key, old_val))
+                export_list.append("unset %s" % (old_key))
+            elif key not in ("PATH", "PS1", "PWD"):
+                export_list.append(f"unset {key}")
         elif shell == "tcsh":
-            if clear:
-                export_list.append(f"unsetenv {k}")
-            else:
-                export_list.append(f'setenv {k}:"{v}"')
+            export_list.append(f"unsetenv {key}")
         elif shell == "cmd":
-            if clear:
-                export_list.append(f"set {k}=")
-            else:
-                export_list.append(f'set {k}="{v}"')
+            export_list.append(f"set {key}=")
         elif shell == "pwsh":
-            if clear:
-                export_list.append(f"Remove-Item Env:{k}")
-            else:
-                export_list.append(f'$env:{k}="{v}"')
+            export_list.append(f"Remove-Item Env:{key}")
+        elif shell == "unknown":
+            raise Exception("unknown shell")
+
+    export_list.sort()
+    exp = "\n".join(export_list)
+
+    return exp
+
+
+def export(
+    name=config.DEFAULT_NAMESPACE,
+    shell=config.SHELL,
+    scope=None,
+):
+    """Returns shell set env commands that can be sourced to set env stack
+    environment variables.
+
+    List of shell names: bash, sh, tcsh, cmd, pwsh
+    (see output of config.detect_shell()).
+
+    :param name: stack namespace.
+    :param shell: name of shell (default: current shell).
+    :param scope: environment scope (default: cwd).
+    :returns: shell commands as string.
+    """
+    env = load_environ(name, scope=scope)
+    export_vars = dict(env.items())
+    export_list = list()
+
+    for key, val in export_vars.items():
+        val = expandvars(val, env, recursive=False)
+        if shell in ["bash", "sh", "zsh"]:
+            export_list.append(f"export {key}={val}")
+            if key in os.environ:
+                old_key = f"_ES_OLD_{key}"
+                old_val = os.environ[key]
+                export_list.append(f"export {old_key}={old_val}")
+        elif shell == "tcsh":
+            export_list.append(f'setenv {key}:"{val}"')
+        elif shell == "cmd":
+            export_list.append(f'set {key}="{val}"')
+        elif shell == "pwsh":
+            export_list.append(f'$env:{key}="{val}"')
         elif shell == "unknown":
             raise Exception("unknown shell")
 
@@ -621,23 +638,24 @@ def revert():
 
 
 def init(name=config.DEFAULT_NAMESPACE):
-    """Initializes the environment for a given namespace. Modifies sys.path
-    from PYTHONPATH.
+    """Initializes the environment from a given stack namespace. Environments
+    propogate downwards with subsequent calls to init().
 
-        # initialize the default environemnt
-        >>> envstack.init()
+    Updates sys.path using paths found in PYTHONPATH.
 
-        # initialize the dev environment
-        >>> envstack.init('dev')
+    Initialize the default environment:
+    >>> envstack.init()
 
-        # revert to the original environment
-        >>> envstack.revert()
+    Initialize the dev environment (inherits previous):
+    >>> envstack.init('dev')
 
-    :param name: stack namespace (default stack).
+    Revert to the original environment:
+    >>> envstack.revert()
+
+    :param name: stack namespace (default: 'stack').
+    :param reset: clear existing values first (default: False).
     """
-    logger.log.debug("initializing env stack: %s", name)
-
-    # save the current environment
+    # save environment to restore later using envstack.revert()
     save()
 
     # clear old sys.path values
@@ -645,16 +663,7 @@ def init(name=config.DEFAULT_NAMESPACE):
         if path and path in sys.path:
             sys.path.remove(path)
 
-    # clear vars from stack namespace
-    env = load_environ(name, environ=None)
-    for key in env.keys():
-        if key in os.environ:
-            del os.environ[key]
-
-    # store the name of the environment stack (e.g. for $PS1)
-    os.environ["ENVSTACK"] = name
-
-    # load the new environment
+    # load the stack and update the environment
     env = load_environ(name)
     os.environ.update(encode(env))
 
@@ -691,7 +700,6 @@ def load_environ(
     :param includes: merge included namespaces.
     :returns: dict of environment variables.
     """
-
     # build list of sources from namespace(s) and scope
     if not sources:
         sources = build_sources(name, scope=scope, includes=includes)
@@ -705,6 +713,9 @@ def load_environ(
     # load env files first
     for source in sources:
         env.update(source.load(platform=platform))
+
+    # store the name of the environment stack
+    env["ENVSTACK"] = env.get("ENVSTACK", "".join(name))
 
     # merge values from given environment
     if environ:

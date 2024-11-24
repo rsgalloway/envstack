@@ -38,7 +38,14 @@ import sys
 import traceback
 
 from envstack import __version__, config
-from envstack.env import build_sources, expandvars, export, load_environ, trace_var
+from envstack.env import (
+    build_sources,
+    expandvars,
+    clear,
+    export,
+    load_environ,
+    trace_var,
+)
 from envstack.wrapper import run_command
 
 
@@ -139,7 +146,7 @@ def main():
             for source in sources:
                 print(source)
         elif args.clear:
-            print(export(args.namespace, config.SHELL, clear=True))
+            print(clear(args.namespace, config.SHELL))
         elif args.export:
             print(export(args.namespace, config.SHELL))
         elif command:
