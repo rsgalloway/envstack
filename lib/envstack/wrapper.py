@@ -51,10 +51,14 @@ def to_args(cmd):
 
 def shell_join(args):
     """Joins a list of arguments into a single quoted shell string."""
-    try:
-        return shlex.join(args)
-    except AttributeError:
-        return " ".join(shlex.quote(arg) for arg in args)
+    argstr = ".".join(args)
+    if '"' in argstr or "'" in argstr:
+        try:
+            return shlex.join(args)
+        except AttributeError:
+            return " ".join(shlex.quote(arg) for arg in args)
+    else:
+        return " ".join(args)
 
 
 class Wrapper(object):
@@ -186,7 +190,6 @@ class ShellWrapper(CommandWrapper):
 
     def get_subprocess_command(self, env):
         """Returns the command to be passed to the shell in a subprocess."""
-        self.cmd = expandvars(self.cmd, env, recursive=True)
         if re.search(r"\$\w+", self.cmd):
             return f'{config.SHELL} -i -c "{self.cmd}"'
         else:

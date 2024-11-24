@@ -765,10 +765,6 @@ def load_environ(
     # store the name of the environment stack
     env["ENVSTACK"] = env.get("ENVSTACK", "|".join(name))
 
-    # merge values from given environment
-    # if environ:
-    #     return merge(env, environ, platform=platform)
-
     return env
 
 
