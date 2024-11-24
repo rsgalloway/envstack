@@ -280,7 +280,7 @@ the output of the `--export` command:
 
 #### bash
 ```bash
-alias envstack-set='source <(envstack "$1" --export)';
+alias envstack-init='source <(envstack --export)';
 ```
 
 #### cmd
@@ -288,30 +288,18 @@ alias envstack-set='source <(envstack "$1" --export)';
 doskey envstack-set=for /f "usebackq" %i in (`envstack --export $*`) do %%i
 ```
 
-Then you can set the environment stack in your shell with the `envstack-set`
+Then you can set the environment stack in your shell with the `envstack-init`
 command. To clear the environment in your current shell, create an alias that
 sources the output of the `--clear` command:
 
 #### bash
 ```bash
-alias envstack-clear='source <(envstack "$1" --clear)';
+alias envstack-clear='source <(envstack --clear)';
 ```
 
 #### cmd
 ```cmd
 doskey envstack-clear=for /f "usebackq" %i in (`envstack --clear $*`) do %%i
-```
-
-Create a function for convenience that does both in one command:
-
-#### bash
-```bash
-envstack-init() { envstack-clear "$1"; envstack-set "$1"; }
-```
-
-#### cmd
-```cmd
-doskey envstack-init=envstack-clear $* & envstack-set $*
 ```
 
 ## Config
