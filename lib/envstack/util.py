@@ -34,6 +34,31 @@ Contains common utility functions and classes.
 """
 
 import os
+import sys
+
+
+def clear_sys_path(var="PYTHONPATH"):
+    """
+    Remove paths from sys.path that are in the given environment variable.
+
+    :param var: The environment variable to remove paths from.
+    """
+    for path in get_paths_from_var(var):
+        if path and path in sys.path:
+            sys.path.remove(path)
+
+
+def load_sys_path(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
+    """
+    Add paths from the given environment variable to sys.path.
+
+    :param var: The environment variable to add paths from.
+    :param pathsep: The path separator to use.
+    :param reverse: Reverse the order of the paths.
+    """
+    for path in get_paths_from_var(var, pathsep, reverse):
+        if path and path not in sys.path:
+            sys.path.insert(0, path)
 
 
 def dict_diff(dict1, dict2):
