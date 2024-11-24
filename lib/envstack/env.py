@@ -654,7 +654,7 @@ def export(
 
 
 def save():
-    """Saves the current environment."""
+    """Saves the current environment for later restoration."""
     global SAVED_ENVIRONMENT
     if not SAVED_ENVIRONMENT:
         SAVED_ENVIRONMENT = dict(os.environ.copy())
@@ -662,12 +662,30 @@ def save():
 
 
 def revert():
-    """Reverts the environment to the saved environment."""
+    """Reverts the environment to the saved environment. Updates sys.path using
+    paths found in PYTHONPATH.
+
+    Initialize the default environment stack:
+    >>> envstack.init()
+
+    Revert to the previous environment:
+    >>> envstack.revert()
+    """
     global SAVED_ENVIRONMENT
     if SAVED_ENVIRONMENT is None:
         return
+
+    # clear current sys.path values
+    util.clear_sys_path()
+
+    # restore the original environment
     os.environ.clear()
     os.environ.update(SAVED_ENVIRONMENT)
+
+    # restore sys.path from PYTHONPATH
+    util.load_sys_path()
+
+    SAVED_ENVIRONMENT = None
 
 
 def init(name=config.DEFAULT_NAMESPACE):
@@ -676,10 +694,10 @@ def init(name=config.DEFAULT_NAMESPACE):
 
     Updates sys.path using paths found in PYTHONPATH.
 
-    Initialize the default environment:
+    Initialize the default environment stack:
     >>> envstack.init()
 
-    Initialize the dev environment (inherits previous):
+    Initialize the dev environment stack (inherits from previous call):
     >>> envstack.init('dev')
 
     Revert to the original environment:
@@ -692,18 +710,14 @@ def init(name=config.DEFAULT_NAMESPACE):
     save()
 
     # clear old sys.path values
-    for path in util.get_paths_from_var("PYTHONPATH"):
-        if path and path in sys.path:
-            sys.path.remove(path)
+    util.clear_sys_path()
 
     # load the stack and update the environment
     env = load_environ(name)
     os.environ.update(encode(env))
 
     # update sys.path from PYTHONPATH
-    for path in util.get_paths_from_var("PYTHONPATH"):
-        if path and path not in sys.path:
-            sys.path.insert(0, path)
+    util.load_sys_path()
 
 
 def load_environ(
@@ -748,7 +762,7 @@ def load_environ(
         env.update(source.load(platform=platform))
 
     # store the name of the environment stack
-    env["ENVSTACK"] = env.get("ENVSTACK", "".join(name))
+    env["ENVSTACK"] = env.get("ENVSTACK", "|".join(name))
 
     # merge values from given environment
     if environ:
