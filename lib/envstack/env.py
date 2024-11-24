@@ -553,21 +553,36 @@ def clear(
     export_vars = dict(env.items())
     export_list = list()
 
+    # vars that should not be unset
+    restricted_vars = ["PATH", "PS1", "PWD", "PROMPT", "DEFAULT_ENV_DIR"]
+
     for key in export_vars:
         old_key = f"_ES_OLD_{key}"
         old_val = os.environ.get(old_key)
         if shell in ["bash", "sh", "zsh"]:
-            if old_key in os.environ:
+            if old_val:
                 export_list.append("export %s=%s" % (key, old_val))
                 export_list.append("unset %s" % (old_key))
-            elif key not in ("PATH", "PS1", "PWD"):
+            elif key not in restricted_vars:
                 export_list.append(f"unset {key}")
         elif shell == "tcsh":
-            export_list.append(f"unsetenv {key}")
+            if old_val:
+                export_list.append(f"setenv {key} {old_val}")
+                export_list.append(f"unsetenv {old_key}")
+            elif key not in restricted_vars:
+                export_list.append(f"unsetenv {key}")
         elif shell == "cmd":
-            export_list.append(f"set {key}=")
+            if old_val:
+                export_list.append(f"set {key}={old_val}")
+                export_list.append(f"set {old_key}=")
+            elif key not in restricted_vars:
+                export_list.append(f"set {key}=")
         elif shell == "pwsh":
-            export_list.append(f"Remove-Item Env:{key}")
+            if old_val:
+                export_list.append(f"$env:{key}='{old_val}'")
+                export_list.append(f"Remove-Item Env:{old_key}")
+            elif key not in restricted_vars:
+                export_list.append(f"Remove-Item Env:{key}")
         elif shell == "unknown":
             raise Exception("unknown shell")
 
@@ -599,18 +614,27 @@ def export(
 
     for key, val in export_vars.items():
         val = expandvars(val, env, recursive=False)
+        old_key = f"_ES_OLD_{key}"
+        old_val = os.environ.get(key)
+        if key == "PATH" and not val:
+            logger.log.warning("PATH is empty")
+            continue
         if shell in ["bash", "sh", "zsh"]:
             export_list.append(f"export {key}={val}")
-            if key in os.environ:
-                old_key = f"_ES_OLD_{key}"
-                old_val = os.environ[key]
+            if old_val:
                 export_list.append(f"export {old_key}={old_val}")
         elif shell == "tcsh":
             export_list.append(f'setenv {key}:"{val}"')
+            if old_val:
+                export_list.append(f'setenv {old_key}:"{old_val}"')
         elif shell == "cmd":
             export_list.append(f'set {key}="{val}"')
+            if old_val:
+                export_list.append(f'set {old_key}="{old_val}"')
         elif shell == "pwsh":
             export_list.append(f'$env:{key}="{val}"')
+            if old_val:
+                export_list.append(f'$env:{old_key}="{old_val}"')
         elif shell == "unknown":
             raise Exception("unknown shell")
 
