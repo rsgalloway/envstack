@@ -539,7 +539,10 @@ def clear(
     scope=None,
 ):
     """Returns shell commands that can be sourced to unset or restore env stack
-    environment variables.
+    environment variables. Should only be run after a previous export:
+
+        $ source <(envstack --export)
+        $ source <(envstack --clear)
 
     List of shell names: bash, sh, tcsh, cmd, pwsh
     (see output of config.detect_shell()).
@@ -549,14 +552,20 @@ def clear(
     :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
-    env = load_environ(name, scope=scope)
+    if "ENVSTACK" not in os.environ:
+        logger.log.info("Environment is already clear")
+        return ""
+
+    env = load_environ(name, environ=None, scope=scope)
     export_vars = dict(env.items())
     export_list = list()
 
-    # vars that should not be unset
+    # vars that should never be unset
     restricted_vars = ["PATH", "PS1", "PWD", "PROMPT", "DEFAULT_ENV_DIR"]
 
     for key in export_vars:
+        if key not in os.environ:
+            continue
         old_key = f"_ES_OLD_{key}"
         old_val = os.environ.get(old_key)
         if shell in ["bash", "sh", "zsh"]:
