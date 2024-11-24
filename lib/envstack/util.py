@@ -34,7 +34,11 @@ Contains common utility functions and classes.
 """
 
 import os
+import re
 import sys
+
+# regex pattern to find variables like ${VAR}, ${VAR:=default}, ${VAR:?message}
+variable_pattern = re.compile(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(.*?))?\}")
 
 
 def clear_sys_path(var="PYTHONPATH"):
@@ -104,3 +108,42 @@ def get_paths_from_var(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
             paths.reverse()
 
     return paths
+
+
+def evaluate_modifiers(expression, environ=os.environ):
+    """
+    Evaluates Bash-like variable expansion modifiers.
+
+    Supports:
+    - value like "world" (no substitution)
+    - ${VAR} for direct substitution (empty string if unset)
+    - ${VAR:=default} to set and use a default value if unset
+    - ${VAR:?error message} to raise an error if the variable is unset or null
+
+    :param expression: The Bash-like string, e.g.,
+        "${VAR:=default}/path", "${VAR}/path", or "${VAR:?error message}"
+    :return: The resulting evaluated string with all substitutions applied.
+    :raises ValueError: If a variable is undefined and has the :? syntax with an
+        error message.
+    """
+
+    def substitute_variable(match):
+        var_name = match.group(1)
+        operator = match.group(2)
+        default = match.group(3)
+        value = environ.get(var_name)
+
+        if operator == "=":
+            if value is None:
+                value = default
+                # os.environ[var_name] = value
+        elif operator == "?":
+            if value is None:
+                error_message = default if default else f"{var_name} is not set"
+                raise ValueError(f"{var_name}: {error_message}")
+        elif operator is None:
+            value = value or ""
+
+        return value
+
+    return variable_pattern.sub(substitute_variable, str(expression))

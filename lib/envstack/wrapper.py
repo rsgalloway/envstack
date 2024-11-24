@@ -109,11 +109,9 @@ class Wrapper(object):
                 env=env,
                 shell=self.shell,
             )
-
         except Exception:
             traceback.print_exc()
             exitcode = 1
-
         else:
             stdout, stderr = process.communicate()
             while stdout and stderr:

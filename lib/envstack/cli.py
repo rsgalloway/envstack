@@ -40,8 +40,8 @@ import traceback
 from envstack import __version__, config
 from envstack.env import (
     build_sources,
-    expandvars,
     clear,
+    expandvars,
     export,
     load_environ,
     trace_var,

@@ -36,7 +36,6 @@ Contains functions and classes for processing scoped .env files.
 import os
 import re
 import string
-import sys
 
 from envstack import config, logger, path, util
 from envstack.exceptions import *
@@ -439,6 +438,8 @@ def _build_sources(
         src = add_source(named_file)
         if src and includes:
             add_includes(src)
+            for include in src.includes():
+                add_source(os.path.join(path, f"{include}.env"))
 
         # look for a default .env file in this scope
         default_file = os.path.join(path, default_env)
@@ -529,8 +530,8 @@ def expandvars(var, env=None, recursive=False):
     :param recursive: revursively expand values.
     :returns: expanded value from values in env.
     """
-    env = env or environ
-    return EnvVar(var).expand(env, recursive=recursive)
+    var = EnvVar(var).expand(env, recursive=recursive)
+    return util.evaluate_modifiers(var, os.environ)
 
 
 def clear(
@@ -765,8 +766,8 @@ def load_environ(
     env["ENVSTACK"] = env.get("ENVSTACK", "|".join(name))
 
     # merge values from given environment
-    if environ:
-        return merge(env, environ, platform=platform)
+    # if environ:
+    #     return merge(env, environ, platform=platform)
 
     return env
 
@@ -880,8 +881,6 @@ def trace_var(name, var, scope=None):
     :param scope: environment scope (default: cwd)
     :returns: source path
     """
-    if var in os.environ:
-        return "local environment"
     sources = build_sources(name, scope=scope)
     sources.reverse()
     for source in sources:
@@ -889,6 +888,8 @@ def trace_var(name, var, scope=None):
         env = data.get(config.PLATFORM, data.get("all", {}))
         if var in env:
             return source.path
+    if var in os.environ:
+        return "local environment"
 
 
 # default stack environment
