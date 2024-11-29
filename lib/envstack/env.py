@@ -553,10 +553,6 @@ def clear(
     :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
-    if "ENVSTACK" not in os.environ:
-        logger.log.info("Environment is already clear")
-        return ""
-
     env = load_environ(name, environ=None, scope=scope)
     export_vars = dict(env.items())
     export_list = list()
@@ -761,9 +757,6 @@ def load_environ(
     # load env files first
     for source in sources:
         env.update(source.load(platform=platform))
-
-    # store the name of the environment stack
-    env["ENVSTACK"] = env.get("ENVSTACK", "|".join(name))
 
     return env
 
