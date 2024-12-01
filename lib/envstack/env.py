@@ -441,10 +441,6 @@ def _build_sources(
             for include in src.includes():
                 add_source(os.path.join(path, f"{include}.env"))
 
-        # look for a default .env file in this scope
-        default_file = os.path.join(path, default_env)
-        add_source(default_file)
-
         path = os.path.dirname(path)
         if not path:
             continue
@@ -459,14 +455,14 @@ def _build_sources(
         if default_inc_src and includes:
             add_includes(default_inc_src)
 
-    # check for default .env file
+    # check for default named .env file
     default_src = add_source(os.path.join(config.DEFAULT_ENV_DIR, named_env))
 
     # add included sources
     if default_src and includes:
         add_includes(default_src)
 
-    # check for global default .env file
+    # check for global stack.env file
     global_default = os.path.join(config.DEFAULT_ENV_DIR, default_env)
     add_source(global_default)
 
@@ -512,8 +508,9 @@ def build_sources(
             includes=includes,
             default=default,
         )
-        if named_sources:
-            sources.extend(named_sources)
+        for name_source in named_sources:
+            if name_source not in sources:
+                sources.append(name_source)
 
     return sources
 
@@ -725,7 +722,8 @@ def load_environ(
     scope=None,
     includes=True,
 ):
-    """Loads env data for a given name.
+    """Loads env stack data for a given name. Adds "STACK" key to environment,
+    and sets the value to `name`.
 
     To load an environment for a given namespace, where the scope is the current
     working directory (cwd):
@@ -744,6 +742,7 @@ def load_environ(
     :param includes: merge included namespaces.
     :returns: dict of environment variables.
     """
+
     # build list of sources from namespace(s) and scope
     if not sources:
         sources = build_sources(name, scope=scope, includes=includes)
@@ -757,6 +756,10 @@ def load_environ(
     # load env files first
     for source in sources:
         env.update(source.load(platform=platform))
+
+    # add the current env stack name to the environment
+    if not env.get("STACK"):
+        env["STACK"] = name[-1] if isinstance(name, list) else name
 
     return env
 
