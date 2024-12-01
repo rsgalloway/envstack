@@ -68,21 +68,31 @@ PYTHON_VERSION = sys.version_info[0]
 SHELL = detect_shell()
 USERNAME = os.getenv("USERNAME", os.getenv("USER"))
 
-# set some default environment variables
+# set some default environment values
 DEFAULT_ENV = {
     "ENV": ENV,
     "HOME": HOME,
     "PLATFORM": PLATFORM,
+    "ROOT": os.getenv(
+        "ROOT",
+        {
+            "darwin": "{HOME}/Library/Application Support/pipe",
+            "linux": "{HOME}/.local/pipe",
+            "windows": "C:\\ProgramData\\pipe",
+        }
+        .get(PLATFORM)
+        .format(**locals()),
+    ),
     "USER": USERNAME,
 }
 
-# default location of env stack .env files
+# default location of stack .env files
 DEFAULT_ENV_DIR = os.getenv(
     "DEFAULT_ENV_DIR",
     {
-        "darwin": "{HOME}/Library/Application Support/pipe/{ENV}/env",
-        "linux": "{HOME}/.local/pipe/{ENV}/env",
-        "windows": "C:\\ProgramData\\pipe\\{ENV}\\env",
+        "darwin": "{ROOT}/pipe/{ENV}/env",
+        "linux": "{ROOT}/{ENV}/env",
+        "windows": "{ROOT}\\{ENV}\\env",
     }
     .get(PLATFORM)
     .format(**DEFAULT_ENV),
