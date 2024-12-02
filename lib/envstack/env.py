@@ -52,6 +52,9 @@ null = ""
 # stores the original environment
 SAVED_ENVIRONMENT = None
 
+# default stack sources (akin to sys.path)
+ENVSTACKPATH = util.get_paths_from_var("ENVSTACKPATH", reverse=False)
+
 
 class EnvVar(string.Template, str):
     """A string class for supporting $-substitutions, e.g.: ::
@@ -400,12 +403,13 @@ def _build_sources(
     includes=True,
     default=config.DEFAULT_NAMESPACE,
 ):
+    # stores list of Source objects
     sources = []
 
-    # list of included .env files
+    # list of included stack namespaces
     include_sources = []
 
-    # scope, or root, of env tree
+    # scope defines the directory tree to search for .env files
     path = scope or os.getcwd()
     scope = Scope(scope)
     level, levels = 0, len(scope.levels())
@@ -432,7 +436,7 @@ def _build_sources(
                 include_sources.append(include_env)
             add_source(include_file)
 
-    # walk up the directory tree looking for .env files
+    # walk up the directory tree looking for stack files
     while level < levels:
         named_file = os.path.join(path, named_env)
         src = add_source(named_file)
@@ -447,7 +451,7 @@ def _build_sources(
 
         level += 1
 
-    # look for default include .env files (and their includes)
+    # look for default include stack files (and their includes)
     for include_source in include_sources:
         default_inc_src = add_source(
             os.path.join(config.DEFAULT_ENV_DIR, include_source)
@@ -455,16 +459,24 @@ def _build_sources(
         if default_inc_src and includes:
             add_includes(default_inc_src)
 
-    # check for default named .env file
+    # look for a default stack .env file
     default_src = add_source(os.path.join(config.DEFAULT_ENV_DIR, named_env))
 
-    # add included sources
+    # add included stacks
     if default_src and includes:
         add_includes(default_src)
 
-    # check for global stack.env file
-    global_default = os.path.join(config.DEFAULT_ENV_DIR, default_env)
-    add_source(global_default)
+    if ENVSTACKPATH:
+        # look for stack files in paths set by $ENVSTACKPATH
+        for espath in ENVSTACKPATH:
+            add_source(os.path.join(espath, named_env))
+            add_source(os.path.join(espath, default_env))
+
+    else:
+        # look for a global default stack file
+        # DEPRECATED: use $ENVSTACKPATH instead
+        global_default = os.path.join(config.DEFAULT_ENV_DIR, default_env)
+        add_source(global_default)
 
     return sources
 
@@ -682,7 +694,7 @@ def revert():
     SAVED_ENVIRONMENT = None
 
 
-def init(name=config.DEFAULT_NAMESPACE):
+def init(*name):
     """Initializes the environment from a given stack namespace. Environments
     propogate downwards with subsequent calls to init().
 
@@ -691,14 +703,16 @@ def init(name=config.DEFAULT_NAMESPACE):
     Initialize the default environment stack:
     >>> envstack.init()
 
-    Initialize the dev environment stack (inherits from previous call):
+    Initialize the 'dev' environment stack (inherits from previous call):
     >>> envstack.init('dev')
+
+    Initialize both 'dev' and 'test', in that order:
+    >>> envstack.init('dev', 'test')
 
     Revert to the original environment:
     >>> envstack.revert()
 
-    :param name: stack namespace (default: 'stack').
-    :param reset: clear existing values first (default: False).
+    :param *name: list of stack namespaces.
     """
     # save environment to restore later using envstack.revert()
     save()
@@ -885,7 +899,7 @@ def trace_var(name, var, scope=None):
 
 
 # default stack environment
-environ = load_environ(environ=os.environ)
+environ = load_environ(name=config.DEFAULT_NAMESPACE)
 
 
 def getenv(key, default=None):
