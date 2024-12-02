@@ -131,7 +131,7 @@ def main():
             if len(args.resolve) == 0:
                 args.resolve = load_environ(args.namespace).keys()
             env = load_environ(args.namespace, platform=args.platform)
-            for resolve in args.resolve:
+            for resolve in sorted(args.resolve):
                 var = env.get(resolve)
                 val = expandvars(var, env, recursive=True)
                 print(f"{resolve}={val}")
@@ -153,7 +153,7 @@ def main():
             return run_command(command, args.namespace)
         else:
             env = load_environ(args.namespace, platform=args.platform, includes=True)
-            for k, v in env.items():
+            for k, v in sorted(env.items()):
                 print(f"{k}={v}")
 
     except KeyboardInterrupt:
