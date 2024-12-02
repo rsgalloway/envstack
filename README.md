@@ -25,11 +25,6 @@ $ cd envstack
 $ python setup.py install
 ```
 
-The install process will automatically attempt to install the default
-`stack.env` file to the default env file directory defined `$DEFAULT_ENV_DIR`.
-**Note:** The [siteconf](https://github.com/rsgalloway/siteconf)
-sitecustomize.py module may override `$DEFAULT_ENV_DIR`.
-
 #### distman
 
 If installing from source to a network location, you can use
@@ -53,7 +48,7 @@ $ envstack
 ENV=prod
 HELLO=world
 LOG_LEVEL=INFO
-DEFAULT_ENV_DIR=${DEPLOY_ROOT}/env
+ENVPATH=${DEPLOY_ROOT}/env
 DEPLOY_ROOT=${ROOT}/${ENV}
 ROOT=${HOME}/.local/pipe
 BIN=${DEPLOY_ROOT}/bin

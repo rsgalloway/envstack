@@ -53,9 +53,6 @@ null = ""
 # stores the original environment
 SAVED_ENVIRONMENT = None
 
-# default stack sources (akin to sys.path)
-ENVSTACKPATH = util.get_paths_from_var("ENVSTACKPATH", reverse=False)
-
 
 class EnvVar(string.Template, str):
     """A string class for supporting $-substitutions, e.g.: ::
