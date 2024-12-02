@@ -58,7 +58,7 @@ def detect_shell():
 
 
 DEBUG = os.getenv("DEBUG")
-DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "stack")
+DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "default")
 ENV = os.getenv("ENV", "prod")
 HOME = os.getenv("HOME")
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")

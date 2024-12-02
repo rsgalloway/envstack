@@ -39,7 +39,6 @@ import traceback
 
 from envstack import __version__, config
 from envstack.env import (
-    build_sources,
     clear,
     expandvars,
     export,
@@ -98,6 +97,11 @@ def parse_args():
         help="platform to resolve variables for (linux, darwin, windows)",
     )
     parser.add_argument(
+        "--scope",
+        metavar="SCOPE",
+        help="search scope for environment stack files",
+    )
+    parser.add_argument(
         "-r",
         "--resolve",
         nargs="*",
@@ -139,12 +143,14 @@ def main():
             if len(args.trace) == 0:
                 args.trace = load_environ(args.namespace).keys()
             for trace in args.trace:
-                path = trace_var(args.namespace, trace)
+                path = trace_var(*args.namespace, var=trace)
                 print("{0}: {1}".format(trace, path))
         elif args.sources:
-            sources = build_sources(args.namespace)
+            from envstack.env import get_sources
+
+            sources = get_sources(*args.namespace, scope=args.scope)
             for source in sources:
-                print(source)
+                print(source.path)
         elif args.clear:
             print(clear(args.namespace, config.SHELL))
         elif args.export:

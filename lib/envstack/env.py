@@ -36,6 +36,7 @@ Contains functions and classes for processing scoped .env files.
 import os
 import re
 import string
+from pathlib import Path
 
 from envstack import config, logger, path, util
 from envstack.exceptions import *
@@ -397,132 +398,84 @@ def encode(env, resolved=True):
     return dict((c(k), c(v)) for k, v in env.items())
 
 
-def _build_sources(
-    name=config.DEFAULT_NAMESPACE,
-    scope=None,
-    includes=True,
-    default=config.DEFAULT_NAMESPACE,
-):
-    # stores list of Source objects
-    sources = []
-
-    # list of included stack namespaces
-    include_sources = []
-
-    # scope defines the directory tree to search for .env files
-    path = scope or os.getcwd()
-    scope = Scope(scope)
-    level, levels = 0, len(scope.levels())
-
-    # the namespaced and default .env file names
-    named_env = f"{name}.env"
-    default_env = f"{default}.env"
-
-    def add_source(path):
-        """Adds a source to the list of sources."""
-        if not os.path.exists(path):
-            return
-        if not sources or (sources[0].path != path):
-            this_source = Source(path)
-            sources.insert(0, this_source)
-            return this_source
-
-    def add_includes(src):
-        """Adds included sources to the list of sources and includes."""
-        included = [f"{i}.env" for i in src.includes()]
-        for include_env in included:
-            include_file = os.path.join(config.DEFAULT_ENV_DIR, include_env)
-            if include_env not in include_sources:
-                include_sources.append(include_env)
-            add_source(include_file)
-
-    # walk up the directory tree looking for stack files
-    while level < levels:
-        named_file = os.path.join(path, named_env)
-        src = add_source(named_file)
-        if src and includes:
-            add_includes(src)
-            for include in src.includes():
-                add_source(os.path.join(path, f"{include}.env"))
-
-        path = os.path.dirname(path)
-        if not path:
-            continue
-
-        level += 1
-
-    # look for default include stack files (and their includes)
-    for include_source in include_sources:
-        default_inc_src = add_source(
-            os.path.join(config.DEFAULT_ENV_DIR, include_source)
-        )
-        if default_inc_src and includes:
-            add_includes(default_inc_src)
-
-    # look for a default stack .env file
-    default_src = add_source(os.path.join(config.DEFAULT_ENV_DIR, named_env))
-
-    # add included stacks
-    if default_src and includes:
-        add_includes(default_src)
-
-    if ENVSTACKPATH:
-        # look for stack files in paths set by $ENVSTACKPATH
-        for espath in ENVSTACKPATH:
-            add_source(os.path.join(espath, named_env))
-            add_source(os.path.join(espath, default_env))
-
-    else:
-        # look for a global default stack file
-        # DEPRECATED: use $ENVSTACKPATH instead
-        global_default = os.path.join(config.DEFAULT_ENV_DIR, default_env)
-        add_source(global_default)
-
-    return sources
-
-
-def build_sources(
-    name=config.DEFAULT_NAMESPACE,
-    scope=None,
-    includes=True,
-    default=config.DEFAULT_NAMESPACE,
-):
-    """Builds the list of env source files for a given name. Where the source
-    is in the list of sources depends on its position in the directory tree.
-    Lower scope sources will override higher scope sources, with the default
-    source at the lowest scope position:
-
-        $DEFAULT_ENV_DIR/stack.env
-        /stack.env
-        /show/stack.env
-        /show/seq/stack.env
-        /show/seq/shot/stack.env
-        /show/seq/shot/task/stack.env
-
-    :param name: list of .env file basenames.
-    :param scope: environment scope (default: cwd).
-    :param includes: add sources specified in includes.
-    :param default: name of default environment namespace.
-    :returns: list of source files sorted by scope.
+def get_sources(*names: str, scope: str = None):
     """
+    Find .env files recursively based on includes, avoiding cyclic dependencies.
 
+    Args:
+        *names (str): A variable-length list of .env file names to search for.
+        scope (str): A filesystem path defining the scope to walk up to.
+                     Defaults to the current working directory.
+
+    Returns:
+        List[Path]: A list of resolved `.env` file paths in the order they are loaded.
+    """
+    clear_file_cache()
+
+    # set default scope to the current working directory
+    scope = Path(scope or os.getcwd()).resolve()
+
+    loaded_files = []
     sources = []
+    loading_stack = set()
 
-    if type(name) == str:
-        namespaces = [name]
-    else:
-        namespaces = name
+    def _walk_to_scope(current_path):
+        """Generate directories from the current path up to the scope."""
+        paths = []
+        while current_path != scope.parent:
+            paths.append(current_path)
+            if current_path == scope:
+                break
+            current_path = current_path.parent
+        return [str(p) for p in paths]
 
-    for namespace in namespaces:
-        named_sources = _build_sources(
-            name=namespace,
-            scope=scope,
-            includes=includes,
-            default=default,
-        )
-        for name_source in named_sources:
-            if name_source not in sources:
-                sources.append(name_source)
+    # construct search paths from $ENVPATH and current scope
+    envpath = os.environ.get("ENVPATH", "")
+    envpath_dirs = [Path(p).resolve() for p in envpath.split(":") if p.strip()]
+    scope_dirs = _walk_to_scope(scope)
+    envpath_dirs.reverse()
+    search_paths = envpath_dirs + scope_dirs
+
+    def _find_files(file_basename):
+        if not file_basename.endswith(".env"):
+            file_basename += ".env"
+        found_files = []
+        for directory in search_paths:
+            potential_file = Path(directory) / file_basename
+            if potential_file.exists():
+                found_files.append(potential_file)
+        if not found_files:
+            raise FileNotFoundError(f"{file_basename} not found in ENVPATH or scope.")
+        return found_files
+
+    def _load_file(file_basename):
+        file_paths = _find_files(file_basename)
+
+        # process each file independently
+        for file_path in file_paths:
+            if file_path in loaded_files:
+                continue
+
+            if file_basename in loading_stack:
+                raise ValueError(f"Cyclic dependency detected in {file_basename}")
+
+            source = Source(file_path)
+            loading_stack.add(file_basename)
+
+            # parse included files recursively
+            for include_basename in source.includes():
+                _load_file(include_basename)
+
+            # add current file to the loaded list after processing includes
+            loaded_files.append(file_path)
+            sources.append(source)
+            loading_stack.remove(file_basename)
+
+    # process each stack in the list
+    for name in names:
+        if not name.endswith(".env"):
+            name += ".env"
+        _load_file(name)
 
     return sources
 
@@ -756,12 +709,12 @@ def load_environ(
     :param includes: merge included namespaces.
     :returns: dict of environment variables.
     """
+    if type(name) == str:
+        name = [name]
 
-    # build list of sources from namespace(s) and scope
-    if not sources:
-        sources = build_sources(name, scope=scope, includes=includes)
+    sources = get_sources(*name)
 
-    # create the environment as an Env instance
+    # create the environment to be returned
     env = Env()
     env.set_namespace(name)
     if scope:
@@ -778,7 +731,7 @@ def load_environ(
     return env
 
 
-def load_file(path):
+def load_file(path: str):
     """Reads a given .env file and returns data as dict.
 
     :param path: path to envstack env file
@@ -879,7 +832,7 @@ def safe_eval(value):
     return value
 
 
-def trace_var(name, var, scope=None):
+def trace_var(*name: str, var: str = None, scope: str = None):
     """Traces where a var is getting set for a given name.
 
     :param name: name of tool or executable
@@ -887,15 +840,15 @@ def trace_var(name, var, scope=None):
     :param scope: environment scope (default: cwd)
     :returns: source path
     """
-    sources = build_sources(name, scope=scope)
+    sources = get_sources(*name, scope=scope)
     sources.reverse()
     for source in sources:
         data = load_file(source.path)
         env = data.get(config.PLATFORM, data.get("all", {}))
         if var in env:
             return source.path
-    if var in os.environ:
-        return "local environment"
+        elif os.getenv(var):
+            return "local environment"
 
 
 # default stack environment
