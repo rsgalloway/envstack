@@ -47,7 +47,7 @@ $ export ENVPATH=./env
 ```
 
 Running the `envstack` command will show you the default environment stack,
-defined in the file `default.env`:
+defined in the default stack file `env/default.env`:
 
 ```bash
 $ envstack
