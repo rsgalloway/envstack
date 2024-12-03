@@ -90,6 +90,11 @@ def parse_args():
         help="generate export commands for %s" % config.SHELL,
     )
     parser.add_argument(
+        "--ignore-missing",
+        action="store_true",
+        help="ignore missing environment stack files",
+    )
+    parser.add_argument(
         "-p",
         "--platform",
         default=config.PLATFORM,
@@ -130,8 +135,13 @@ def main():
     """Main thread."""
     args, command = parse_args()
 
+    if args.ignore_missing:
+        config.IGNORE_MISSING = True
+
     try:
-        if args.resolve is not None:
+        if command:
+            return run_command(command, args.namespace)
+        elif args.resolve is not None:
             if len(args.resolve) == 0:
                 args.resolve = load_environ(args.namespace).keys()
             env = load_environ(args.namespace, platform=args.platform)
@@ -155,10 +165,8 @@ def main():
             print(clear(args.namespace, config.SHELL))
         elif args.export:
             print(export(args.namespace, config.SHELL))
-        elif command:
-            return run_command(command, args.namespace)
         else:
-            env = load_environ(args.namespace, platform=args.platform, includes=True)
+            env = load_environ(args.namespace, platform=args.platform)
             for k, v in sorted(env.items()):
                 print(f"{k}={v}")
 

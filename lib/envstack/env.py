@@ -441,7 +441,7 @@ def get_sources(*names: str, scope: str = None):
             potential_file = Path(directory) / file_basename
             if potential_file.exists():
                 found_files.append(potential_file)
-        if not found_files:
+        if not found_files and not config.IGNORE_MISSING:
             raise FileNotFoundError(f"{file_basename} not found in ENVPATH or scope.")
         return found_files
 
@@ -512,7 +512,7 @@ def clear(
     :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
-    env = load_environ(name, environ=None, scope=scope)
+    env = load_environ(name, scope=scope)
     export_vars = dict(env.items())
     export_list = list()
 
@@ -681,10 +681,8 @@ def init(*name):
 def load_environ(
     name=config.DEFAULT_NAMESPACE,
     sources=None,
-    environ=os.environ,
     platform=config.PLATFORM,
     scope=None,
-    includes=True,
 ):
     """Loads env stack data for a given name. Adds "STACK" key to environment,
     and sets the value to `name`.
@@ -700,10 +698,8 @@ def load_environ(
 
     :param name: namespace (basename of env files).
     :param sources: list of env files (optional).
-    :param environ: merge with this environment (optional).
     :param platform: name of platform (linux, darwin, windows).
     :param scope: environment scope (default: cwd).
-    :param includes: merge included namespaces.
     :returns: dict of environment variables.
     """
     if type(name) == str:

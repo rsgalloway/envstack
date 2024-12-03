@@ -61,6 +61,7 @@ DEBUG = os.getenv("DEBUG")
 DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "default")
 ENV = os.getenv("ENV", "prod")
 HOME = os.getenv("HOME")
+IGNORE_MISSING = os.getenv("IGNORE_MISSING", False)
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 ON_POSIX = "posix" in sys.builtin_module_names
 PLATFORM = platform.system().lower()
