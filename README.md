@@ -102,14 +102,14 @@ $ HELLO=goodbye envstack -- echo {HELLO}
 world
 ```
 
-With an expansion modifier, variable have a default value and can be overridden
-in the environment or by higher scope stacks:
+With an expansion modifier, variables have a default value and can also be
+overridden in the environment, or by higher scope stacks:
 
 ```yaml
 HELLO: ${HELLO:=world}
 ```
 
-Here we show the default value, and overriding it:
+Here we show the default value, and how we can override it in the environment:
 
 ```bash
 $ envstack -- echo {HELLO}
