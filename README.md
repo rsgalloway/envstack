@@ -39,12 +39,22 @@ root folder defined by `$DEPLOY_ROOT` (defined in `env/default.env`).
 
 ## Quickstart
 
-Envstack looks for .env files in directories specified by `$ENVPATH`, and in the
+Envstack looks for .env files in directories specified by `$ENVPATH` and in the
 current working directory:
 
 ```bash
 $ export ENVPATH=./env
 ```
+
+Define as many paths as you want, and envstack will search for stack file in
+order from left to right:
+
+```bash
+$ export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
+```
+
+In the case above, stack files in `/mnt/pipe/dev/env` will take precedence over those
+found in `/mnt/pipe/prod/env`.
 
 Running the `envstack` command will show you the default environment stack,
 defined in the default stack file `env/default.env`:
@@ -87,7 +97,7 @@ Without the expansion modifier, values are set and do not change (but can be
 overridden by lower scope stacks, i.e. a lower scope stack file may override
 a higher one). 
 
-If we define $HELLO like this:
+If we define `$HELLO` like this:
 
 ```yaml
 HELLO: world
