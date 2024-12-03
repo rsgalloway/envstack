@@ -31,11 +31,11 @@ If installing from source to a network location, you can use
 install envstack using the provided `dist.json` file:
 
 ```bash
-$ distman [-d]
+$ envstack -- distman [-d]
 ```
 
 Using distman will deploy the targets defined in the `dist.json` file to the
-root folder defined by `$DEPLOY_ROOT` (defined in `stack.env`).
+root folder defined by `$DEPLOY_ROOT` (defined in `env/default.env`).
 
 ## Quickstart
 
