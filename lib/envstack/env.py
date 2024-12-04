@@ -705,6 +705,9 @@ def load_environ(
     if type(name) == str:
         name = [name]
 
+    if not name:
+        name = [config.DEFAULT_NAMESPACE]
+
     sources = get_sources(*name)
 
     # create the environment to be returned
@@ -719,7 +722,7 @@ def load_environ(
 
     # add the current env stack name to the environment
     if not env.get("STACK"):
-        env["STACK"] = name[-1] if isinstance(name, list) else name
+        env["STACK"] = util.get_stack_name(name)
 
     return env
 

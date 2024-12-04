@@ -37,6 +37,9 @@ import os
 import re
 import sys
 
+from envstack import config
+
+
 # regex pattern to find variables like ${VAR}, ${VAR:=default}, ${VAR:?message}
 variable_pattern = re.compile(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(.*?))?\}")
 
@@ -63,6 +66,22 @@ def load_sys_path(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
     for path in get_paths_from_var(var, pathsep, reverse):
         if path and path not in sys.path:
             sys.path.insert(0, path)
+
+
+def get_stack_name(name=config.DEFAULT_NAMESPACE):
+    """
+    Returns the stack name as a string. The stack name is always the last
+    element in the stack list.
+
+    :param name: The input name, can be a string, tuple, or list.
+    :return: The stack name as a string.
+    """
+    if isinstance(name, str):
+        return name
+    elif isinstance(name, (tuple, list)):
+        return str(name[-1]) if name else ""
+    else:
+        raise ValueError("Invalid input type. Expected string, tuple, or list.")
 
 
 def dict_diff(dict1, dict2):
