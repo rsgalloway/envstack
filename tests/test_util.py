@@ -34,6 +34,7 @@ Contains unit tests for the util.py module.
 """
 
 import unittest
+
 from envstack.util import evaluate_modifiers, get_stack_name
 
 

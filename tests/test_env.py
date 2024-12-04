@@ -33,19 +33,12 @@ __doc__ = """
 Contains unit tests for the env.py module.
 """
 
-import unittest
-
 import os
 import sys
+import unittest
 
 import envstack
-from envstack.env import (
-    EnvVar,
-    Env,
-    Scope,
-    Source,
-    merge,
-)
+from envstack.env import Env, EnvVar, Scope, Source, merge
 from envstack.util import dict_diff
 
 
