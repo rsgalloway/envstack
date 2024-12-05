@@ -100,16 +100,19 @@ class EnvVar(string.Template, str):
         v.extend(iterable)
         self.template = v
 
-    def expand(self, env=None, recursive=False):
+    def expand(self, env=os.environ, recursive=True):
         """Returns expanded value of this var as new EnvVar instance.
 
         :env: Env instance object or key/value dict
         :returns: expanded EnvVar instance
         """
-        env = env or os.environ
-
         try:
-            val = EnvVar(self.safe_substitute(env, **os.environ))
+            # FIXME: os.environ is overriding fixed values in the .env file
+            # $ ROOT=/var/tmp envstack -r DEPLOY_ROOT ROOT
+            # DEPLOY_ROOT=/var/tmp/prod
+            # ROOT=/mnt/pipe
+            merged = merge(env, os.environ, strict=True)
+            val = EnvVar(self.safe_substitute(env, **merged))
         except RuntimeError as err:
             if "maximum recursion depth exceeded" in str(err):
                 raise CyclicalReference(self.template)
