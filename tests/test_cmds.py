@@ -49,15 +49,30 @@ class TestStacks(unittest.TestCase):
     def test_default(self):
         expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=${ENV:=${STACK}}
-ENVPATH=${ROOT}/${STACK}/env:${ROOT}/prod/env:${ENVPATH}
+ENVPATH=${ROOT}/${STACK}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
-PATH=${ROOT}/${STACK}/bin:${ROOT}/prod/bin:${PATH}
-PYTHONPATH=${ROOT}/${STACK}/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
-ROOT=${ROOT:=${HOME}/.local/pipe}
+PATH=${ROOT}/${STACK}/bin:${PATH}
+PYTHONPATH=${ROOT}/${STACK}/lib/python:${PYTHONPATH}
+ROOT=${HOME}/.local/pipe
 STACK=default
 """
         command = self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_prod(self):
+        expected_output = """DEPLOY_ROOT=${ROOT}/prod
+ENV=prod
+ENVPATH=${DEPLOY_ROOT}/env
+HELLO=${HELLO:=world}
+LOG_LEVEL=${LOG_LEVEL:=INFO}
+PATH=${DEPLOY_ROOT}/bin:${PATH}
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
+STACK=prod
+"""
+        command = "%s prod" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -69,7 +84,7 @@ HELLO=${HELLO:=world}
 LOG_LEVEL=DEBUG
 PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
 PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
-ROOT=${ROOT:=${HOME}/.local/pipe}
+ROOT=/mnt/pipe
 STACK=dev
 """
         command = "%s dev" % self.envstack_bin
@@ -79,13 +94,13 @@ STACK=dev
     def test_hello(self):
         expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=${ENV:=${STACK}}
-ENVPATH=${ROOT}/${STACK}/env:${ROOT}/prod/env:${ENVPATH}
+ENVPATH=${ROOT}/${STACK}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
-PATH=${ROOT}/${STACK}/bin:${ROOT}/prod/bin:${PATH}
+PATH=${ROOT}/${STACK}/bin:${PATH}
 PYEXE=python
-PYTHONPATH=${ROOT}/${STACK}/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
-ROOT=${ROOT:=${HOME}/.local/pipe}
+PYTHONPATH=${ROOT}/${STACK}/lib/python:${PYTHONPATH}
+ROOT=${HOME}/.local/pipe
 STACK=hello
 """
         command = "%s hello" % self.envstack_bin
