@@ -7,25 +7,43 @@ Environment variable management system.
 
 The list of features include:
 
-- **Environment stacks:** allows you to manage environment variables using .env files called environment stacks. These stacks provide a hierarchical and contextual approach to managing variables.
+- **Environment stacks:** allows you to manage environment variables using .env
+files called environment stacks. These stacks provide a hierarchical and
+contextual approach to managing variables.
 
-- **Hierarchical structure:** stacks can be combined and have a defined order of priority. Variables defined in higher scope stacks flow from higher scope to lower scope, left to right.
+- **Hierarchical structure:** stacks can be combined and have a defined order of
+priority. Variables defined in higher scope stacks flow from higher scope to
+lower scope, left to right.
 
-- **Variable expansion modifiers:** supports bash-like variable expansion modifiers, allowing you to set default values for variables and override them in the environment or by higher scope stacks.
+- **Variable expansion modifiers:** supports bash-like variable expansion
+modifiers, allowing you to set default values for variables and override them in
+the environment or by higher scope stacks.
 
-- **Platform-specific variables:** stacks can have platform-specific variables, which always inherit from the default stack. This allows you to define different values for variables based on the platform.
+- **Platform-specific variables:** stacks can have platform-specific variables
+and values. This allows you to define different values for variables based on
+the platform.
 
-- **Variable references:** variables can reference other variables, allowing for more flexibility and dynamic value assignment.
+- **Variable references:** variables can reference other variables, allowing for
+more flexibility and dynamic value assignment.
 
-- **Includes:** stack files can include other namespaced environments, making it easy to reuse and combine different stacks.
+- **Includes:** stack files can include other stacks, making it easy to reuse
+and combine different stacks.
 
-- **Python API:** provides a Python API that allows you to initialize and work with environment stacks programmatically. You can initialize specific stacks, revert to the original environment, and resolve variables.
+- **Python API:** provides a Python API that allows you to initialize and work
+with environment stacks programmatically. Easily initialize pre-defined
+environments with Python scripts, tools and wrappers.
 
-- **Running commands:** allows you to run command line executables inside an environment stack, providing a convenient way to execute commands with the desired environment.
+- **Running commands:** allows you to run command line executables inside an
+environment stack, providing a convenient way to execute commands with a
+pre-defined environment.
 
-- **Wrappers:** supports wrappers, which are command line executable scripts that automatically run a given command in the environment stack. This allows for easy customization and automation of command execution.
+- **Wrappers:** supports wrappers, which are command line executable scripts
+that automatically run a given command in the environment stack. This allows for
+easy customization and management of environments.
 
-- **Shell integration:** provides instructions for sourcing the environment stack in your current shell, allowing you to set and clear the environment easily.
+- **Shell integration:** provides instructions for sourcing the environment
+stack in your current shell, allowing you to set and clear the environment
+easily.
 
 
 ## Installation
