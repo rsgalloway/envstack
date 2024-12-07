@@ -66,6 +66,12 @@ current working directory. Get the latest `default.env` stack file:
 $ wget -O default.env https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
 ```
 
+Set `$ENVPATH` to the directory containing your environment stack files:
+
+```bash
+$ export ENVPATH=/path/to/env/stack/files
+```
+
 Define as many paths as you want, and envstack will search for stack file in
 order from left to right, for example:
 
@@ -75,6 +81,8 @@ $ export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
 
 In the case above, stack files in `/mnt/pipe/dev/env` will take precedence over those
 found in `/mnt/pipe/prod/env`.
+
+#### Basic Usage
 
 Running the `envstack` command will show you the default environment stack,
 defined in the `default.env` stack file:
@@ -91,6 +99,8 @@ PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=/mnt/pipe
 STACK=default
 ```
+
+**Note:**: The name of the current stack will always be stored in `$STACK`.
 
 To see stacks, pass the stack name as the first arg. Environment stacks can be
 combined, in order of priority (variables defined in stacks flow from higher
@@ -392,3 +402,13 @@ alias envstack-clear='source <(envstack --clear)';
 ```cmd
 doskey envstack-clear=for /f "usebackq" %i in (`envstack --clear $*`) do %%i
 ```
+
+## Config
+
+The following environment variables are used to help manage functionality:
+
+| Name | Description |
+|------|-------------|
+| ENVPATH | Colon-separated paths to search for stack files |
+| IGNORE_MISSING | Ignore missing stack files when resolving environments |
+| STACK | Name of the current stack |
