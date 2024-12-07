@@ -38,7 +38,7 @@ import sys
 import unittest
 
 import envstack
-from envstack.env import Env, EnvVar, Scope, Source, merge
+from envstack.env import Env, EnvVar, Scope, Source
 from envstack.util import dict_diff
 
 
@@ -67,10 +67,13 @@ class TestEnvVar(unittest.TestCase):
         self.assertEqual(v.template, ["$FOO", "${BAR}", "baz", "qux"])
 
     def test_expand(self):
-        v = EnvVar("$FOO:${BAR}")
-        env = {"FOO": "foo", "BAR": "bar"}
-        expanded = v.expand(env)
-        self.assertEqual(expanded.template, "foo:bar")
+        v = EnvVar("${BAR}")
+        env = {"FOO": "foo", "BAR": "${FOO}"}
+        value = v.expand(env)
+        self.assertEqual(value, "foo")
+        v = EnvVar("${FOO}:${BAR}")
+        value = v.expand(env)
+        self.assertEqual(value, "foo:foo")
 
     def test_parts(self):
         v = EnvVar("$FOO:${BAR}/bin")
@@ -84,23 +87,13 @@ class TestEnvVar(unittest.TestCase):
 class TestEnv(unittest.TestCase):
     def test_getitem(self):
         env = Env({"FOO": "foo", "BAR": "$FOO"})
-        self.assertEqual(env["BAR"], "foo")
+        self.assertEqual(env["BAR"], "$FOO")
 
     def test_get(self):
         env = Env({"FOO": "foo", "BAR": "$FOO"})
-        self.assertEqual(env.get("BAR"), "foo")
-        self.assertEqual(env.get("BAZ"), "")
+        self.assertEqual(env.get("BAR"), "$FOO")
+        self.assertEqual(env.get("BAZ"), None)
         self.assertEqual(env.get("BAZ", "default"), "default")
-
-    def test_get_raw(self):
-        env = Env({"FOO": "foo", "BAR": "$FOO"})
-        self.assertEqual(env.get_raw("BAR"), "$FOO")
-
-    def test_merge(self):
-        env1 = Env({"FOO": "foo", "BAR": "$FOO"})
-        env2 = {"BAR": "baz", "BAZ": "qux"}
-        merged = merge(env1, env2)
-        self.assertEqual(merged, {"FOO": "foo", "BAR": "baz"})
 
     def test_copy(self):
         env = Env({"FOO": "foo", "BAR": "$FOO"})
@@ -166,16 +159,14 @@ class TestInit(unittest.TestCase):
         sys_path = sys.path.copy()
         path = os.getenv("PATH")
         python_path = os.getenv("PYTHONPATH")
-        root = os.path.join(os.getenv("HOME"), ".local", "pipe")
-        deploy_root = os.path.join(root, "prod")
 
         envstack.init()
         self.assertEqual(os.getenv("ENV"), os.getenv("ENV", "default"))
         self.assertEqual(os.getenv("STACK"), "default")
         self.assertEqual(os.getenv("HELLO"), "world")
         self.assertEqual(os.getenv("LOG_LEVEL"), "INFO")
-        self.assertEqual(os.getenv("ROOT"), root)
-        self.assertEqual(os.getenv("DEPLOY_ROOT"), deploy_root)
+        self.assertEqual(os.getenv("ROOT"), "/mnt/pipe")
+        self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/prod")
         self.assertTrue(len(sys.path) > len(sys_path))
         self.assertTrue(len(os.getenv("PATH")) > len(path))
         self.assertTrue(len(os.getenv("PYTHONPATH")) > len(python_path))
@@ -183,42 +174,16 @@ class TestInit(unittest.TestCase):
         self.assertTrue("prod/bin" in os.getenv("PATH"))
 
         envstack.revert()
-        # diffs = dict_diff(original_env, os.environ)
-        # self.assertEqual(diffs["added"], {})
-        # self.assertEqual(diffs["changed"], {})
-        # self.assertEqual(diffs["removed"], {})
-        # self.assertEqual(diffs["unchanged"], original_env)
-        # self.assertEqual(os.getenv("PATH"), path)
-        # self.assertEqual(os.getenv("PYTHONPATH"), python_path)
-
-    def test_init_prod(self):
-        """Tests init with default stack."""
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
-        os.environ["ENVPATH"] = envpath
-        os.environ["HELLO"] = "goodbye"
-        os.environ["ROOT"] = "/var/tmp"  # cannot override ROOT
-        os.environ["ENV"] = "foobar"  # cannot override ENV
-        original_env = os.environ.copy()
-        sys_path = sys.path.copy()
-
-        envstack.init("prod")
-        self.assertEqual(os.getenv("ENV"), "prod")
-        self.assertEqual(os.getenv("STACK"), "prod")
-        self.assertEqual(os.getenv("HELLO"), "goodbye")
-        self.assertEqual(os.getenv("LOG_LEVEL"), "INFO")
-        self.assertEqual(os.getenv("ROOT"), "/mnt/pipe")
-        self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/prod")
-        self.assertTrue(len(sys.path) > len(sys_path))
-
-        envstack.revert()
-        # diffs = dict_diff(original_env, os.environ)
-        # self.assertEqual(diffs["added"], {})
-        # self.assertEqual(diffs["changed"], {})
-        # self.assertEqual(diffs["removed"], {})
-        # self.assertEqual(diffs["unchanged"], original_env)
+        diffs = dict_diff(original_env, os.environ)
+        self.assertEqual(diffs["added"], {})
+        self.assertEqual(diffs["changed"], {})
+        self.assertEqual(diffs["removed"], {})
+        self.assertEqual(diffs["unchanged"], original_env)
+        self.assertEqual(os.getenv("PATH"), path)
+        self.assertEqual(os.getenv("PYTHONPATH"), python_path)
 
     def test_init_dev(self):
-        """Tests init with default stack."""
+        """Tests init with dev stack."""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
         os.environ["HELLO"] = "goodbye"
@@ -238,11 +203,33 @@ class TestInit(unittest.TestCase):
         self.assertTrue(len(sys.path) > len(sys_path))
 
         envstack.revert()
-        # diffs = dict_diff(original_env, os.environ)
-        # self.assertEqual(diffs["added"], {})
-        # self.assertEqual(diffs["changed"], {})
-        # self.assertEqual(diffs["removed"], {})
-        # self.assertEqual(diffs["unchanged"], original_env)
+        diffs = dict_diff(original_env, os.environ)
+        self.assertEqual(diffs["added"], {})
+        self.assertEqual(diffs["changed"], {})
+        self.assertEqual(diffs["removed"], {})
+        self.assertEqual(diffs["unchanged"], original_env)
+
+    def test_init_zzz_custom(self):
+        """Tests init with custom test stack."""
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        os.environ["ENVPATH"] = envpath
+        os.environ["HELLO"] = "goodbye"
+        os.environ["ENV"] = "foobar"  # cannot override ENV
+        original_env = os.environ.copy()
+        sys_path = sys.path.copy()
+
+        envstack.init("test", "custom", ignore_missing=True)
+        self.assertEqual(os.getenv("ENV"), "custom")
+        self.assertEqual(os.getenv("STACK"), "custom")
+        self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/custom")
+        self.assertTrue(len(sys.path) > len(sys_path))
+
+        envstack.revert()
+        diffs = dict_diff(original_env, os.environ)
+        self.assertEqual(diffs["added"], {})
+        self.assertEqual(diffs["changed"], {})
+        self.assertEqual(diffs["removed"], {})
+        self.assertEqual(diffs["unchanged"], original_env)
 
 
 if __name__ == "__main__":

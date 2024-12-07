@@ -33,9 +33,10 @@ __doc__ = """
 Contains unit tests for the util.py module.
 """
 
+import os
 import unittest
 
-from envstack.util import evaluate_modifiers, get_stack_name
+from envstack.util import encode, evaluate_modifiers, get_stack_name, safe_eval
 
 
 class TestEvaluateModifiers(unittest.TestCase):
@@ -56,10 +57,16 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "hello")
 
+    def test_default_value_empty_env(self):
         expression = "${VAR:=default}"
         environ = {}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "default")
+
+    def test_default_value_with_default_args(self):
+        expression = "${HELLO:=world}"
+        result = evaluate_modifiers(expression)
+        self.assertEqual(result, os.getenv("HELLO", "world"))
 
     def test_error_message(self):
         expression = "${VAR:?error message}"
@@ -67,19 +74,34 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "hello")
 
+    def test_error_message_raise(self):
         expression = "${VAR:?error message}"
         environ = {}
         with self.assertRaises(ValueError):
             evaluate_modifiers(expression, environ)
 
     def test_multiple_substitutions(self):
-        expression = "${VAR}/${FOO:=default}/${BAR:?error message}"
+        expression = "${VAR}/${FOO:=foobar}/${BAR:?error message}"
         environ = {"VAR": "hello", "BAR": "world"}
         result = evaluate_modifiers(expression, environ)
-        self.assertEqual(result, "hello/default/world")
+        self.assertEqual(result, "hello/foobar/world")
 
 
-class TestEvaluateModifiers(unittest.TestCase):
+class TestUtils(unittest.TestCase):
+    def test_encode(self):
+        env = {
+            "VAR1": "value1",
+            "VAR2": 1,
+            "VAR3": 4.5,
+        }
+        encoded_env = encode(env)
+        expected_encoded_env = {
+            "VAR1": "value1",
+            "VAR2": "1",
+            "VAR3": "4.5",
+        }
+        self.assertEqual(encoded_env, expected_encoded_env)
+
     def test_get_stack_name_string(self):
         name = "stack_name"
         result = get_stack_name(name)
@@ -104,6 +126,38 @@ class TestEvaluateModifiers(unittest.TestCase):
         name = 123
         with self.assertRaises(ValueError):
             get_stack_name(name)
+
+
+class TestSafeEval(unittest.TestCase):
+    def test_safe_eval_string(self):
+        value = "hello"
+        result = safe_eval(value)
+        self.assertEqual(result, "hello")
+
+    def test_safe_eval_integer(self):
+        value = "123"
+        result = safe_eval(value)
+        self.assertEqual(result, 123)
+
+    def test_safe_eval_float(self):
+        value = "3.14"
+        result = safe_eval(value)
+        self.assertEqual(result, 3.14)
+
+    def test_safe_eval_list(self):
+        value = "['a', 'b', 'c']"
+        result = safe_eval(value)
+        self.assertEqual(result, ["a", "b", "c"])
+
+    def test_safe_eval_dict(self):
+        value = "{'key': 'value'}"
+        result = safe_eval(value)
+        self.assertEqual(result, {"key": "value"})
+
+    def test_safe_eval_invalid_value(self):
+        value = "invalid"
+        result = safe_eval(value)
+        self.assertEqual(result, "invalid")
 
 
 if __name__ == "__main__":

@@ -38,7 +38,7 @@ import subprocess
 import unittest
 
 
-class TestStacks(unittest.TestCase):
+class TestUnresolved(unittest.TestCase):
     def setUp(self):
         self.envstack_bin = os.path.join(
             os.path.dirname(__file__), "..", "bin", "envstack"
@@ -48,31 +48,16 @@ class TestStacks(unittest.TestCase):
 
     def test_default(self):
         expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
-ENV=${ENV:=${STACK}}
-ENVPATH=${ROOT}/${STACK}/env:${ENVPATH}
-HELLO=${HELLO:=world}
-LOG_LEVEL=${LOG_LEVEL:=INFO}
-PATH=${ROOT}/${STACK}/bin:${PATH}
-PYTHONPATH=${ROOT}/${STACK}/lib/python:${PYTHONPATH}
-ROOT=${HOME}/.local/pipe
-STACK=default
-"""
-        command = self.envstack_bin
-        output = subprocess.check_output(command, shell=True, universal_newlines=True)
-        self.assertEqual(output, expected_output)
-
-    def test_prod(self):
-        expected_output = """DEPLOY_ROOT=${ROOT}/prod
 ENV=prod
-ENVPATH=${DEPLOY_ROOT}/env
+ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${DEPLOY_ROOT}/bin:${PATH}
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=/mnt/pipe
-STACK=prod
+STACK=default
 """
-        command = "%s prod" % self.envstack_bin
+        command = self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -93,14 +78,14 @@ STACK=dev
 
     def test_hello(self):
         expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
-ENV=${ENV:=${STACK}}
-ENVPATH=${ROOT}/${STACK}/env:${ENVPATH}
+ENV=prod
+ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
-PATH=${ROOT}/${STACK}/bin:${PATH}
+PATH=${DEPLOY_ROOT}/bin:${PATH}
 PYEXE=python
-PYTHONPATH=${ROOT}/${STACK}/lib/python:${PYTHONPATH}
-ROOT=${HOME}/.local/pipe
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
 STACK=hello
 """
         command = "%s hello" % self.envstack_bin
@@ -108,22 +93,65 @@ STACK=hello
         self.assertEqual(output, expected_output)
 
     def test_thing(self):
-        expected_output = """CHAR_LIST=['a', 'b', 'c']
-DEPLOY_ROOT=${ROOT}/dev
+        expected_output = """CHAR_LIST=['a', 'b', 'c', '${HELLO}']
 DICT={'a': 1, 'b': 2, 'c': 3}
-ENV=dev
-ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 FLOAT=1.0
 HELLO=goodbye
 INT=5
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 NUMBER_LIST=[1, 2, 3]
-PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
 PYTHONPATH=/usr/local/lib/python2.7/site-packages:${PYTHONPATH}
-ROOT=/mnt/tools
 STACK=thing
 """
         command = "%s thing" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+
+class TestResolved(unittest.TestCase):
+    def setUp(self):
+        self.envstack_bin = os.path.join(
+            os.path.dirname(__file__), "..", "bin", "envstack"
+        )
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        os.environ["ENVPATH"] = envpath
+        os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
+
+    def test_default(self):
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/prod
+HELLO=world
+ROOT=/mnt/pipe
+STACK=default
+"""
+        command = "%s -r DEPLOY_ROOT HELLO ROOT STACK" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_dev(self):
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/dev
+HELLO=world
+ROOT=/mnt/pipe
+STACK=dev
+"""
+        command = "%s dev -r DEPLOY_ROOT HELLO ROOT STACK" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_test(self):
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/test
+HELLO=world
+ROOT=/mnt/pipe
+STACK=test
+"""
+        command = "%s test -r DEPLOY_ROOT HELLO ROOT STACK" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_thing(self):
+        expected_output = """CHAR_LIST=['a', 'b', 'c', 'goodbye']
+HELLO=goodbye
+"""
+        command = "%s thing -r HELLO CHAR_LIST" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -155,6 +183,24 @@ class TestCommands(unittest.TestCase):
     def test_thing_echo(self):
         command = "%s thing -- echo {HELLO}" % self.envstack_bin
         expected_output = "goodbye\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_test_echo_deploy_root(self):
+        command = "%s test -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        expected_output = "/mnt/pipe/test\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_test_echo_deploy_root(self):
+        command = (
+            "%s test foobar --ignore-missing -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        )
+        expected_output = "/mnt/pipe/foobar\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )

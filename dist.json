@@ -17,13 +17,13 @@
             "source": "env/hello.env",
             "destination": "{DEPLOY_ROOT}/env/hello.env"
         },
+        "env-test": {
+            "source": "env/test.env",
+            "destination": "{DEPLOY_ROOT}/env/test.env"
+        },
         "env-thing": {
             "source": "env/thing.env",
             "destination": "{DEPLOY_ROOT}/env/thing.env"
-        },
-        "env-prod": {
-            "source": "env/prod.env",
-            "destination": "{DEPLOY_ROOT}/env/prod.env"
         },
         "bin-envstack": {
             "source": "bin/envstack",

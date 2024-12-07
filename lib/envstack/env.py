@@ -62,7 +62,7 @@ class EnvVar(string.Template, str):
     'foo:bar'
     """
 
-    def __init__(self, template=null):
+    def __init__(self, template: str = null):
         super(EnvVar, self).__init__(template)
 
     def __eq__(self, other):
@@ -73,15 +73,15 @@ class EnvVar(string.Template, str):
     def __iter__(self):
         return iter(self.parts())
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         return EnvVar(self.value().__getitem__(key))
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: str):
         v = self.value()
         v.__setitem__(key, value)
         self.template = v
 
-    def append(self, value):
+    def append(self, value: str):
         """If value is a list, append object to the end of the list.
 
         :param value: value to append
@@ -100,19 +100,14 @@ class EnvVar(string.Template, str):
         v.extend(iterable)
         self.template = v
 
-    def expand(self, env=os.environ, recursive=True):
+    def expand(self, env: dict = os.environ, recursive: bool = True):
         """Returns expanded value of this var as new EnvVar instance.
 
-        :env: Env instance object or key/value dict
-        :returns: expanded EnvVar instance
+        :env: Env instance object or key/value dict.
+        :returns: expanded EnvVar instance.
         """
         try:
-            # FIXME: os.environ is overriding fixed values in the .env file
-            # $ ROOT=/var/tmp envstack -r DEPLOY_ROOT ROOT
-            # DEPLOY_ROOT=/var/tmp/prod
-            # ROOT=/mnt/pipe
-            merged = merge(env, os.environ, strict=True)
-            val = EnvVar(self.safe_substitute(env, **merged))
+            val = EnvVar(self.safe_substitute(env))
         except RuntimeError as err:
             if "maximum recursion depth exceeded" in str(err):
                 raise CyclicalReference(self.template)
@@ -127,39 +122,17 @@ class EnvVar(string.Template, str):
                 for v in val.value():
                     ret.append(EnvVar(v).expand(env, recursive))
                 return ret
-
             elif type(val.value()) == dict:
                 ret = {}
                 for k, v in val.value().items():
                     ret[k] = EnvVar(v).expand(env, recursive)
                 return ret
-
             elif val.parts():
                 return val.expand(env, recursive=False)
-
             else:
                 return val
-
         else:
             return val
-
-    def get(self, key, default=None):
-        """EnvVar.get(k[,d]) -> EnvVar[k] if k in EnvVar and EnvVar[k]
-        is a dict, else d.
-        """
-        try:
-            return self[key]
-        except (KeyError, TypeError):
-            return default
-
-    def items(self):
-        """Returns list of (key, value) pairs as 2-tuples if
-        the value of this EnvVar is a dict.
-        """
-        template = safe_eval(self.template)
-        if not isinstance(template, dict):
-            raise TypeError(type(template), template)
-        return [(k, EnvVar(v).value()) for k, v in template.items()]
 
     def keys(self):
         """Returns EnvVar.keys() if the value of this EnvVar is a dict."""
@@ -186,7 +159,7 @@ class EnvVar(string.Template, str):
 
     def value(self):
         """Returns EnvVar value."""
-        return safe_eval(self.template)
+        return self.template  # util.safe_eval(self.template)
 
     def vars(self):
         """Returns a list of embedded, named variables, e.g.: ::
@@ -200,92 +173,40 @@ class EnvVar(string.Template, str):
 
 
 class Env(dict):
-    """Dict subclass that auto-expands embedded variables.
+    """Dictionary subclass for managing environments.
 
-    >>> env = envstack.Env({
-    ...     'BAR': '$FOO',
-    ...     'BAZ': '$BAR'
-    ... })
-    >>> env['BAR']
-    None
-    >>> env.update({'FOO': 'bar'})
-    >>> env['BAZ']
-    bar
-    >>> env.get('BAZ', resolved=False)
-    '$BAR'
+        >>> env = Env({"BAR": "${FOO}", "FOO": "foo"})
+        >>> resolve_environ(env)
+        {'BAR': 'foo', 'FOO': 'foo'}
     """
 
     def __init__(self, *args, **kwargs):
         super(Env, self).__init__(*args, **kwargs)
         self.scope = os.getcwd()
 
-    def __getitem__(self, key):
-        """Returns expanded value of key."""
-        if key not in self.keys():
-            raise KeyError(key)
-        try:
-            value = self.__get(key)
-            if key in value.vars():
-                return value
-            return value.expand(self).value()
-        except CyclicalReference:
-            return value
-        except InvalidSyntax:
-            return EnvVar()
-
-    def __get(self, key, default=null):
-        """Returns unexpanded values of key. Same as dict.get(k[,d]) where k is the
-        key, and d is a default value."""
-        return EnvVar(super(Env, self).get(key, default))
-
     def copy(self):
         """Returns a copy of this Env."""
         return Env(super(Env, self).copy())
 
-    def get(self, key, default=null, resolved=True):
-        """Returns expanded or raw unexpanded value of key, or a given default value.
-
-        :param key: return value of this key
-        :param default: default value if key not present
-        :param resolved: return expanded values
-        """
-        if key not in self:
-            return default
-        value = self.__get(key, default)
-        if key in value.vars():
-            return value
-        if resolved:
-            try:
-                return value.expand(self).value()
-            except CyclicalReference:
-                return value
-            except InvalidSyntax:
-                return EnvVar()
-        return value
-
-    def get_raw(self, key):
-        """Returns raw, unexpanded value of key, or None."""
-        return self.get(key, resolved=False).template
-
-    def merge(self, env):
+    def merge(self, env: dict):
         """Merges another env into this one, i.e. env[k] will replace self[k].
 
-        :param env: env to merge into this one
+        :param env: env to merge into this one.
         """
         for k, v in env.items():
             self[k] = v
 
-    def set_namespace(self, name):
+    def set_namespace(self, name: str):
         """Stores the namespace for this environment.
 
-        :param name: namespace
+        :param name: namespace.
         """
         self.namespace = name
 
-    def set_scope(self, path):
+    def set_scope(self, path: str):
         """Stores the scope for this environment.
 
-        :param path: path of scope
+        :param path: path of scope.
         """
         self.scope = path
 
@@ -293,7 +214,7 @@ class Env(dict):
 class Scope(path.Path):
     """Scope class."""
 
-    def __init__(self, path=None):
+    def __init__(self, path: str = None):
         """
         :param path: scope path (default is CWD)
         """
@@ -305,7 +226,7 @@ class Source(object):
 
     def __init__(self, path):
         """
-        :param path: path to .env file
+        :param path: path to .env file.
         """
         self.path = path
         self.__data = {}
@@ -358,57 +279,14 @@ def clear_file_cache():
     load_file_cache = {}
 
 
-def decode_value(value):
-    """Returns a decoded value that's been encoded by a wrapper.
-
-    Decoding encoded environments can be tricky. For example, it must account for path
-    templates that include curly braces, e.g. path templates string like this must be
-    preserved:
-
-        '/path/with/{variable}'
-
-    :param value: wrapper encoded env value
-    :returns: decoded value
-    """
-    # TODO: find a better way to encode/decode wrapper envs
-    return (
-        str(value)
-        .replace("'[", "[")
-        .replace("]'", "]")
-        .replace('"[', "[")
-        .replace(']"', "]")
-        .replace('"{"', "{'")
-        .replace('"}"', "'}")
-        .replace("'{'", "{'")
-        .replace("'}'", "'}")
-    )
-
-
-def encode(env, resolved=True):
-    """Returns environment as a dict with str encoded key/values for passing to
-    wrapper subprocesses.
-
-    :param env: `Env` instance or os.environ.
-    :param resolved: fully resolve values (default=True).
-    :returns: dict with bytestring key/values.
-    """
-    c = lambda v: str(v)
-    if resolved:
-        return dict((c(k), c(expandvars(v, env))) for k, v in env.items())
-    return dict((c(k), c(v)) for k, v in env.items())
-
-
 def get_sources(*names: str, scope: str = None):
     """
-    Find .env files recursively based on includes, avoiding cyclic dependencies.
+    Returns a list of Source objects for a given list of .env basenames.
 
-    Args:
-        *names (str): A variable-length list of .env file names to search for.
-        scope (str): A filesystem path defining the scope to walk up to.
-                     Defaults to the current working directory.
-
-    Returns:
-        List[Path]: A list of resolved `.env` file paths in the order they are loaded.
+    :param names: list of .env file names to search for.
+    :param scope: filesystem path defining the scope to walk up to.
+    :raises TemplateNotFound: if a file is not found in ENVPATH or scope.
+    :returns: list of Source objects.
     """
     clear_file_cache()
 
@@ -445,7 +323,7 @@ def get_sources(*names: str, scope: str = None):
             if potential_file.exists():
                 found_files.append(potential_file)
         if not found_files and not config.IGNORE_MISSING:
-            raise FileNotFoundError(f"{file_basename} not found in ENVPATH or scope.")
+            raise TemplateNotFound(f"{file_basename} not found in ENVPATH or scope.")
         return found_files
 
     def _load_file(file_basename):
@@ -480,7 +358,7 @@ def get_sources(*names: str, scope: str = None):
     return sources
 
 
-def expandvars(var, env=None, recursive=False):
+def expandvars(var, env: Env = None, recursive: bool = False):
     """Expands variables in a given string for a given environment,
     e.g.: if env = {'ROOT':'/projects'}
 
@@ -515,14 +393,12 @@ def clear(
     :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
+
     env = load_environ(name, scope=scope)
-    export_vars = dict(env.items())
     export_list = list()
+    restricted = ["PATH", "PS1", "PWD", "PROMPT"]
 
-    # vars that should never be unset
-    restricted_vars = ["PATH", "PS1", "PWD", "PROMPT", "DEFAULT_ENV_DIR"]
-
-    for key in export_vars:
+    for key in env:
         if key not in os.environ:
             continue
         old_key = f"_ES_OLD_{key}"
@@ -531,25 +407,25 @@ def clear(
             if old_val:
                 export_list.append("export %s=%s" % (key, old_val))
                 export_list.append("unset %s" % (old_key))
-            elif key not in restricted_vars:
+            elif key not in restricted:
                 export_list.append(f"unset {key}")
         elif shell == "tcsh":
             if old_val:
                 export_list.append(f"setenv {key} {old_val}")
                 export_list.append(f"unsetenv {old_key}")
-            elif key not in restricted_vars:
+            elif key not in restricted:
                 export_list.append(f"unsetenv {key}")
         elif shell == "cmd":
             if old_val:
                 export_list.append(f"set {key}={old_val}")
                 export_list.append(f"set {old_key}=")
-            elif key not in restricted_vars:
+            elif key not in restricted:
                 export_list.append(f"set {key}=")
         elif shell == "pwsh":
             if old_val:
                 export_list.append(f"$env:{key}='{old_val}'")
                 export_list.append(f"Remove-Item Env:{old_key}")
-            elif key not in restricted_vars:
+            elif key not in restricted:
                 export_list.append(f"Remove-Item Env:{key}")
         elif shell == "unknown":
             raise Exception("unknown shell")
@@ -576,12 +452,14 @@ def export(
     :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
-    env = load_environ(name, scope=scope)
-    export_vars = dict(env.items())
+
+    # resolve environment variables
+    resolved_env = resolve_environ(load_environ(name, scope=scope))
+
+    # track the environment variables to export
     export_list = list()
 
-    for key, val in export_vars.items():
-        val = expandvars(val, env, recursive=False)
+    for key, val in resolved_env.items():
         old_key = f"_ES_OLD_{key}"
         old_val = os.environ.get(key)
         if key == "PATH" and not val:
@@ -625,10 +503,12 @@ def revert():
     paths found in PYTHONPATH.
 
     Initialize the default environment stack:
-    >>> envstack.init()
+
+        >>> envstack.init()
 
     Revert to the previous environment:
-    >>> envstack.revert()
+
+        >>> envstack.revert()
     """
     global SAVED_ENVIRONMENT
     if SAVED_ENVIRONMENT is None:
@@ -647,38 +527,61 @@ def revert():
     SAVED_ENVIRONMENT = None
 
 
-def init(*name):
+def init(*name, ignore_missing=False):
     """Initializes the environment from a given stack namespace. Environments
     propogate downwards with subsequent calls to init().
 
     Updates sys.path using paths found in PYTHONPATH.
 
     Initialize the default environment stack:
-    >>> envstack.init()
+
+        >>> envstack.init()
 
     Initialize the 'dev' environment stack (inherits from previous call):
-    >>> envstack.init('dev')
+
+        >>> envstack.init('dev')
 
     Initialize both 'dev' and 'test', in that order:
-    >>> envstack.init('dev', 'test')
+
+        >>> envstack.init('dev', 'test')
 
     Revert to the original environment:
-    >>> envstack.revert()
+
+        >>> envstack.revert()
 
     :param *name: list of stack namespaces.
+    :param ignore_missing: ignore missing .env files.
     """
     # save environment to restore later using envstack.revert()
     save()
+
+    config.IGNORE_MISSING = ignore_missing
 
     # clear old sys.path values
     util.clear_sys_path()
 
     # load the stack and update the environment
-    env = load_environ(name)
-    os.environ.update(encode(env))
+    env = resolve_environ(load_environ(name))
+    os.environ.update(util.encode(env))
 
     # update sys.path from PYTHONPATH
     util.load_sys_path()
+
+
+def resolve_environ(env):
+    """Resolves all variables in a given unresolved environment, returning a
+    new environment dict.
+
+    :param env: unresolved environment.
+    :returns: resolved environment.
+    """
+    resolved = Env()
+
+    for key, value in env.items():
+        evaluated_value = util.evaluate_modifiers(value, env)
+        resolved[key] = evaluated_value
+
+    return resolved
 
 
 def load_environ(
@@ -733,8 +636,8 @@ def load_environ(
 def load_file(path: str):
     """Reads a given .env file and returns data as dict.
 
-    :param path: path to envstack env file
-    :returns: loaded yaml data as dict
+    :param path: path to envstack env file.
+    :returns: loaded yaml data as dict.
     """
 
     if path in load_file_cache:
@@ -762,82 +665,13 @@ def load_file(path: str):
     return data
 
 
-def merge(env, other, strict=False, platform=config.PLATFORM):
-    """Merges values from other into env. For example, to merge values from
-    the local environment into an env instance:
-
-        >>> merge(env, os.environ)
-
-    To merge values from env into the local environment:
-
-        >>> merge(os.environ, env)
-
-    :param env: source env
-    :param other: env to merge
-    :param strict: value from env takes precedence (default: False)
-    :param platform: name of platform (linux, darwin, windows)
-    :returns: merged env
-    """
-    merged = env.copy()
-    for key, value in merged.items():
-        varstr = "${%s}" % key
-        # replace variables in other with values from env
-        if key in other:
-            # replace variables in value with values from other
-            if varstr in str(value):
-                value = re.sub(
-                    r"\${(\w+)}",
-                    lambda match: other.get(match.group(1), match.group(0)),
-                    value,
-                )
-            elif not strict:
-                value = other.get(key)
-        else:
-            value = str(value).replace(varstr, "")
-        # replace colons with semicolons on windows
-        if platform == "windows":
-            result = re.sub(r"(?<!\b[A-Za-z]):", ";", str(value))
-            value = result.rstrip(";")
-        merged[key] = value
-    return merged
-
-
-def safe_eval(value):
-    """
-    Returns template value preserving original class. Useful for preserving
-    nested values in wrappers. For example, a value of "1.0" returns 1.0, and a
-    value of "['a', 'b']" returns ['a', 'b'].
-
-    :param value: value to evaluate
-    :returns: evaluated value
-    """
-    try:
-        from ast import literal_eval
-
-        eval_func = literal_eval
-    except ImportError:
-        # warning: security issue
-        eval_func = eval
-
-    if type(value) == str:
-        try:
-            return eval_func(value)
-        except Exception:
-            try:
-                return eval_func(decode_value(value))
-            except Exception:
-                return value
-
-    return value
-
-
 def trace_var(*name: str, var: str = None, scope: str = None):
     """Traces where a var is getting set for a given name.
 
-    :param name: name of tool or executable
-    :param var: environment variable to trace
-    :param scope: environment scope (default: cwd)
-    :returns: source path
+    :param name: name of tool or executable.
+    :param var: environment variable to trace.
+    :param scope: environment scope (default: cwd).
+    :returns: source path.
     """
     sources = get_sources(*name, scope=scope)
     sources.reverse()
@@ -854,7 +688,7 @@ def trace_var(*name: str, var: str = None, scope: str = None):
 environ = load_environ(name=config.DEFAULT_NAMESPACE)
 
 
-def getenv(key, default=None):
+def getenv(key, default: str = None):
     """Replaces os.getenv, where the environment includes envstack
     declared variables.
 

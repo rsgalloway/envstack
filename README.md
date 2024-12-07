@@ -62,13 +62,13 @@ defined in the default stack file `env/default.env`:
 ```bash
 $ envstack
 DEPLOY_ROOT=${ROOT}/${ENV}
-ENV=${ENV:=${STACK}}
-ENVPATH=${ROOT}/${STACK}/env:${ROOT}/prod/env:${ENVPATH}
+ENV=prod
+ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
-PATH=${ROOT}/${STACK}/bin:${ROOT}/prod/bin:${PATH}
-PYTHONPATH=${ROOT}/${STACK}/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
-ROOT=${ROOT:=${HOME}/.local/pipe}
+PATH=${DEPLOY_ROOT}/bin:${PATH}
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
 STACK=default
 ```
 
@@ -165,8 +165,30 @@ windows:
   HELLO: goodbye
 ```
 
-Environment files can include other namespaced environments (you should probably
-always include the default stack):
+Variables can reference other variables:
+
+```yaml
+all: &default
+  FOO: ${BAR}
+  BAR: ${BAZ}
+  BAZ: ${BIZ}
+  BIZ: ${BIZ:=foo}
+```
+
+As you might expect, the above resolves to:
+
+```bash
+$ envstack -r
+BAR=foo
+BAZ=foo
+BIZ=foo
+FOO=foo
+```
+
+#### Includes
+
+Environment stack files can include other namespaced environments (you should
+probably always include the default stack):
 
 ```yaml
 include: [default, test]
@@ -231,6 +253,15 @@ for the default environment stack:
 ```python
 >>> envstack.getenv("HELLO")
 'world'
+```
+
+Creating and resolving environments:
+
+```python
+>>> from envstack.env import Env
+>>> env = Env({"BAR": "${FOO}", "FOO": "foo"})
+>>> resolve_environ(env)
+{'BAR': 'foo', 'FOO': 'foo'}
 ```
 
 ## Running Commands

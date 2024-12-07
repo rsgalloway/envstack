@@ -40,7 +40,8 @@ import subprocess
 import traceback
 
 from envstack import config, logger
-from envstack.env import encode, expandvars, load_environ
+from envstack.env import load_environ, resolve_environ
+from envstack.util import encode, evaluate_modifiers
 
 
 def to_args(cmd):
@@ -110,7 +111,7 @@ class Wrapper(object):
             process = subprocess.Popen(
                 args=command,
                 bufsize=0,
-                env=env,
+                env=encode(env),
                 shell=self.shell,
             )
         except Exception:
@@ -131,7 +132,7 @@ class Wrapper(object):
 
     def get_subprocess_command(self, env):
         """Returns the command to be passed to the subprocess."""
-        cmd = expandvars(self.executable(), env, recursive=True)
+        cmd = evaluate_modifiers(self.executable(), env)
         args = self.get_subprocess_args(cmd)
         return " ".join([cmd] + args)
 
@@ -141,7 +142,7 @@ class Wrapper(object):
         is called on the wrapper.
         """
         env = os.environ.copy()
-        env.update(encode(self.env))
+        env.update(resolve_environ(self.env))
         return env
 
 

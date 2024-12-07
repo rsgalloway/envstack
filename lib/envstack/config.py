@@ -86,15 +86,3 @@ DEFAULT_ENV = {
     ),
     "USER": USERNAME,
 }
-
-# default location of stack .env files
-DEFAULT_ENV_DIR = os.getenv(
-    "DEFAULT_ENV_DIR",
-    {
-        "darwin": "{ROOT}/pipe/{ENV}/env",
-        "linux": "{ROOT}/{ENV}/env",
-        "windows": "{ROOT}\\{ENV}\\env",
-    }
-    .get(PLATFORM)
-    .format(**DEFAULT_ENV),
-)
