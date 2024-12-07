@@ -175,9 +175,9 @@ class EnvVar(string.Template, str):
 class Env(dict):
     """Dictionary subclass for managing environments.
 
-        >>> env = Env({"BAR": "${FOO}", "FOO": "foo"})
-        >>> resolve_environ(env)
-        {'BAR': 'foo', 'FOO': 'foo'}
+    >>> env = Env({"BAR": "${FOO}", "FOO": "foo"})
+    >>> resolve_environ(env)
+    {'BAR': 'foo', 'FOO': 'foo'}
     """
 
     def __init__(self, *args, **kwargs):
@@ -358,7 +358,7 @@ def get_sources(*names: str, scope: str = None):
     return sources
 
 
-def expandvars(var, env: Env = None, recursive: bool = False):
+def expandvars(var: str, env: Env = None, recursive: bool = False):
     """Expands variables in a given string for a given environment,
     e.g.: if env = {'ROOT':'/projects'}
 
@@ -375,9 +375,9 @@ def expandvars(var, env: Env = None, recursive: bool = False):
 
 
 def clear(
-    name=config.DEFAULT_NAMESPACE,
-    shell=config.SHELL,
-    scope=None,
+    name: str = config.DEFAULT_NAMESPACE,
+    shell: str = config.SHELL,
+    scope: str = None,
 ):
     """Returns shell commands that can be sourced to unset or restore env stack
     environment variables. Should only be run after a previous export:

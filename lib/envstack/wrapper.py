@@ -233,7 +233,7 @@ class CmdWrapper(CommandWrapper):
         return self.cmd
 
 
-def run_command(command, namespace=config.DEFAULT_NAMESPACE):
+def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
     """
     Runs a given command with the given stack namespace.
 

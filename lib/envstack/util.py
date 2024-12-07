@@ -47,7 +47,7 @@ variable_pattern = re.compile(
 )
 
 
-def clear_sys_path(var="PYTHONPATH"):
+def clear_sys_path(var: str = "PYTHONPATH"):
     """
     Remove paths from sys.path that are in the given environment variable.
 
@@ -58,7 +58,7 @@ def clear_sys_path(var="PYTHONPATH"):
             sys.path.remove(path)
 
 
-def decode_value(value):
+def decode_value(value: str):
     """Returns a decoded value that's been encoded by a wrapper.
 
     Decoding encoded environments can be tricky. For example, it must account for path
@@ -84,7 +84,7 @@ def decode_value(value):
     )
 
 
-def dedupe_list(lst):
+def dedupe_list(lst: list):
     """
     Deduplicates a list while preserving the original order. Useful for
     deduplicating paths.
@@ -95,7 +95,7 @@ def dedupe_list(lst):
     return list(OrderedDict.fromkeys(lst))
 
 
-def dict_diff(dict1, dict2):
+def dict_diff(dict1: dict, dict2: dict):
     """
     Compare two dictionaries and return their differences.
 
@@ -118,7 +118,7 @@ def dict_diff(dict1, dict2):
     }
 
 
-def encode(env):
+def encode(env: dict):
     """Returns environment as a dict with str encoded key/values for passing to
     wrapper subprocesses.
 
@@ -130,7 +130,9 @@ def encode(env):
     return dict((c(k), c(v)) for k, v in env.items())
 
 
-def get_paths_from_var(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
+def get_paths_from_var(
+    var: str = "PYTHONPATH", pathsep: str = os.pathsep, reverse: bool = True
+):
     """Returns a list of paths from a given pathsep separated environment
     variable.
 
@@ -152,7 +154,7 @@ def get_paths_from_var(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
     return paths
 
 
-def get_stack_name(name=config.DEFAULT_NAMESPACE):
+def get_stack_name(name: str = config.DEFAULT_NAMESPACE):
     """
     Returns the stack name as a string. The stack name is always the last
     element in the stack list.
@@ -168,7 +170,7 @@ def get_stack_name(name=config.DEFAULT_NAMESPACE):
         raise ValueError("Invalid input type. Expected string, tuple, or list.")
 
 
-def evaluate_modifiers(expression, environ=os.environ):
+def evaluate_modifiers(expression: str, environ: dict = os.environ):
     """
     Evaluates Bash-like variable expansion modifiers.
 
@@ -255,7 +257,9 @@ def evaluate_modifiers(expression, environ=os.environ):
     return result
 
 
-def load_sys_path(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
+def load_sys_path(
+    var: str = "PYTHONPATH", pathsep: str = os.pathsep, reverse: bool = True
+):
     """
     Add paths from the given environment variable to sys.path.
 
@@ -268,7 +272,7 @@ def load_sys_path(var="PYTHONPATH", pathsep=os.pathsep, reverse=True):
             sys.path.insert(0, path)
 
 
-def safe_eval(value):
+def safe_eval(value: str):
     """
     Returns template value preserving original class. Useful for preserving
     nested values in wrappers. For example, a value of "1.0" returns 1.0, and a
