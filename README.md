@@ -1,12 +1,32 @@
 envstack
 ========
 
-Stacked environment variable management system.
+Environment variable management system.
 
-Environment variables are declared in namespaced .env files using yaml syntax.
-The default stack declares env variables in `stack.env` files. You can create
-any new stack by creating new `.env` files, e.g. to create a new `thing` stack
-just create `thing.env` files in any given context.
+## Features
+
+The features of Envstack include:
+
+- **Environment stacks:** Envstack allows you to manage environment variables using .env files called environment stacks. These stacks provide a hierarchical and contextual approach to managing variables.
+
+- **Hierarchical structure:** Environment stacks can be combined and have a defined order of priority. Variables defined in higher scope stacks flow from higher scope to lower scope, left to right.
+
+- **Variable expansion modifiers:** Envstack supports bash-like variable expansion modifiers, allowing you to set default values for variables and override them in the environment or by higher scope stacks.
+
+- **Platform-specific variables:** Environment stacks can have platform-specific variables, which always inherit from the default stack. This allows you to define different values for variables based on the platform.
+
+- **Variable references:** Variables in Envstack can reference other variables, allowing for more flexibility and dynamic value assignment.
+
+- **Includes:** Environment stack files can include other namespaced environments, making it easy to reuse and combine different stacks.
+
+- **Python API:** Envstack provides a Python API that allows you to initialize and work with environment stacks programmatically. You can initialize specific stacks, revert to the original environment, and resolve variables.
+
+- **Running commands:** Envstack allows you to run command line executables inside an environment stack, providing a convenient way to execute commands with the desired environment.
+
+- **Wrappers:** Envstack supports wrappers, which are command line executable scripts that automatically run a given command in the environment stack. This allows for easy customization and automation of command execution.
+
+- **Shell integration:** Envstack provides instructions for sourcing the environment stack in your current shell, allowing you to set and clear the environment easily.
+
 
 ## Installation
 
