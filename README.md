@@ -5,27 +5,27 @@ Environment variable management system.
 
 ## Features
 
-The features of Envstack include:
+The list of features include:
 
-- **Environment stacks:** Envstack allows you to manage environment variables using .env files called environment stacks. These stacks provide a hierarchical and contextual approach to managing variables.
+- **Environment stacks:** allows you to manage environment variables using .env files called environment stacks. These stacks provide a hierarchical and contextual approach to managing variables.
 
-- **Hierarchical structure:** Environment stacks can be combined and have a defined order of priority. Variables defined in higher scope stacks flow from higher scope to lower scope, left to right.
+- **Hierarchical structure:** stacks can be combined and have a defined order of priority. Variables defined in higher scope stacks flow from higher scope to lower scope, left to right.
 
-- **Variable expansion modifiers:** Envstack supports bash-like variable expansion modifiers, allowing you to set default values for variables and override them in the environment or by higher scope stacks.
+- **Variable expansion modifiers:** supports bash-like variable expansion modifiers, allowing you to set default values for variables and override them in the environment or by higher scope stacks.
 
-- **Platform-specific variables:** Environment stacks can have platform-specific variables, which always inherit from the default stack. This allows you to define different values for variables based on the platform.
+- **Platform-specific variables:** stacks can have platform-specific variables, which always inherit from the default stack. This allows you to define different values for variables based on the platform.
 
-- **Variable references:** Variables in Envstack can reference other variables, allowing for more flexibility and dynamic value assignment.
+- **Variable references:** variables can reference other variables, allowing for more flexibility and dynamic value assignment.
 
-- **Includes:** Environment stack files can include other namespaced environments, making it easy to reuse and combine different stacks.
+- **Includes:** stack files can include other namespaced environments, making it easy to reuse and combine different stacks.
 
-- **Python API:** Envstack provides a Python API that allows you to initialize and work with environment stacks programmatically. You can initialize specific stacks, revert to the original environment, and resolve variables.
+- **Python API:** provides a Python API that allows you to initialize and work with environment stacks programmatically. You can initialize specific stacks, revert to the original environment, and resolve variables.
 
-- **Running commands:** Envstack allows you to run command line executables inside an environment stack, providing a convenient way to execute commands with the desired environment.
+- **Running commands:** allows you to run command line executables inside an environment stack, providing a convenient way to execute commands with the desired environment.
 
-- **Wrappers:** Envstack supports wrappers, which are command line executable scripts that automatically run a given command in the environment stack. This allows for easy customization and automation of command execution.
+- **Wrappers:** supports wrappers, which are command line executable scripts that automatically run a given command in the environment stack. This allows for easy customization and automation of command execution.
 
-- **Shell integration:** Envstack provides instructions for sourcing the environment stack in your current shell, allowing you to set and clear the environment easily.
+- **Shell integration:** provides instructions for sourcing the environment stack in your current shell, allowing you to set and clear the environment easily.
 
 
 ## Installation
@@ -160,30 +160,37 @@ goodbye
 
 ## Creating Stacks
 
-To create a new environment stack, create a new namespaced .env file.
-For example `thing.env` (the stack namespace is "thing"):
+Several example or starter stacks are available in the [env folder of the
+envstack repo](https://github.com/rsgalloway/envstack/tree/master/env).
+
+To create a blank environment stack, create a new namespaced .env file and
+declare some variables.
+
+For example `foo.env` (the stack name is "foo"):
 
 ```yaml
 all: &default
   FOO: bar
+  BAR: ${FOO}
 ```
 
-To see the resolved environment for the `thing` environment stack, run:
+To see the resolved environment for the `foo` environment stack, run:
 
 ```bash
-$ envstack thing
-FOO 'bar'
+$ envstack foo
+FOO=bar
+BAR=$FOO
 ```
 
-Variables can reference other variables defined elsewhere (but cannot be
-circular):
+To see resolved values:
 
-```yaml
-all: &default
-  BAR: $FOO
+```bash
+$ envstack foo -r
+FOO=bar
+BAR=bar
 ```
 
-Variables can be platform specific (always inherit from `default`):
+Variables can be platform specific (but always inherit from `all`):
 
 ```yaml
 linux:
@@ -218,7 +225,7 @@ FOO=foo
 #### Includes
 
 Environment stack files can include other namespaced environments (you should
-probably always include the default stack):
+probably always include the `default` stack):
 
 ```yaml
 include: [default, test]

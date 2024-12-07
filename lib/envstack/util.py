@@ -38,6 +38,7 @@ import re
 import sys
 
 from envstack import config
+from envstack.exceptions import CyclicalReference
 from collections import OrderedDict
 
 # regular expression pattern for Bash-like variable expansion
@@ -180,6 +181,7 @@ def evaluate_modifiers(expression, environ=os.environ):
     :param expression: The Bash-like string, e.g.,
         "${VAR:=default}/path", "${VAR}/path", or "${VAR:?error message}"
     :return: The resulting evaluated string with all substitutions applied.
+    :raises CyclicalReference: If a cyclical reference is detected.
     :raises ValueError: If a variable is undefined and has the :? syntax with an
         error message.
     """
@@ -226,6 +228,10 @@ def evaluate_modifiers(expression, environ=os.environ):
         # dedupe paths and convert to platform-specific path separators
         if ":" in result:
             result = os.pathsep.join(dedupe_list(result.split(":")))
+
+    # detect cyclical references
+    except RecursionError:
+        raise CyclicalReference(f"Cyclical reference detected in {expression}")
 
     # evaluate list elements
     except TypeError:

@@ -36,6 +36,7 @@ Contains unit tests for the util.py module.
 import os
 import unittest
 
+from envstack.exceptions import CyclicalReference
 from envstack.util import encode, evaluate_modifiers, get_stack_name, safe_eval
 
 
@@ -78,6 +79,12 @@ class TestEvaluateModifiers(unittest.TestCase):
         expression = "${VAR:?error message}"
         environ = {}
         with self.assertRaises(ValueError):
+            evaluate_modifiers(expression, environ)
+
+    def test_cyclical_reference_error(self):
+        expression = "${VAR}"
+        environ = {"VAR": "${FOO}", "FOO": "${BAR}", "BAR": "${VAR}"}
+        with self.assertRaises(CyclicalReference):
             evaluate_modifiers(expression, environ)
 
     def test_multiple_substitutions(self):
