@@ -279,7 +279,7 @@ def clear_file_cache():
     load_file_cache = {}
 
 
-def get_sources(*names: str, scope: str = None):
+def get_sources(*names, scope: str = None):
     """
     Returns a list of Source objects for a given list of .env basenames.
 
@@ -437,9 +437,9 @@ def clear(
 
 
 def export(
-    name=config.DEFAULT_NAMESPACE,
-    shell=config.SHELL,
-    scope=None,
+    name: str = config.DEFAULT_NAMESPACE,
+    shell: str = config.SHELL,
+    scope: str = None,
 ):
     """Returns shell set env commands that can be sourced to set env stack
     environment variables.
@@ -527,7 +527,7 @@ def revert():
     SAVED_ENVIRONMENT = None
 
 
-def init(*name, ignore_missing=False):
+def init(*name, ignore_missing: bool = False):
     """Initializes the environment from a given stack namespace. Environments
     propogate downwards with subsequent calls to init().
 
@@ -568,7 +568,7 @@ def init(*name, ignore_missing=False):
     util.load_sys_path()
 
 
-def resolve_environ(env):
+def resolve_environ(env: dict):
     """Resolves all variables in a given unresolved environment, returning a
     new environment dict.
 
@@ -585,10 +585,10 @@ def resolve_environ(env):
 
 
 def load_environ(
-    name=config.DEFAULT_NAMESPACE,
-    sources=None,
-    platform=config.PLATFORM,
-    scope=None,
+    name: str = config.DEFAULT_NAMESPACE,
+    sources: list = None,
+    platform: str = config.PLATFORM,
+    scope: str = None,
 ):
     """Loads env stack data for a given name. Adds "STACK" key to environment,
     and sets the value to `name`.
@@ -665,7 +665,7 @@ def load_file(path: str):
     return data
 
 
-def trace_var(*name: str, var: str = None, scope: str = None):
+def trace_var(*name, var: str = None, scope: str = None):
     """Traces where a var is getting set for a given name.
 
     :param name: name of tool or executable.
