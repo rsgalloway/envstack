@@ -60,14 +60,14 @@ root folder defined by `$DEPLOY_ROOT` (defined in `env/default.env`).
 ## Quickstart
 
 Envstack looks for .env files in directories specified by `$ENVPATH` and in the
-current working directory:
+current working directory. Get the latest `default.env` stack file:
 
 ```bash
-$ export ENVPATH=./env
+$ wget -O default.env https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
 ```
 
 Define as many paths as you want, and envstack will search for stack file in
-order from left to right:
+order from left to right, for example:
 
 ```bash
 $ export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
@@ -77,7 +77,7 @@ In the case above, stack files in `/mnt/pipe/dev/env` will take precedence over 
 found in `/mnt/pipe/prod/env`.
 
 Running the `envstack` command will show you the default environment stack,
-defined in the default stack file `env/default.env`:
+defined in the `default.env` stack file:
 
 ```bash
 $ envstack
