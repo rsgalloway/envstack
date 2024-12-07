@@ -1,13 +1,29 @@
 {
     "author": "ryan@rsg.io",
     "targets": {
-        "env-envstack": {
-            "source": "stack.env",
-            "destination": "{DEPLOY_ROOT}/env/stack.env"
+        "env-default": {
+            "source": "env/default.env",
+            "destination": "{DEPLOY_ROOT}/env/default.env"
         },
         "env-dev": {
-            "source": "dev.env",
+            "source": "env/dev.env",
             "destination": "{DEPLOY_ROOT}/env/dev.env"
+        },
+        "env-distman": {
+            "source": "env/distman.env",
+            "destination": "{DEPLOY_ROOT}/env/distman.env"
+        },
+        "env-hello": {
+            "source": "env/hello.env",
+            "destination": "{DEPLOY_ROOT}/env/hello.env"
+        },
+        "env-test": {
+            "source": "env/test.env",
+            "destination": "{DEPLOY_ROOT}/env/test.env"
+        },
+        "env-thing": {
+            "source": "env/thing.env",
+            "destination": "{DEPLOY_ROOT}/env/thing.env"
         },
         "bin-envstack": {
             "source": "bin/envstack",

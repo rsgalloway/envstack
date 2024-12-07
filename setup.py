@@ -30,51 +30,17 @@
 #
 
 import os
-import shutil
 
 from setuptools import find_packages, setup
-from setuptools.command.install import install
 
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, "README.md")) as f:
     long_description = f.read()
 
 
-class PostInstallCommand(install):
-    """Custom post-installation for copying stack.env."""
-
-    def install_default_stack(self):
-        """Copy the default stack.env file to the default location."""
-        from envstack.config import DEFAULT_ENV_DIR
-
-        if not os.path.isdir(DEFAULT_ENV_DIR):
-            os.makedirs(DEFAULT_ENV_DIR)
-
-        source = os.path.join(os.path.dirname(__file__), "stack.env")
-        destination = os.path.join(DEFAULT_ENV_DIR, "stack.env")
-
-        if os.path.exists(source):
-            if os.path.exists(destination):
-                print(f"WARNING: '{destination}' already exists, skipping")
-            else:
-                print(f"Copying {source} to {destination}")
-                shutil.copy(source, destination)
-        else:
-            print(f"{source} not found)")
-
-    def run(self):
-        """Run the default install and copy the default stack.env file."""
-        install.run(self)
-
-        try:
-            self.install_default_stack()
-        except Exception as e:
-            print(f"Error copying stack.env: {e}")
-
-
 setup(
     name="envstack",
-    version="0.6.4",
+    version="0.7.0",
     description="Stacked environment variable management system",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -109,7 +75,5 @@ setup(
         "PyYAML==5.1.2",
     ],
     python_requires=">=3.6",
-    data_files=[(".", ["stack.env", "dev.env", "dist.json"])],
-    cmdclass={"install": PostInstallCommand},
     zip_safe=False,
 )

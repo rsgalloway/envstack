@@ -1,20 +1,27 @@
 envstack
 ========
 
-Stacked environment variable management system. The lightweight, easy to use
-"rez" alternative for production pipelines.
+Environment variable management system.
 
-Environment variables are declared in namespaced .env files using yaml syntax.
-The default stack declares env variables in `stack.env` files. You can create
-any new stack by creating new `.env` files, e.g. to create a new `thing` stack
-just create `thing.env` files in any given context.
+| Feature | Description |
+|---------|-------------|
+| Environment stacks | Allows you to manage environment variables using .env files called environment stacks. These stacks provide a hierarchical and contextual approach to managing variables. |
+| Hierarchical structure | Stacks can be combined and have a defined order of priority. Variables defined in higher scope stacks flow from higher scope to lower scope, left to right. |
+| Variable expansion modifiers | Supports bash-like variable expansion modifiers, allowing you to set default values for variables and override them in the environment or by higher scope stacks. |
+| Platform-specific variables | Stacks can have platform-specific variables and values. This allows you to define different values for variables based on the platform. |
+| Variable references | Variables can reference other variables, allowing for more flexibility and dynamic value assignment. |
+| Includes | Stack files can include other stacks, making it easy to reuse and combine different stacks. |
+| Python API | Provides a Python API that allows you to initialize and work with environment stacks programmatically. Easily initialize pre-defined environments with Python scripts, tools, and wrappers. |
+| Running commands | Allows you to run command line executables inside an environment stack, providing a convenient way to execute commands with a pre-defined environment. |
+| Wrappers | Supports wrappers, which are command line executable scripts that automatically run a given command in the environment stack. This allows for easy customization and management of environments. |
+| Shell integration | Provides instructions for sourcing the environment stack in your current shell, allowing you to set and clear the environment easily. |
 
 ## Installation
 
 The easiest way to install:
 
 ```bash
-$ pip install envstack
+$ pip install -U envstack
 ```
 
 Alternatively,
@@ -25,11 +32,6 @@ $ cd envstack
 $ python setup.py install
 ```
 
-The install process will automatically attempt to install the default
-`stack.env` file to the default env file directory defined `$DEFAULT_ENV_DIR`.
-**Note:** The [siteconf](https://github.com/rsgalloway/siteconf)
-sitecustomize.py module may override `$DEFAULT_ENV_DIR`.
-
 #### distman
 
 If installing from source to a network location, you can use
@@ -37,33 +39,106 @@ If installing from source to a network location, you can use
 install envstack using the provided `dist.json` file:
 
 ```bash
-$ distman [-d]
+$ ENVPATH=./env distman [-d]
 ```
 
 Using distman will deploy the targets defined in the `dist.json` file to the
-root folder defined by `$DEPLOY_ROOT` (defined in `stack.env`).
+root folder defined by `${DEPLOY_ROOT}` (defined in `env/default.env`).
 
 ## Quickstart
 
-The `stack` namespace is the default environment stack. Running the `envstack`
-command should show you the default environment stack:
+Envstack looks for .env files in directories specified by `${ENVPATH}` and in
+the current working directory. Get the latest `default.env` stack file:
+
+```bash
+$ wget -O default.env \
+https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
+```
+
+Set `$ENVPATH` to the directory containing your environment stack files:
+
+```bash
+$ export ENVPATH=/path/to/env/stack/files
+```
+
+Define as many paths as you want, and envstack will search for stack file in
+order from left to right, for example:
+
+```bash
+$ export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
+```
+
+In the case above, stack files in `/mnt/pipe/dev/env` will take precedence over those
+found in `/mnt/pipe/prod/env`.
+
+#### Basic Usage
+
+Running the `envstack` command will show you the default environment stack,
+defined in the `default.env` stack file:
 
 ```bash
 $ envstack
-ENV=prod
-HELLO=world
-LOG_LEVEL=INFO
-DEFAULT_ENV_DIR=${DEPLOY_ROOT}/env
 DEPLOY_ROOT=${ROOT}/${ENV}
-ROOT=${HOME}/.local/pipe
-BIN=${DEPLOY_ROOT}/bin
-LIB=${DEPLOY_ROOT}/lib/python
-PATH=${BIN}:${PATH}
-PYTHONPATH=${LIB}:${PYTHONPATH}
+ENV=prod
+ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
+HELLO=${HELLO:=world}
+LOG_LEVEL=${LOG_LEVEL:=INFO}
+PATH=${DEPLOY_ROOT}/bin:${PATH}
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
+STACK=default
 ```
 
-You can override anything in the environment stack by setting values in the
-local environment first:
+**Note:** The name of the current stack will always be stored in `${STACK}`.
+
+To see stacks, pass the stack name as the first arg. Environment stacks can be
+combined, in order of priority (variables defined in stacks flow from higher
+scope to lower scope, left to right):
+
+```bash
+$ envstack [STACK [STACK ...]]
+```
+
+## Setting Values
+
+Envstack uses bash-like variable expansion modifiers. Setting `$VAR` to a fixed
+value means `$VAR` will always use that value. Using an expansion modifier
+allows you to override the value:
+
+| Value | Description |
+|---------------------|-------------|
+| value |  'value' |
+| ${VAR:-default} | os.environ.get('VAR', 'default') |
+| ${VAR:=default} | VAR = VAR or 'default' |
+| ${VAR:?error message} | if not VAR: raise ValueError() |
+
+Without the expansion modifier, values are set and do not change (but can be
+overridden by lower scope stacks, i.e. a lower scope stack file may override
+a higher one). 
+
+If we define `$HELLO` like this:
+
+```yaml
+HELLO: world
+```
+
+Then the value is set and cannot be modified (except by lower scope stacks):
+
+```bash
+$ envstack -- echo {HELLO}
+world
+$ HELLO=goodbye envstack -- echo {HELLO}
+world
+```
+
+With an expansion modifier, variables have a default value and can also be
+overridden in the environment, or by higher scope stacks:
+
+```yaml
+HELLO: ${HELLO:=world}
+```
+
+Here we show the default value, and how we can override it in the environment:
 
 ```bash
 $ envstack -- echo {HELLO}
@@ -72,70 +147,83 @@ $ HELLO=goodbye envstack -- echo {HELLO}
 goodbye
 ```
 
-Modify the environment stack by editing `stack.env` or by creating additional
-contextual `stack.env` files in parent folders on the filesystem.
-
 ## Creating Stacks
 
-To create a new environment stack, create a new namespaced .env file.
-For example `thing.env` (the stack namespace is "thing"):
+Several example or starter stacks are available in the [env folder of the
+envstack repo](https://github.com/rsgalloway/envstack/tree/master/env).
+
+To create a blank environment stack, create a new namespaced .env file and
+declare some variables.
+
+For example `foo.env` (the stack name is "foo"):
 
 ```yaml
 all: &default
   FOO: bar
+  BAR: ${FOO}
 ```
 
-To see the resolved environment for the `thing` environment stack, run:
+To see the resolved environment for the `foo` environment stack, run:
 
 ```bash
-$ envstack thing
-FOO 'bar'
+$ envstack foo
+FOO=bar
+BAR=$FOO
 ```
 
-Variables can reference other variables defined elsewhere (but cannot be
-circular):
+To see resolved values:
 
-```yaml
-all: &default
-  BAR: $FOO
+```bash
+$ envstack foo -r
+FOO=bar
+BAR=bar
 ```
 
-Variables can be platform specific (and inherit the defaults):
+Variables can be platform specific (but always inherit from `all`):
 
 ```yaml
 linux:
   <<: *default
   HELLO: world
+
+windows:
+  <<: *default
+  HELLO: goodbye
 ```
 
-Environment files can include other namespaced environments (all stacks inherit
-the default stack.env automatically).
+Variables can reference other variables:
 
 ```yaml
-include: [other]
+all: &default
+  FOO: ${BAR}
+  BAR: ${BAZ}
+  BAZ: ${BIZ}
+  BIZ: ${BIZ:=foo}
 ```
 
-## Context
+As you might expect, the above resolves to:
 
-Environment stacks are hierarchical, so values for `$FOO` defined in .env files
-lower in the filesystem (lower in scope) override those defined higher up
-(higher in scope):
-
-```
-${DEFAULT_ENV_DIR}
-/stack.env
-/show/stack.env
-/show/seq/stack.env
-/show/seq/shot/stack.env
-/show/seq/shot/task/stack.env
+```bash
+$ envstack -r
+BAR=foo
+BAZ=foo
+BIZ=foo
+FOO=foo
 ```
 
-If you are working in the task directory, those envstack $VARs will override the
-$VARs defined in the shot, seq, show and root directories.
+#### Includes
+
+Environment stack files can include other namespaced environments (you should
+probably always include the `default` stack):
+
+```yaml
+include: [default, test]
+```
 
 ## Usage
 
-To see the unresolved environment for one or more environment stacks:
+To see the unresolved environment for one or more environment stacks (values are
+defined in the stacks from left to right):
 
 ```bash
 $ envstack [STACK [STACK ...]]
@@ -185,12 +273,20 @@ To revert the original environment:
 >>> 
 ```
 
-Alternatively, `envstack.getenv` can be a drop-in replacement for `os.getenv`
-for the default environment stack:
+Creating and resolving environments:
 
 ```python
->>> envstack.getenv("HELLO")
-'world'
+>>> from envstack.env import Env, resolve_environ
+>>> env = Env({"BAR": "${FOO}", "FOO": "foo"})
+>>> resolve_environ(env)
+{'BAR': 'foo', 'FOO': 'foo'}
+```
+
+Loading and resolving predefined environments from stack files:
+
+```python
+>>> from envstack.env import load_environ, resolve_environ
+>>> env = resolve_environ(load_environ("prod"))
 ```
 
 ## Running Commands
@@ -304,10 +400,10 @@ doskey envstack-clear=for /f "usebackq" %i in (`envstack --clear $*`) do %%i
 
 ## Config
 
-Default config settings are in the config.py module. The following environment
-variables are supported:
+The following environment variables are used to help manage functionality:
 
-| Variable            | Description |
-|---------------------|-------------|
-| $DEFAULT_ENV_DIR    | the folder containing the default env stack files |
-| $DEFAULT_ENV_STACK  | the name of the default env stack namespace |
+| Name | Description |
+|------|-------------|
+| ENVPATH | Colon-separated paths to search for stack files |
+| IGNORE_MISSING | Ignore missing stack files when resolving environments |
+| STACK | Name of the current stack |

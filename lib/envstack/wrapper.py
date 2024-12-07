@@ -40,7 +40,8 @@ import subprocess
 import traceback
 
 from envstack import config, logger
-from envstack.env import encode, expandvars, load_environ
+from envstack.env import load_environ, resolve_environ
+from envstack.util import encode, evaluate_modifiers
 
 
 def to_args(cmd):
@@ -51,10 +52,14 @@ def to_args(cmd):
 
 def shell_join(args):
     """Joins a list of arguments into a single quoted shell string."""
-    try:
-        return shlex.join(args)
-    except AttributeError:
-        return " ".join(shlex.quote(arg) for arg in args)
+    argstr = ".".join(args)
+    if '"' in argstr or "'" in argstr:
+        try:
+            return shlex.join(args)
+        except AttributeError:
+            return " ".join(shlex.quote(arg) for arg in args)
+    else:
+        return " ".join(args)
 
 
 class Wrapper(object):
@@ -106,14 +111,12 @@ class Wrapper(object):
             process = subprocess.Popen(
                 args=command,
                 bufsize=0,
-                env=env,
+                env=encode(env),
                 shell=self.shell,
             )
-
         except Exception:
             traceback.print_exc()
             exitcode = 1
-
         else:
             stdout, stderr = process.communicate()
             while stdout and stderr:
@@ -129,7 +132,7 @@ class Wrapper(object):
 
     def get_subprocess_command(self, env):
         """Returns the command to be passed to the subprocess."""
-        cmd = expandvars(self.executable(), env, recursive=True)
+        cmd = evaluate_modifiers(self.executable(), env)
         args = self.get_subprocess_args(cmd)
         return " ".join([cmd] + args)
 
@@ -139,7 +142,7 @@ class Wrapper(object):
         is called on the wrapper.
         """
         env = os.environ.copy()
-        env.update(encode(self.env))
+        env.update(resolve_environ(self.env))
         return env
 
 
@@ -188,7 +191,6 @@ class ShellWrapper(CommandWrapper):
 
     def get_subprocess_command(self, env):
         """Returns the command to be passed to the shell in a subprocess."""
-        self.cmd = expandvars(self.cmd, env, recursive=True)
         if re.search(r"\$\w+", self.cmd):
             return f'{config.SHELL} -i -c "{self.cmd}"'
         else:
@@ -231,7 +233,7 @@ class CmdWrapper(CommandWrapper):
         return self.cmd
 
 
-def run_command(command, namespace=config.DEFAULT_NAMESPACE):
+def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
     """
     Runs a given command with the given stack namespace.
 

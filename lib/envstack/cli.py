@@ -39,11 +39,11 @@ import traceback
 
 from envstack import __version__, config
 from envstack.env import (
-    build_sources,
-    expandvars,
     clear,
     export,
+    get_sources,
     load_environ,
+    resolve_environ,
     trace_var,
 )
 from envstack.wrapper import run_command
@@ -91,11 +91,21 @@ def parse_args():
         help="generate export commands for %s" % config.SHELL,
     )
     parser.add_argument(
+        "--ignore-missing",
+        action="store_true",
+        help="ignore missing environment stack files",
+    )
+    parser.add_argument(
         "-p",
         "--platform",
         default=config.PLATFORM,
         metavar="PLATFORM",
         help="platform to resolve variables for (linux, darwin, windows)",
+    )
+    parser.add_argument(
+        "--scope",
+        metavar="SCOPE",
+        help="search scope for environment stack files",
     )
     parser.add_argument(
         "-r",
@@ -126,36 +136,38 @@ def main():
     """Main thread."""
     args, command = parse_args()
 
+    if args.ignore_missing:
+        config.IGNORE_MISSING = True
+
     try:
-        if args.resolve is not None:
+        if command:
+            return run_command(command, args.namespace)
+        elif args.resolve is not None:
             if len(args.resolve) == 0:
                 args.resolve = load_environ(args.namespace).keys()
-            env = load_environ(args.namespace, platform=args.platform)
-            for resolve in args.resolve:
-                var = env.get(resolve)
-                val = expandvars(var, env, recursive=True)
-                print(f"{resolve}={val}")
+            resolved = resolve_environ(
+                load_environ(args.namespace, platform=args.platform)
+            )
+            for key in sorted(args.resolve):
+                val = resolved.get(key)
+                print(f"{key}={val}")
         elif args.trace is not None:
             if len(args.trace) == 0:
                 args.trace = load_environ(args.namespace).keys()
             for trace in args.trace:
-                path = trace_var(args.namespace, trace)
+                path = trace_var(*args.namespace, var=trace)
                 print("{0}: {1}".format(trace, path))
         elif args.sources:
-            sources = build_sources(args.namespace)
+            sources = get_sources(*args.namespace, scope=args.scope)
             for source in sources:
-                print(source)
+                print(source.path)
         elif args.clear:
             print(clear(args.namespace, config.SHELL))
         elif args.export:
             print(export(args.namespace, config.SHELL))
-        elif command:
-            return run_command(command, args.namespace)
         else:
-            env = load_environ(
-                args.namespace, environ=None, platform=args.platform, includes=True
-            )
-            for k, v in env.items():
+            env = load_environ(args.namespace, platform=args.platform)
+            for k, v in sorted(env.items()):
                 print(f"{k}={v}")
 
     except KeyboardInterrupt:

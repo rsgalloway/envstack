@@ -58,9 +58,10 @@ def detect_shell():
 
 
 DEBUG = os.getenv("DEBUG")
-DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "stack")
+DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "default")
 ENV = os.getenv("ENV", "prod")
 HOME = os.getenv("HOME")
+IGNORE_MISSING = os.getenv("IGNORE_MISSING", False)
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 ON_POSIX = "posix" in sys.builtin_module_names
 PLATFORM = platform.system().lower()
@@ -68,22 +69,20 @@ PYTHON_VERSION = sys.version_info[0]
 SHELL = detect_shell()
 USERNAME = os.getenv("USERNAME", os.getenv("USER"))
 
-# set some default environment variables
+# set some default environment values
 DEFAULT_ENV = {
     "ENV": ENV,
     "HOME": HOME,
     "PLATFORM": PLATFORM,
+    "ROOT": os.getenv(
+        "ROOT",
+        {
+            "darwin": "{HOME}/Library/Application Support/pipe",
+            "linux": "{HOME}/.local/pipe",
+            "windows": "C:\\ProgramData\\pipe",
+        }
+        .get(PLATFORM)
+        .format(**locals()),
+    ),
     "USER": USERNAME,
 }
-
-# default location of env stack .env files
-DEFAULT_ENV_DIR = os.getenv(
-    "DEFAULT_ENV_DIR",
-    {
-        "darwin": "{HOME}/Library/Application Support/pipe/{ENV}/env",
-        "linux": "{HOME}/.local/pipe/{ENV}/env",
-        "windows": "C:\\ProgramData\\pipe\\{ENV}\\env",
-    }
-    .get(PLATFORM)
-    .format(**DEFAULT_ENV),
-)
