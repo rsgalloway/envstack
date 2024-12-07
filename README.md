@@ -43,15 +43,16 @@ $ ENVPATH=./env distman [-d]
 ```
 
 Using distman will deploy the targets defined in the `dist.json` file to the
-root folder defined by `$DEPLOY_ROOT` (defined in `env/default.env`).
+root folder defined by `${DEPLOY_ROOT}` (defined in `env/default.env`).
 
 ## Quickstart
 
-Envstack looks for .env files in directories specified by `$ENVPATH` and in the
-current working directory. Get the latest `default.env` stack file:
+Envstack looks for .env files in directories specified by `${ENVPATH}` and in
+the current working directory. Get the latest `default.env` stack file:
 
 ```bash
-$ wget -O default.env https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
+$ wget -O default.env \
+https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
 ```
 
 Set `$ENVPATH` to the directory containing your environment stack files:
@@ -88,7 +89,7 @@ ROOT=/mnt/pipe
 STACK=default
 ```
 
-**Note:**: The name of the current stack will always be stored in `$STACK`.
+**Note:** The name of the current stack will always be stored in `${STACK}`.
 
 To see stacks, pass the stack name as the first arg. Environment stacks can be
 combined, in order of priority (variables defined in stacks flow from higher
@@ -279,6 +280,13 @@ Creating and resolving environments:
 >>> env = Env({"BAR": "${FOO}", "FOO": "foo"})
 >>> resolve_environ(env)
 {'BAR': 'foo', 'FOO': 'foo'}
+```
+
+Loading and resolving predefined environments from stack files:
+
+```python
+>>> from envstack.env import load_environ, resolve_environ
+>>> env = resolve_environ(load_environ("prod"))
 ```
 
 ## Running Commands
