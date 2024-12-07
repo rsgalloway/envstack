@@ -41,7 +41,7 @@ from pathlib import Path
 from envstack import config, logger, path, util
 from envstack.exceptions import *
 
-# value delimiter pattern (splits values by colons or semicolons)
+# value delimiter pattern (splits values by os.pathsep)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
 
 # stores cached file data in memory
@@ -50,8 +50,8 @@ load_file_cache = {}
 # value for unresolvable variables
 null = ""
 
-# stores the original environment
-SAVED_ENVIRONMENT = None
+# stores environment when calling envstack.save()
+saved_environ = None
 
 
 class EnvVar(string.Template, str):
@@ -492,10 +492,10 @@ def export(
 
 def save():
     """Saves the current environment for later restoration."""
-    global SAVED_ENVIRONMENT
-    if not SAVED_ENVIRONMENT:
-        SAVED_ENVIRONMENT = dict(os.environ.copy())
-        return SAVED_ENVIRONMENT
+    global saved_environ
+    if not saved_environ:
+        saved_environ = dict(os.environ.copy())
+        return saved_environ
 
 
 def revert():
@@ -510,8 +510,8 @@ def revert():
 
         >>> envstack.revert()
     """
-    global SAVED_ENVIRONMENT
-    if SAVED_ENVIRONMENT is None:
+    global saved_environ
+    if saved_environ is None:
         return
 
     # clear current sys.path values
@@ -519,12 +519,12 @@ def revert():
 
     # restore the original environment
     os.environ.clear()
-    os.environ.update(SAVED_ENVIRONMENT)
+    os.environ.update(saved_environ)
 
     # restore sys.path from PYTHONPATH
     util.load_sys_path()
 
-    SAVED_ENVIRONMENT = None
+    saved_environ = None
 
 
 def init(*name, ignore_missing: bool = False):
@@ -639,6 +639,8 @@ def load_file(path: str):
     :param path: path to envstack env file.
     :returns: loaded yaml data as dict.
     """
+
+    global load_file_cache
 
     if path in load_file_cache:
         return load_file_cache[path]
