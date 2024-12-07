@@ -21,7 +21,7 @@ Environment variable management system.
 The easiest way to install:
 
 ```bash
-$ pip install envstack
+$ pip install -U envstack
 ```
 
 Alternatively,
@@ -39,7 +39,7 @@ If installing from source to a network location, you can use
 install envstack using the provided `dist.json` file:
 
 ```bash
-$ envstack -- distman [-d]
+$ ENVPATH=./env distman [-d]
 ```
 
 Using distman will deploy the targets defined in the `dist.json` file to the
@@ -272,18 +272,10 @@ To revert the original environment:
 >>> 
 ```
 
-Alternatively, `envstack.getenv` can be a drop-in replacement for `os.getenv`
-for the default environment stack:
-
-```python
->>> envstack.getenv("HELLO")
-'world'
-```
-
 Creating and resolving environments:
 
 ```python
->>> from envstack.env import Env
+>>> from envstack.env import Env, resolve_environ
 >>> env = Env({"BAR": "${FOO}", "FOO": "foo"})
 >>> resolve_environ(env)
 {'BAR': 'foo', 'FOO': 'foo'}

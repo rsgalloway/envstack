@@ -682,17 +682,3 @@ def trace_var(*name, var: str = None, scope: str = None):
             return source.path
         elif os.getenv(var):
             return "local environment"
-
-
-# default stack environment
-environ = load_environ(name=config.DEFAULT_NAMESPACE)
-
-
-def getenv(key, default: str = None):
-    """Replaces os.getenv, where the environment includes envstack
-    declared variables.
-
-    Get an environment variable, return None if it doesn't exist.
-    The optional second argument can specify an alternate default.
-    """
-    return environ.get(key, default)

@@ -36,4 +36,4 @@ Stacked environment variable management system.
 __prog__ = "envstack"
 __version__ = "0.7.0"
 
-from envstack.env import clear, getenv, init, revert, save
+from envstack.env import clear, init, revert, save
