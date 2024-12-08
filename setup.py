@@ -69,6 +69,7 @@ setup(
     entry_points={
         "console_scripts": [
             "envstack=envstack.cli:main",
+            "whichenv=envstack.cli:whichenv",
         ],
     },
     install_requires=[

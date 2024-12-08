@@ -304,3 +304,43 @@ def safe_eval(value: str):
                 return value
 
     return value
+
+
+def get_stacks():
+    """
+    Returns a list of all stack names found in the environment paths.
+    """
+    import glob
+
+    paths = get_paths_from_var("ENVPATH")
+    stacks = set()
+
+    for path in paths:
+        env_files = glob.glob(os.path.join(path, "*.env"))
+        for env_file in env_files:
+            file_name = os.path.basename(env_file)
+            stack_name = os.path.splitext(file_name)[0]
+            stacks.add(stack_name)
+
+    return sorted(list(stacks))
+
+
+def findenv(var_name):
+    """
+    Returns a list of paths where the given environment var is set.
+
+    :param var_name: The environment variable to search for.
+    :returns: A list of paths where the variable is set.
+    """
+    from envstack.env import trace_var
+
+    paths = set()
+
+    stacks = get_stacks()
+
+    for stack in stacks:
+        path = trace_var(stack, var=var_name)
+        if path and os.path.exists(path):
+            paths.add(path)
+
+    return sorted(list(paths))
