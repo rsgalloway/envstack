@@ -143,7 +143,23 @@ HELLO=world
 ROOT=/mnt/pipe
 STACK=test
 """
-        command = "%s test -r DEPLOY_ROOT HELLO ROOT STACK" % self.envstack_bin
+        command = (
+            "ENV=blah ROOT=/var/tmp %s test -r DEPLOY_ROOT HELLO ROOT STACK"
+            % self.envstack_bin
+        )
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_foobar(self):
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/foobar
+HELLO=world
+ROOT=/mnt/pipe
+STACK=foobar
+"""
+        command = (
+            "ENV=blah ROOT=/var/tmp %s test foobar -r DEPLOY_ROOT HELLO ROOT STACK"
+            % self.envstack_bin
+        )
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -197,9 +213,7 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_test_echo_deploy_root(self):
-        command = (
-            "%s test foobar -- echo {DEPLOY_ROOT}" % self.envstack_bin
-        )
+        command = "%s test foobar -- echo {DEPLOY_ROOT}" % self.envstack_bin
         expected_output = "/mnt/pipe/foobar\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True

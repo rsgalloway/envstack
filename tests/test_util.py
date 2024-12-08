@@ -168,19 +168,30 @@ class TestSafeEval(unittest.TestCase):
 
 
 class TestIssue18(unittest.TestCase):
-    def test_non_cyclical_reference_error1(self):
+    def test_non_cyclical_reference_error_1(self):
         expression = "${FOO}"
         environ = {"FOO": "${FOO}"}
         self.assertEqual(evaluate_modifiers(expression, environ), "")
 
-    def test_non_cyclical_reference_error2(self):
+    def test_non_cyclical_reference_error_2(self):
         expression = "${FOO}"
         environ = {"FOO": "foo:${FOO}"}
         self.assertEqual(evaluate_modifiers(expression, environ), "foo:")
-            
-    def test_cyclical_reference_error(self):
+
+    def test_non_cyclical_reference_error_3(self):
+        expression = "${FOO}"
+        environ = {"FOO": "bar/${FOO}"}
+        self.assertEqual(evaluate_modifiers(expression, environ), "bar/")
+
+    def test_cyclical_reference_error_1(self):
         expression = "${VAR}"
         environ = {"VAR": "${FOO}", "FOO": "${BAR}", "BAR": "${VAR}"}
+        with self.assertRaises(CyclicalReference):
+            evaluate_modifiers(expression, environ)
+
+    def test_cyclical_reference_error_2(self):
+        expression = "${FOO}"
+        environ = {"FOO": "${BAR}", "BAR": "${FOO}"}
         with self.assertRaises(CyclicalReference):
             evaluate_modifiers(expression, environ)
 
