@@ -412,3 +412,11 @@ The following environment variables are used to help manage functionality:
 | ENVPATH | Colon-separated paths to search for stack files |
 | IGNORE_MISSING | Ignore missing stack files when resolving environments |
 | STACK | Name of the current stack |
+
+# Tests
+
+Unit tests can be run using pytest (currently only tested on linux):
+
+```bash
+$ pytest tests -s
+```
