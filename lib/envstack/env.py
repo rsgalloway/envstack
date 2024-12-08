@@ -47,9 +47,6 @@ delimiter_pattern = re.compile("(?![^{]*})[;:]+")
 # stores cached file data in memory
 load_file_cache = {}
 
-# value for unresolvable variables
-null = ""
-
 # stores environment when calling envstack.save()
 saved_environ = None
 
@@ -62,7 +59,7 @@ class EnvVar(string.Template, str):
     'foo:bar'
     """
 
-    def __init__(self, template: str = null):
+    def __init__(self, template: str = util.null):
         super(EnvVar, self).__init__(template)
 
     def __eq__(self, other):
@@ -274,12 +271,14 @@ class Source(object):
 
 
 def clear_file_cache():
-    """Clears global file memory cache."""
+    """Clears global file cache."""
     global load_file_cache
     load_file_cache = {}
 
 
-def get_sources(*names, scope: str = None):
+def get_sources(
+    *names, scope: str = None, ignore_missing: bool = config.IGNORE_MISSING
+):
     """
     Returns a list of Source objects for a given list of .env basenames.
 
@@ -322,7 +321,7 @@ def get_sources(*names, scope: str = None):
             potential_file = Path(directory) / file_basename
             if potential_file.exists():
                 found_files.append(potential_file)
-        if not found_files and not config.IGNORE_MISSING:
+        if not found_files and not ignore_missing:
             raise TemplateNotFound(f"{file_basename} not found in ENVPATH or scope.")
         return found_files
 
@@ -370,6 +369,8 @@ def expandvars(var: str, env: Env = None, recursive: bool = False):
     :param recursive: revursively expand values.
     :returns: expanded value from values in env.
     """
+    if not env:
+        env = Env()
     var = EnvVar(var).expand(env, recursive=recursive)
     return util.evaluate_modifiers(var, os.environ)
 
@@ -492,7 +493,9 @@ def export(
 
 def save():
     """Saves the current environment for later restoration."""
+
     global saved_environ
+
     if not saved_environ:
         saved_environ = dict(os.environ.copy())
         return saved_environ
@@ -510,7 +513,9 @@ def revert():
 
         >>> envstack.revert()
     """
+
     global saved_environ
+
     if saved_environ is None:
         return
 
@@ -527,7 +532,7 @@ def revert():
     saved_environ = None
 
 
-def init(*name, ignore_missing: bool = False):
+def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
     """Initializes the environment from a given stack namespace. Environments
     propogate downwards with subsequent calls to init().
 
@@ -552,16 +557,15 @@ def init(*name, ignore_missing: bool = False):
     :param *name: list of stack namespaces.
     :param ignore_missing: ignore missing .env files.
     """
+
     # save environment to restore later using envstack.revert()
     save()
-
-    config.IGNORE_MISSING = ignore_missing
 
     # clear old sys.path values
     util.clear_sys_path()
 
     # load the stack and update the environment
-    env = resolve_environ(load_environ(name))
+    env = resolve_environ(load_environ(name, ignore_missing=ignore_missing))
     os.environ.update(util.encode(env))
 
     # update sys.path from PYTHONPATH
@@ -589,6 +593,7 @@ def load_environ(
     sources: list = None,
     platform: str = config.PLATFORM,
     scope: str = None,
+    ignore_missing: bool = config.IGNORE_MISSING,
 ):
     """Loads env stack data for a given name. Adds "STACK" key to environment,
     and sets the value to `name`.
@@ -606,6 +611,7 @@ def load_environ(
     :param sources: list of env files (optional).
     :param platform: name of platform (linux, darwin, windows).
     :param scope: environment scope (default: cwd).
+    :param ignore_missing: ignore missing .env files.
     :returns: dict of environment variables.
     """
     if type(name) == str:
@@ -614,7 +620,8 @@ def load_environ(
     if not name:
         name = [config.DEFAULT_NAMESPACE]
 
-    sources = get_sources(*name)
+    # get the sources for the given stack(s)
+    sources = get_sources(*name, scope=scope, ignore_missing=ignore_missing)
 
     # create the environment to be returned
     env = Env()
@@ -675,8 +682,12 @@ def trace_var(*name, var: str = None, scope: str = None):
     :param scope: environment scope (default: cwd).
     :returns: source path.
     """
-    sources = get_sources(*name, scope=scope)
+
+    # get the sources for the given stack(s)
+    sources = get_sources(*name, scope=scope, ignore_missing=True)
     sources.reverse()
+
+    # check for the variable in the env files
     for source in sources:
         data = load_file(source.path)
         env = data.get(config.PLATFORM, data.get("all", {}))

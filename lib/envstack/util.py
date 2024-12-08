@@ -41,6 +41,9 @@ from envstack import config
 from envstack.exceptions import CyclicalReference
 from collections import OrderedDict
 
+# value for unresolvable variables
+null = ""
+
 # regular expression pattern for Bash-like variable expansion
 variable_pattern = re.compile(
     r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(\$\{[a-zA-Z_][a-zA-Z0-9_]*\}|[^}]*))?\}"
@@ -193,16 +196,18 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         var_name = match.group(1)
         operator = match.group(2)
         argument = match.group(3)
-        override = os.getenv(var_name, "")
+        override = os.getenv(var_name, null)
         value = environ.get(var_name, override)
         varstr = "${%s}" % var_name
 
         # check for self-referential values
         is_recursive = value and varstr in value
 
-        # e.g. PATH, PYTHONPATH, ENVPATH, etc
+        # handle recursive references
         if is_recursive and override:
             value = value.replace(varstr, override)
+        else:
+            value = value.replace(varstr, "")
 
         if operator == "=":
             if override:
@@ -231,7 +236,7 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         if ":" in result:
             result = os.pathsep.join(dedupe_list(result.split(":")))
 
-    # detect cyclical references
+    # detect recursion errors
     except RecursionError:
         raise CyclicalReference(f"Cyclical reference detected in {expression}")
 
@@ -299,3 +304,43 @@ def safe_eval(value: str):
                 return value
 
     return value
+
+
+def get_stacks():
+    """
+    Returns a list of all stack names found in the environment paths.
+    """
+    import glob
+
+    paths = get_paths_from_var("ENVPATH")
+    stacks = set()
+
+    for path in paths:
+        env_files = glob.glob(os.path.join(path, "*.env"))
+        for env_file in env_files:
+            file_name = os.path.basename(env_file)
+            stack_name = os.path.splitext(file_name)[0]
+            stacks.add(stack_name)
+
+    return sorted(list(stacks))
+
+
+def findenv(var_name):
+    """
+    Returns a list of paths where the given environment var is set.
+
+    :param var_name: The environment variable to search for.
+    :returns: A list of paths where the variable is set.
+    """
+    from envstack.env import trace_var
+
+    paths = set()
+
+    stacks = get_stacks()
+
+    for stack in stacks:
+        path = trace_var(stack, var=var_name)
+        if path and os.path.exists(path):
+            paths.add(path)
+
+    return sorted(list(paths))

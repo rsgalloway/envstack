@@ -91,11 +91,6 @@ def parse_args():
         help="generate export commands for %s" % config.SHELL,
     )
     parser.add_argument(
-        "--ignore-missing",
-        action="store_true",
-        help="ignore missing environment stack files",
-    )
-    parser.add_argument(
         "-p",
         "--platform",
         default=config.PLATFORM,
@@ -132,12 +127,19 @@ def parse_args():
     return args, args_after_dash
 
 
+def whichenv():
+    """Entry point for the whichenv command line tool"""
+    from envstack.util import findenv
+
+    var_name = sys.argv[1]
+    paths = findenv(var_name)
+    for path in paths:
+        print("{0}: {1}".format(var_name, path))
+
+
 def main():
     """Main thread."""
     args, command = parse_args()
-
-    if args.ignore_missing:
-        config.IGNORE_MISSING = True
 
     try:
         if command:

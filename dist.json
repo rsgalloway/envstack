@@ -33,6 +33,14 @@
             "source": "bin/envstack.bat",
             "destination": "{DEPLOY_ROOT}/bin/envstack.bat"
         },
+        "bin-whichenv": {
+            "source": "bin/whichenv",
+            "destination": "{DEPLOY_ROOT}/bin/whichenv"
+        },
+        "bat-whichenv": {
+            "source": "bin/whichenv.bat",
+            "destination": "{DEPLOY_ROOT}/bin/whichenv.bat"
+        },
         "bin-hello": {
             "source": "bin/hello",
             "destination": "{DEPLOY_ROOT}/bin/hello"
