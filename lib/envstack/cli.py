@@ -132,6 +132,16 @@ def parse_args():
     return args, args_after_dash
 
 
+def whichenv():
+    """Entry point for the whichenv command line tool"""
+    from envstack.util import findenv
+
+    var_name = sys.argv[1]
+    paths = findenv(var_name)
+    for path in paths:
+        print("{0}: {1}".format(var_name, path))
+
+
 def main():
     """Main thread."""
     args, command = parse_args()
