@@ -167,5 +167,23 @@ class TestSafeEval(unittest.TestCase):
         self.assertEqual(result, "invalid")
 
 
+class TestIssue18(unittest.TestCase):
+    def test_non_cyclical_reference_error1(self):
+        expression = "${FOO}"
+        environ = {"FOO": "${FOO}"}
+        self.assertEqual(evaluate_modifiers(expression, environ), "")
+
+    def test_non_cyclical_reference_error2(self):
+        expression = "${FOO}"
+        environ = {"FOO": "foo:${FOO}"}
+        self.assertEqual(evaluate_modifiers(expression, environ), "foo:")
+            
+    def test_cyclical_reference_error(self):
+        expression = "${VAR}"
+        environ = {"VAR": "${FOO}", "FOO": "${BAR}", "BAR": "${VAR}"}
+        with self.assertRaises(CyclicalReference):
+            evaluate_modifiers(expression, environ)
+
+
 if __name__ == "__main__":
     unittest.main()
