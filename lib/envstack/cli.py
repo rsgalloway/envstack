@@ -91,11 +91,6 @@ def parse_args():
         help="generate export commands for %s" % config.SHELL,
     )
     parser.add_argument(
-        "--ignore-missing",
-        action="store_true",
-        help="ignore missing environment stack files",
-    )
-    parser.add_argument(
         "-p",
         "--platform",
         default=config.PLATFORM,
@@ -135,9 +130,6 @@ def parse_args():
 def main():
     """Main thread."""
     args, command = parse_args()
-
-    if args.ignore_missing:
-        config.IGNORE_MISSING = True
 
     try:
         if command:

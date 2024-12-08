@@ -41,6 +41,9 @@ from envstack import config
 from envstack.exceptions import CyclicalReference
 from collections import OrderedDict
 
+# value for unresolvable variables
+null = ""
+
 # regular expression pattern for Bash-like variable expansion
 variable_pattern = re.compile(
     r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(\$\{[a-zA-Z_][a-zA-Z0-9_]*\}|[^}]*))?\}"
@@ -193,16 +196,18 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         var_name = match.group(1)
         operator = match.group(2)
         argument = match.group(3)
-        override = os.getenv(var_name, "")
+        override = os.getenv(var_name, null)
         value = environ.get(var_name, override)
         varstr = "${%s}" % var_name
 
         # check for self-referential values
         is_recursive = value and varstr in value
 
-        # e.g. PATH, PYTHONPATH, ENVPATH, etc
+        # handle recursive references
         if is_recursive and override:
             value = value.replace(varstr, override)
+        else:
+            value = value.replace(varstr, "")
 
         if operator == "=":
             if override:
@@ -231,7 +236,7 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         if ":" in result:
             result = os.pathsep.join(dedupe_list(result.split(":")))
 
-    # detect cyclical references
+    # detect recursion errors
     except RecursionError:
         raise CyclicalReference(f"Cyclical reference detected in {expression}")
 

@@ -198,7 +198,7 @@ class TestCommands(unittest.TestCase):
 
     def test_test_echo_deploy_root(self):
         command = (
-            "%s test foobar --ignore-missing -- echo {DEPLOY_ROOT}" % self.envstack_bin
+            "%s test foobar -- echo {DEPLOY_ROOT}" % self.envstack_bin
         )
         expected_output = "/mnt/pipe/foobar\n"
         output = subprocess.check_output(
