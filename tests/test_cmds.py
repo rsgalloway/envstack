@@ -39,12 +39,15 @@ import unittest
 
 
 class TestUnresolved(unittest.TestCase):
+    """Tests unresolved environment variables."""
+
     def setUp(self):
         self.envstack_bin = os.path.join(
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
 
     def test_default(self):
         expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
@@ -76,6 +79,21 @@ STACK=dev
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
+    def test_distman(self):
+        expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
+ENV=${ENV:=prod}
+ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
+HELLO=${HELLO:=world}
+LOG_LEVEL=INFO
+PATH=${DEPLOY_ROOT}/bin:${PATH}
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
+STACK=distman
+"""
+        command = "%s distman" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
     def test_hello(self):
         expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=prod
@@ -83,7 +101,7 @@ ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${DEPLOY_ROOT}/bin:${PATH}
-PYEXE=python
+PYEXE=/usr/bin/python
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=/mnt/pipe
 STACK=hello
@@ -94,13 +112,18 @@ STACK=hello
 
     def test_thing(self):
         expected_output = """CHAR_LIST=['a', 'b', 'c', '${HELLO}']
+DEPLOY_ROOT=${ROOT}/${ENV}
 DICT={'a': 1, 'b': 2, 'c': 3}
+ENV=prod
+ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 FLOAT=1.0
 HELLO=goodbye
 INT=5
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 NUMBER_LIST=[1, 2, 3]
-PYTHONPATH=/usr/local/lib/python2.7/site-packages:${PYTHONPATH}
+PATH=${DEPLOY_ROOT}/bin:${PATH}
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+ROOT=/var/tmp/pipe
 STACK=thing
 """
         command = "%s thing" % self.envstack_bin
@@ -109,12 +132,15 @@ STACK=thing
 
 
 class TestResolved(unittest.TestCase):
+    """Tests resolved environment variables."""
+
     def setUp(self):
         self.envstack_bin = os.path.join(
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
         os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
 
     def test_default(self):
@@ -137,38 +163,78 @@ STACK=dev
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
+    def test_distman(self):
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/prod
+ROOT=/mnt/pipe
+STACK=distman
+"""
+        command = "%s distman -r DEPLOY_ROOT ROOT STACK" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_dev_distman(self):
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/dev
+ROOT=/mnt/pipe
+STACK=distman
+"""
+        command = "%s dev distman -r DEPLOY_ROOT ROOT STACK" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
     def test_test(self):
         expected_output = """DEPLOY_ROOT=/mnt/pipe/test
 HELLO=world
 ROOT=/mnt/pipe
 STACK=test
 """
-        command = "%s test -r DEPLOY_ROOT HELLO ROOT STACK" % self.envstack_bin
+        command = (
+            "ENV=blah ROOT=/var/tmp %s test -r DEPLOY_ROOT HELLO ROOT STACK"
+            % self.envstack_bin
+        )
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_foobar(self):
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/foobar
+HELLO=world
+ROOT=/mnt/pipe
+STACK=foobar
+"""
+        command = (
+            "ENV=blah ROOT=/var/tmp %s test foobar -r DEPLOY_ROOT HELLO ROOT STACK"
+            % self.envstack_bin
+        )
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_thing(self):
         expected_output = """CHAR_LIST=['a', 'b', 'c', 'goodbye']
+DEPLOY_ROOT=/var/tmp/pipe/prod
 HELLO=goodbye
 """
-        command = "%s thing -r HELLO CHAR_LIST" % self.envstack_bin
+        command = "%s thing -r DEPLOY_ROOT HELLO CHAR_LIST" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
 
 class TestCommands(unittest.TestCase):
+    """Tests various envstack commands."""
+
     def setUp(self):
         self.envstack_bin = os.path.join(
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
 
     def test_default_echo(self):
         command = "%s -- echo {HELLO}" % self.envstack_bin
         expected_output = "world\n"
         output = subprocess.check_output(
-            command, start_new_session=True, shell=True, universal_newlines=True
+            command,
+            shell=True,
+            universal_newlines=True,
         )
         self.assertEqual(output, expected_output)
 
@@ -197,8 +263,100 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_test_echo_deploy_root(self):
-        command = (
-            "%s test foobar --ignore-missing -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        command = "%s test foobar -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        expected_output = "/mnt/pipe/foobar\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+
+class TestVarFlow(unittest.TestCase):
+    """Tests the flow of environment variables through stacks."""
+
+    def setUp(self):
+        self.envstack_bin = os.path.join(
+            os.path.dirname(__file__), "..", "bin", "envstack"
+        )
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
+
+    def test_default_hello(self):
+        command = "%s -- echo {HELLO}" % self.envstack_bin
+        expected_output = "world\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_dev_hello(self):
+        command = "%s dev -- echo {HELLO}" % self.envstack_bin
+        expected_output = "world\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_thing_hello(self):
+        command = "%s thing -- echo {HELLO}" % self.envstack_bin
+        expected_output = "goodbye\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_thing_hello_multiple(self):
+        command = "%s default dev thing -- echo {HELLO}" % self.envstack_bin
+        expected_output = "goodbye\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+
+class TestDistman(unittest.TestCase):
+    """Tests value for $DEPLOY_ROOT under various environment configurations."""
+
+    def setUp(self):
+        self.envstack_bin = os.path.join(
+            os.path.dirname(__file__), "..", "bin", "envstack"
+        )
+        self.python_cmd = """python -c \"import os,envstack;envstack.init('distman');print(os.getenv('DEPLOY_ROOT'))\""""
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
+
+    def test_default_deploy_root(self):
+        os.environ["ENV"] = "invalid"  # should not be able to override ENV
+        command = "%s -- %s" % (self.envstack_bin, self.python_cmd)
+        expected_output = "/mnt/pipe/prod\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_dev_deploy_root(self):
+        os.environ["ENV"] = "invalid"  # should not be able to override ENV
+        command = "%s dev -- %s" % (self.envstack_bin, self.python_cmd)
+        expected_output = "/mnt/pipe/dev\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_test_deploy_root(self):
+        command = "ENV=invalid %s test -- %s" % (self.envstack_bin, self.python_cmd)
+        expected_output = "/mnt/pipe/test\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_foobar_deploy_root(self):
+        command = "ENV=invalid %s test foobar -- %s" % (
+            self.envstack_bin,
+            self.python_cmd,
         )
         expected_output = "/mnt/pipe/foobar\n"
         output = subprocess.check_output(

@@ -5,6 +5,7 @@ Environment variable management system.
 
 | Feature | Description |
 |---------|-------------|
+| Namespaced environments | Environments in envstack are namespaced, allowing you to organize and manage variables based on different contexts or projects. Each environment stack can have its own set of variables, providing a clean separation and avoiding conflicts between different environments. |
 | Environment stacks | Allows you to manage environment variables using .env files called environment stacks. These stacks provide a hierarchical and contextual approach to managing variables. |
 | Hierarchical structure | Stacks can be combined and have a defined order of priority. Variables defined in higher scope stacks flow from higher scope to lower scope, left to right. |
 | Variable expansion modifiers | Supports bash-like variable expansion modifiers, allowing you to set default values for variables and override them in the environment or by higher scope stacks. |
@@ -47,8 +48,9 @@ root folder defined by `${DEPLOY_ROOT}` (defined in `env/default.env`).
 
 ## Quickstart
 
-Envstack looks for .env files in directories specified by `${ENVPATH}` and in
-the current working directory. Get the latest `default.env` stack file:
+Envstack looks for .env files in directories specified by `${ENVPATH}` and i
+the current working directory. Start by getting the latest `default.env` 
+environment stack file:
 
 ```bash
 $ wget -O default.env \
@@ -89,7 +91,10 @@ ROOT=/mnt/pipe
 STACK=default
 ```
 
-**Note:** The name of the current stack will always be stored in `${STACK}`.
+If you are not seeing the above output, make sure the `default.env`
+stack file is in your `$ENVPATH` or current working directory.
+
+> NOTE: The name of the current stack will always be stored in `${STACK}`.
 
 To see stacks, pass the stack name as the first arg. Environment stacks can be
 combined, in order of priority (variables defined in stacks flow from higher
@@ -286,7 +291,7 @@ Loading and resolving predefined environments from stack files:
 
 ```python
 >>> from envstack.env import load_environ, resolve_environ
->>> env = resolve_environ(load_environ("prod"))
+>>> env = resolve_environ(load_environ(name))
 ```
 
 ## Running Commands
@@ -407,3 +412,11 @@ The following environment variables are used to help manage functionality:
 | ENVPATH | Colon-separated paths to search for stack files |
 | IGNORE_MISSING | Ignore missing stack files when resolving environments |
 | STACK | Name of the current stack |
+
+# Tests
+
+Unit tests can be run using pytest (currently only tested on linux):
+
+```bash
+$ pytest tests -s
+```

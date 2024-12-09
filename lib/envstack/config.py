@@ -50,18 +50,18 @@ def detect_shell():
         else:
             return "unknown"
     else:
-        shell = os.environ.get("SHELL")
+        shell = os.environ.get("SHELL", "/bin/bash")
         if shell:
-            return shell.split("/")[-1]
+            return shell
         else:
-            return "unknown"
+            return "/usr/bin/bash"
 
 
 DEBUG = os.getenv("DEBUG")
 DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "default")
 ENV = os.getenv("ENV", "prod")
 HOME = os.getenv("HOME")
-IGNORE_MISSING = os.getenv("IGNORE_MISSING", False)
+IGNORE_MISSING = bool(os.getenv("IGNORE_MISSING", 1))
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 ON_POSIX = "posix" in sys.builtin_module_names
 PLATFORM = platform.system().lower()

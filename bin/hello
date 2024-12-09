@@ -2,11 +2,15 @@
 
 __doc__ = """
 Contains an example executable wrapper script that prints the value of a given
-environment variable. Usage:
+environment variable.
 
-$ hello HELLO
-$ hello PATH
-$ hello PYtHONPATH
+Note: Make sure hello.env is in $ENVPATH.
+
+Usage:
+
+    $ hello HELLO
+    $ hello PATH
+    $ hello PYtHONPATH
 """
 
 import sys
@@ -20,7 +24,7 @@ class HelloWrapper(Wrapper):
 
     def executable(self):
         """Return the executable to run."""
-        return "${PYEXE} -c 'import os,sys;print(os.getenv(sys.argv[1]))'"
+        return "/usr/bin/python -c 'import os,sys;print(os.getenv(sys.argv[1]))'"
 
 
 def main():

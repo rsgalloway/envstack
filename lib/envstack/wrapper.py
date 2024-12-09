@@ -44,14 +44,23 @@ from envstack.env import load_environ, resolve_environ
 from envstack.util import encode, evaluate_modifiers
 
 
-def to_args(cmd):
-    """Converts a command line string to an arg list to be passed to
-    subprocess.Popen that preserves args with quotes."""
+def to_args(cmd: str):
+    """
+    Converts a command line string to an arg list to be passed to
+    subprocess.Popen that preserves args with quotes.
+
+    :param cmd: command line string.
+    """
     return shlex.split(cmd)
 
 
 def shell_join(args):
-    """Joins a list of arguments into a single quoted shell string."""
+    """
+    Joins a list of arguments into a single quoted shell string.
+
+    :param args: list of arguments.
+    :returns: shell string.
+    """
     argstr = ".".join(args)
     if '"' in argstr or "'" in argstr:
         try:
@@ -87,8 +96,8 @@ class Wrapper(object):
     def __init__(self, namespace, args=[]):
         """Initializes the wrapper with the given namespace and args.
 
-        :param namespace: namespace
-        :param args: command line arguments
+        :param namespace: environment stack namespace.
+        :param args: command line arguments.
         """
         super(Wrapper, self).__init__()
         self.args = args
@@ -153,14 +162,14 @@ class CommandWrapper(Wrapper):
         """
         Initializes the command wrapper with the given namespace and args, e.g.:
 
-            >>> cmd = CommandWrapper('stack', ['ls', '-al'])
+            >>> cmd = CommandWrapper(stack, ['ls', '-al'])
             >>> print(cmd.executable())
             ls
             >>> print(cmd.args)
             ['-al']
 
-        :param namespace: stack namespace (default: 'stack')
-        :param args: command and arguments as a list
+        :param namespace: environment stack name (default: 'default').
+        :param args: command and arguments as a list.
         """
         super(CommandWrapper, self).__init__(namespace, args)
         self.cmd = args
@@ -178,24 +187,34 @@ class ShellWrapper(CommandWrapper):
         Initializes the command wrapper with the given namespace and args,
         replacing the original command with the shell command, e.g.:
 
-            >>> cmd = ShellWrapper('stack', ['ls', '-l'])
+            >>> cmd = ShellWrapper(stack, ['ls', '-l'])
             >>> print(cmd.executable())
             bash
             >>> print(cmd.args)
             ['-i', '-c', 'ls -l']
 
-        :param namespace: stack namespace (default: 'stack')
-        :param args: command and arguments as a list
+        :param namespace: environment stack name (default: 'default').
+        :param args: command and arguments as a list.
+        :param interactive: run the command in an interactive shell (default: True).
         """
         super(ShellWrapper, self).__init__(namespace, args)
+        self.interactive = self.get_interactive()
 
-    def get_subprocess_command(self, env):
+    def get_interactive(self):
+        """Returns whether to run the command in an interactive shell."""
+        return bool(int(os.getenv("INTERACTIVE", 1)))
+
+    def get_subprocess_command(self, env: dict):
         """Returns the command to be passed to the shell in a subprocess."""
         if re.search(r"\$\w+", self.cmd):
-            return f'{config.SHELL} -i -c "{self.cmd}"'
+            if self.interactive:
+                return f'{config.SHELL} -i -c "{self.cmd}"'
+            return f'{config.SHELL} -c "{self.cmd}"'
         else:
             escaped_command = shlex.quote(self.cmd)
-            return f"{config.SHELL} -i -c {escaped_command}"
+            if self.interactive:
+                return f"{config.SHELL} -i -c {escaped_command}"
+            return f"{config.SHELL} -c {escaped_command}"
 
     def executable(self):
         """Returns the shell command to run the original command."""
@@ -210,14 +229,14 @@ class CmdWrapper(CommandWrapper):
         Initializes the command wrapper with the given namespace and args,
         replacing the original command with the shell command, e.g.:
 
-            >>> cmd = CmdWrapper('stack', ['dir'])
+            >>> cmd = CmdWrapper(stack, ['dir'])
             >>> print(cmd.executable())
             cmd
             >>> print(cmd.args)
             ['/c', 'dir']
 
-        :param namespace: stack namespace (default: 'stack')
-        :param args: command and arguments as a list
+        :param namespace: environment stack name (default: 'default').
+        :param args: command and arguments as a list.
         """
         super(CmdWrapper, self).__init__(namespace, args)
         self.args = ["/c", self.cmd]
@@ -243,20 +262,20 @@ def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
 
         >>> run_command(['ls', '-l'], 'my-stack')
 
-     - Automatically detects the shell to use based on the config.SHELL value.
+     - Automatically detects the shell to use.
      - Converts {VAR} to $VAR for bash, sh, zsh, and %VAR% for cmd.
 
-    :param command: command to run as a list of arguments
-    :param namespace: environment stack namespace (default: 'stack')
+    :param command: command to run as a list of arguments.
+    :param namespace: environment stack name (default: 'default').
+    :param interactive: run the command in an interactive shell (default: True).
     :returns: command exit code
     """
     logger.setup_stream_handler()
-    if config.SHELL in ["bash", "sh", "zsh"]:
-        # convert {VAR} to ${VAR}, e.g. 'echo {VAR}' -> 'echo ${VAR}'
+    shellname = os.path.basename(config.SHELL)
+    if shellname in ["bash", "sh", "zsh"]:
         command = re.sub(r"\{(\w+)\}", r"${\1}", shell_join(command))
         cmd = ShellWrapper(namespace, command)
-    elif config.SHELL in ["cmd"]:
-        # convert {VAR} to %VAR%, e.g. 'echo {VAR}' -> 'echo %VAR%'
+    elif shellname in ["cmd"]:
         command = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(command))
         cmd = CmdWrapper(namespace, command)
     else:
