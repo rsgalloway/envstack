@@ -162,7 +162,7 @@ class CommandWrapper(Wrapper):
         """
         Initializes the command wrapper with the given namespace and args, e.g.:
 
-            >>> cmd = CommandWrapper('stack', ['ls', '-al'])
+            >>> cmd = CommandWrapper(stack, ['ls', '-al'])
             >>> print(cmd.executable())
             ls
             >>> print(cmd.args)
@@ -187,7 +187,7 @@ class ShellWrapper(CommandWrapper):
         Initializes the command wrapper with the given namespace and args,
         replacing the original command with the shell command, e.g.:
 
-            >>> cmd = ShellWrapper('stack', ['ls', '-l'])
+            >>> cmd = ShellWrapper(stack, ['ls', '-l'])
             >>> print(cmd.executable())
             bash
             >>> print(cmd.args)
@@ -225,7 +225,7 @@ class CmdWrapper(CommandWrapper):
         Initializes the command wrapper with the given namespace and args,
         replacing the original command with the shell command, e.g.:
 
-            >>> cmd = CmdWrapper('stack', ['dir'])
+            >>> cmd = CmdWrapper(stack, ['dir'])
             >>> print(cmd.executable())
             cmd
             >>> print(cmd.args)
@@ -260,7 +260,7 @@ def run_command(
 
         >>> run_command(['ls', '-l'], 'my-stack')
 
-     - Automatically detects the shell to use based on the config.SHELL value.
+     - Automatically detects the shell to use.
      - Converts {VAR} to $VAR for bash, sh, zsh, and %VAR% for cmd.
 
     :param command: command to run as a list of arguments.
@@ -269,12 +269,11 @@ def run_command(
     :returns: command exit code
     """
     logger.setup_stream_handler()
-    if config.SHELL in ["bash", "sh", "zsh"]:
-        # convert {VAR} to ${VAR}, e.g. 'echo {VAR}' -> 'echo ${VAR}'
+    shellname = os.path.basename(config.SHELL)
+    if shellname in ["bash", "sh", "zsh"]:
         command = re.sub(r"\{(\w+)\}", r"${\1}", shell_join(command))
         cmd = ShellWrapper(namespace, command, interactive=interactive)
-    elif config.SHELL in ["cmd"]:
-        # convert {VAR} to %VAR%, e.g. 'echo {VAR}' -> 'echo %VAR%'
+    elif shellname in ["cmd"]:
         command = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(command))
         cmd = CmdWrapper(namespace, command)
     else:

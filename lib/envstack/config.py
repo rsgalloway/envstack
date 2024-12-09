@@ -50,11 +50,11 @@ def detect_shell():
         else:
             return "unknown"
     else:
-        shell = os.environ.get("SHELL")
+        shell = os.environ.get("SHELL", "/bin/bash")
         if shell:
-            return shell.split("/")[-1]
+            return shell
         else:
-            return "unknown"
+            return "/usr/bin/bash"
 
 
 DEBUG = os.getenv("DEBUG")
