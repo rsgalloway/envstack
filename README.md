@@ -342,7 +342,7 @@ environment stack that sets a value for `${PYEXE}`:
 #### hello.env
 ```yaml
 all: &default
-  PYEXE: python
+  PYEXE: /usr/bin/python
 ```
 
 #### bin/hello
