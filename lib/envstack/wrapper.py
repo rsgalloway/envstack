@@ -192,10 +192,10 @@ class ShellWrapper(CommandWrapper):
     def get_subprocess_command(self, env):
         """Returns the command to be passed to the shell in a subprocess."""
         if re.search(r"\$\w+", self.cmd):
-            return f'{config.SHELL} -i -c "{self.cmd}"'
+            return f'{config.SHELL} -c "{self.cmd}"'
         else:
             escaped_command = shlex.quote(self.cmd)
-            return f"{config.SHELL} -i -c {escaped_command}"
+            return f"{config.SHELL} -c {escaped_command}"
 
     def executable(self):
         """Returns the shell command to run the original command."""
