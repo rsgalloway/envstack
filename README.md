@@ -11,6 +11,7 @@ Environment variable management system.
 | Variable expansion modifiers | Supports bash-like variable expansion modifiers, allowing you to set default values for variables and override them in the environment or by higher scope stacks. |
 | Platform-specific variables | Stacks can have platform-specific variables and values. This allows you to define different values for variables based on the platform. |
 | Variable references | Variables can reference other variables, allowing for more flexibility and dynamic value assignment. |
+| Multi-line values | Supports variables with multi-line values. |
 | Includes | Stack files can include other stacks, making it easy to reuse and combine different stacks. |
 | Python API | Provides a Python API that allows you to initialize and work with environment stacks programmatically. Easily initialize pre-defined environments with Python scripts, tools, and wrappers. |
 | Running commands | Allows you to run command line executables inside an environment stack, providing a convenient way to execute commands with a pre-defined environment. |
@@ -411,7 +412,7 @@ The following environment variables are used to help manage functionality:
 |------|-------------|
 | ENVPATH | Colon-separated paths to search for stack files |
 | IGNORE_MISSING | Ignore missing stack files when resolving environments |
-| STACK | Name of the current stack |
+| STACK | Name of the current environment stack |
 
 # Tests
 
