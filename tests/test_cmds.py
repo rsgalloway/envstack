@@ -266,6 +266,49 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
 
+class TestVarFlow(unittest.TestCase):
+    """Tests the flow of environment variables through stacks."""
+
+    def setUp(self):
+        self.envstack_bin = os.path.join(
+            os.path.dirname(__file__), "..", "bin", "envstack"
+        )
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        os.environ["ENVPATH"] = envpath
+
+    def test_default_hello(self):
+        command = "%s -- echo {HELLO}" % self.envstack_bin
+        expected_output = "world\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_dev_hello(self):
+        command = "%s dev -- echo {HELLO}" % self.envstack_bin
+        expected_output = "world\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_thing_hello(self):
+        command = "%s thing -- echo {HELLO}" % self.envstack_bin
+        expected_output = "goodbye\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_thing_hello_multiple(self):
+        command = "%s default dev thing -- echo {HELLO}" % self.envstack_bin
+        expected_output = "goodbye\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+
 class TestDistman(unittest.TestCase):
     """Tests value for $DEPLOY_ROOT under various environment configurations."""
 
@@ -305,7 +348,10 @@ class TestDistman(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_foobar_deploy_root(self):
-        command = "ENV=invalid %s test foobar -- %s" % (self.envstack_bin, self.python_cmd)
+        command = "ENV=invalid %s test foobar -- %s" % (
+            self.envstack_bin,
+            self.python_cmd,
+        )
         expected_output = "/mnt/pipe/foobar\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
