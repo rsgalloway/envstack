@@ -44,7 +44,7 @@ from envstack.env import load_environ, resolve_environ
 from envstack.util import encode, evaluate_modifiers
 
 
-def to_args(cmd):
+def to_args(cmd: str):
     """
     Converts a command line string to an arg list to be passed to
     subprocess.Popen that preserves args with quotes.
@@ -182,7 +182,7 @@ class CommandWrapper(Wrapper):
 class ShellWrapper(CommandWrapper):
     """Wrapper class for running wrapped commands in bash, sh, or zsh."""
 
-    def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[], interactive=True):
+    def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
         """
         Initializes the command wrapper with the given namespace and args,
         replacing the original command with the shell command, e.g.:
@@ -198,9 +198,13 @@ class ShellWrapper(CommandWrapper):
         :param interactive: run the command in an interactive shell (default: True).
         """
         super(ShellWrapper, self).__init__(namespace, args)
-        self.interactive = interactive
+        self.interactive = self.get_interactive()
 
-    def get_subprocess_command(self, env):
+    def get_interactive(self):
+        """Returns whether to run the command in an interactive shell."""
+        return bool(int(os.getenv("INTERACTIVE", 1)))
+
+    def get_subprocess_command(self, env: dict):
         """Returns the command to be passed to the shell in a subprocess."""
         if re.search(r"\$\w+", self.cmd):
             if self.interactive:
@@ -248,9 +252,7 @@ class CmdWrapper(CommandWrapper):
         return self.cmd
 
 
-def run_command(
-    command: str, namespace: str = config.DEFAULT_NAMESPACE, interactive: bool = True
-):
+def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
     """
     Runs a given command with the given stack namespace.
 
@@ -272,7 +274,7 @@ def run_command(
     shellname = os.path.basename(config.SHELL)
     if shellname in ["bash", "sh", "zsh"]:
         command = re.sub(r"\{(\w+)\}", r"${\1}", shell_join(command))
-        cmd = ShellWrapper(namespace, command, interactive=interactive)
+        cmd = ShellWrapper(namespace, command)
     elif shellname in ["cmd"]:
         command = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(command))
         cmd = CmdWrapper(namespace, command)

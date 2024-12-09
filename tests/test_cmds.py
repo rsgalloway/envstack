@@ -47,6 +47,7 @@ class TestUnresolved(unittest.TestCase):
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
 
     def test_default(self):
         expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
@@ -139,6 +140,7 @@ class TestResolved(unittest.TestCase):
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
         os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
 
     def test_default(self):
@@ -224,12 +226,15 @@ class TestCommands(unittest.TestCase):
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
 
     def test_default_echo(self):
         command = "%s -- echo {HELLO}" % self.envstack_bin
         expected_output = "world\n"
         output = subprocess.check_output(
-            command, start_new_session=True, shell=True, universal_newlines=True
+            command,
+            shell=True,
+            universal_newlines=True,
         )
         self.assertEqual(output, expected_output)
 
@@ -275,6 +280,7 @@ class TestVarFlow(unittest.TestCase):
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
 
     def test_default_hello(self):
         command = "%s -- echo {HELLO}" % self.envstack_bin
@@ -316,10 +322,10 @@ class TestDistman(unittest.TestCase):
         self.envstack_bin = os.path.join(
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
-
         self.python_cmd = """python -c \"import os,envstack;envstack.init('distman');print(os.getenv('DEPLOY_ROOT'))\""""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
 
     def test_default_deploy_root(self):
         os.environ["ENV"] = "invalid"  # should not be able to override ENV
