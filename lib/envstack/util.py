@@ -160,15 +160,15 @@ def get_paths_from_var(
 def get_stack_name(name: str = config.DEFAULT_NAMESPACE):
     """
     Returns the stack name as a string. The stack name is always the last
-    element in the stack list.
+    element in the stack list or the basename of the envstack file.
 
     :param name: The input name, can be a string, tuple, or list.
     :return: The stack name as a string.
     """
+    if isinstance(name, (tuple, list)):
+        name = str(name[-1]) if name else config.DEFAULT_NAMESPACE
     if isinstance(name, str):
-        return name
-    elif isinstance(name, (tuple, list)):
-        return str(name[-1]) if name else ""
+        return os.path.splitext(os.path.basename(name))[0]
     else:
         raise ValueError("Invalid input type. Expected string, tuple, or list.")
 
