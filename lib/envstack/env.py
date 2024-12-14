@@ -669,22 +669,12 @@ def load_file(path: str):
     if path in load_file_cache:
         return load_file_cache[path]
 
-    data = {}
-
     if not os.path.exists(path):
-        return data
+        return {}
 
-    import yaml
-
-    with open(path) as stream:
-        try:
-            data.update(yaml.safe_load(stream))
-        except (TypeError, yaml.YAMLError) as exc:
-            raise InvalidSource(path) from None
-        except yaml.parser.ParserError as err:
-            raise InvalidSource(path) from None
-
-    load_file_cache[path] = data
+    else:
+        data = util.validate_yaml(path)
+        load_file_cache[path] = data
 
     return data
 
