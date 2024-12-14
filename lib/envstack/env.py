@@ -396,39 +396,53 @@ def clear(
     """
 
     env = load_environ(name, scope=scope)
+
+    # track the environment variables to export
     export_list = list()
-    restricted = ["PATH", "PS1", "PWD", "PROMPT"]
+
+    # restricted environment variables
+    restricted = [
+        "PATH",
+        "PYTHONPATH",
+        "ENVPATH",
+        "PS1",
+        "PWD",
+        "PROMPT",
+    ]
+
+    # get the name of the shell
+    shell_name = os.path.basename(shell)
 
     for key in env:
         if key not in os.environ:
             continue
         old_key = f"_ES_OLD_{key}"
         old_val = os.environ.get(old_key)
-        if shell in ["bash", "sh", "zsh"]:
+        if shell_name in ["bash", "sh", "zsh"]:
             if old_val:
                 export_list.append("export %s=%s" % (key, old_val))
                 export_list.append("unset %s" % (old_key))
             elif key not in restricted:
                 export_list.append(f"unset {key}")
-        elif shell == "tcsh":
+        elif shell_name == "tcsh":
             if old_val:
                 export_list.append(f"setenv {key} {old_val}")
                 export_list.append(f"unsetenv {old_key}")
             elif key not in restricted:
                 export_list.append(f"unsetenv {key}")
-        elif shell == "cmd":
+        elif shell_name == "cmd":
             if old_val:
                 export_list.append(f"set {key}={old_val}")
                 export_list.append(f"set {old_key}=")
             elif key not in restricted:
                 export_list.append(f"set {key}=")
-        elif shell == "pwsh":
+        elif shell_name == "pwsh":
             if old_val:
                 export_list.append(f"$env:{key}='{old_val}'")
                 export_list.append(f"Remove-Item Env:{old_key}")
             elif key not in restricted:
                 export_list.append(f"Remove-Item Env:{key}")
-        elif shell == "unknown":
+        elif shell_name == "unknown":
             raise Exception("unknown shell")
 
     export_list.sort()
@@ -460,29 +474,32 @@ def export(
     # track the environment variables to export
     export_list = list()
 
+    # get the name of the shell
+    shell_name = os.path.basename(shell)
+
     for key, val in resolved_env.items():
         old_key = f"_ES_OLD_{key}"
         old_val = os.environ.get(key)
         if key == "PATH" and not val:
             logger.log.warning("PATH is empty")
             continue
-        if shell in ["bash", "sh", "zsh"]:
+        if shell_name in ["bash", "sh", "zsh"]:
             export_list.append(f"export {key}={val}")
             if old_val:
                 export_list.append(f"export {old_key}={old_val}")
-        elif shell == "tcsh":
+        elif shell_name == "tcsh":
             export_list.append(f'setenv {key}:"{val}"')
             if old_val:
                 export_list.append(f'setenv {old_key}:"{old_val}"')
-        elif shell == "cmd":
+        elif shell_name == "cmd":
             export_list.append(f'set {key}="{val}"')
             if old_val:
                 export_list.append(f'set {old_key}="{old_val}"')
-        elif shell == "pwsh":
+        elif shell_name == "pwsh":
             export_list.append(f'$env:{key}="{val}"')
             if old_val:
                 export_list.append(f'$env:{old_key}="{old_val}"')
-        elif shell == "unknown":
+        elif shell_name == "unknown":
             raise Exception("unknown shell")
 
     export_list.sort()
