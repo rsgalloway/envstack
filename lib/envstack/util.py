@@ -365,7 +365,7 @@ def print_error(file_path: str, e: Exception):
                     prefix = ">> " if i == line_num else "   "
                     print(f"{prefix}{i + 1}: {lines[i].rstrip()}")
     except Exception as ex:
-        pass
+        print("read error:", ex)
 
 
 def validate_yaml(file_path: str):
@@ -394,9 +394,7 @@ def validate_yaml(file_path: str):
     except yaml.YAMLError as e:
         if hasattr(e, "problem_mark") and e.problem_mark:
             mark = e.problem_mark
-            print(
-                f'  File "{file_path}" line {mark.line}, column {mark.column}:'
-            )
+            print(f'  File "{file_path}" line {mark.line}, column {mark.column}:')
         print_error(file_path, e)
         if hasattr(e, "problem") and e.problem:
             print(f"SyntaxError: {e.problem}")

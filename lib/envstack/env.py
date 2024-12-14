@@ -287,7 +287,9 @@ def get_sources(
     :raises TemplateNotFound: if a file is not found in ENVPATH or scope.
     :returns: list of Source objects.
     """
-    clear_file_cache()
+
+    # TODO: smarter file caching (issue #26)
+    # clear_file_cache()
 
     # set default scope to the current working directory
     scope = Path(scope or os.getcwd()).resolve()
