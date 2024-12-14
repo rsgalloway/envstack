@@ -105,6 +105,34 @@ scope to lower scope, left to right):
 $ envstack [STACK [STACK ...]]
 ```
 
+Environment stack files are also executable directly:
+
+```bash
+$ ./env/test.env
+DEPLOY_ROOT=${ROOT}/${STACK}
+ENV=${STACK}
+ENVPATH=${DEPLOY_ROOT}/env:${ROOT}/prod/env
+HELLO=${HELLO:=world}
+LOG_LEVEL=DEBUG
+PATH=${DEPLOY_ROOT}/bin:${ROOT}/prod/bin:${PATH}
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
+STACK=test
+```
+
+You can resolve the with `-r` or run commands inside the environment stack:
+
+```bash
+$ ./env/test.env -- <command>
+```
+
+For example:
+
+```bash
+$ ./env/hello.env -- echo {HELLO}
+world
+```
+
 ## Setting Values
 
 Envstack uses bash-like variable expansion modifiers. Setting `$VAR` to a fixed
