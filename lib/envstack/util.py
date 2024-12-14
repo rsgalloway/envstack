@@ -357,7 +357,7 @@ def print_error(file_path: str, e: Exception):
         with open(file_path, "r") as file:
             lines = file.readlines()
             if hasattr(e, "problem_mark") and e.problem_mark:
-                line_num = e.problem_mark.line
+                line_num = e.problem_mark.line - 1
                 # problematic line and a few surrounding lines for context
                 start = max(0, line_num - 1)
                 end = min(len(lines), line_num + 2)
@@ -376,19 +376,32 @@ def validate_yaml(file_path: str):
     """
     import yaml
 
+    required_keys = {"all", "darwin", "linux", "windows"}
+
     try:
         with open(file_path, "r") as stream:
-            return yaml.safe_load(stream)
+            data = yaml.safe_load(stream.read())
+
+        if not isinstance(data, dict):
+            raise yaml.YAMLError("invalid data structure")
+
+        missing_keys = required_keys - data.keys()
+        if missing_keys:
+            raise yaml.YAMLError(f"missing keys: {', '.join(sorted(missing_keys))}")
+
+        return data
+
     except yaml.YAMLError as e:
         if hasattr(e, "problem_mark") and e.problem_mark:
             mark = e.problem_mark
             print(
-                f"  File '{file_path}' line {mark.line + 1}, column {mark.column + 1}:"
+                f'  File "{file_path}" line {mark.line}, column {mark.column}:'
             )
         print_error(file_path, e)
         if hasattr(e, "problem") and e.problem:
             print(f"SyntaxError: {e.problem}")
-        # if hasattr(e, "context") and e.context:
-        #     print(f"  {e.context}")
+        else:
+            print(f'  File "{file_path}":')
+            print(f"SyntaxError: {e}")
 
     return {}
