@@ -106,7 +106,7 @@ class EnvVar(string.Template, str):
         try:
             val = EnvVar(self.safe_substitute(env))
         except RuntimeError as err:
-            if "maximum recursion depth exceeded" in str(err):
+            if "maximum recursion" in str(err):
                 raise CyclicalReference(self.template)
             else:
                 raise InvalidSyntax(err)
@@ -287,7 +287,9 @@ def get_sources(
     :raises TemplateNotFound: if a file is not found in ENVPATH or scope.
     :returns: list of Source objects.
     """
-    clear_file_cache()
+
+    # TODO: smarter file caching (issue #26)
+    # clear_file_cache()
 
     # set default scope to the current working directory
     scope = Path(scope or os.getcwd()).resolve()
@@ -396,39 +398,53 @@ def clear(
     """
 
     env = load_environ(name, scope=scope)
+
+    # track the environment variables to export
     export_list = list()
-    restricted = ["PATH", "PS1", "PWD", "PROMPT"]
+
+    # restricted environment variables
+    restricted = [
+        "PATH",
+        "PYTHONPATH",
+        "ENVPATH",
+        "PS1",
+        "PWD",
+        "PROMPT",
+    ]
+
+    # get the name of the shell
+    shell_name = os.path.basename(shell)
 
     for key in env:
         if key not in os.environ:
             continue
         old_key = f"_ES_OLD_{key}"
         old_val = os.environ.get(old_key)
-        if shell in ["bash", "sh", "zsh"]:
+        if shell_name in ["bash", "sh", "zsh"]:
             if old_val:
                 export_list.append("export %s=%s" % (key, old_val))
                 export_list.append("unset %s" % (old_key))
             elif key not in restricted:
                 export_list.append(f"unset {key}")
-        elif shell == "tcsh":
+        elif shell_name == "tcsh":
             if old_val:
                 export_list.append(f"setenv {key} {old_val}")
                 export_list.append(f"unsetenv {old_key}")
             elif key not in restricted:
                 export_list.append(f"unsetenv {key}")
-        elif shell == "cmd":
+        elif shell_name == "cmd":
             if old_val:
                 export_list.append(f"set {key}={old_val}")
                 export_list.append(f"set {old_key}=")
             elif key not in restricted:
                 export_list.append(f"set {key}=")
-        elif shell == "pwsh":
+        elif shell_name == "pwsh":
             if old_val:
                 export_list.append(f"$env:{key}='{old_val}'")
                 export_list.append(f"Remove-Item Env:{old_key}")
             elif key not in restricted:
                 export_list.append(f"Remove-Item Env:{key}")
-        elif shell == "unknown":
+        elif shell_name == "unknown":
             raise Exception("unknown shell")
 
     export_list.sort()
@@ -460,29 +476,32 @@ def export(
     # track the environment variables to export
     export_list = list()
 
+    # get the name of the shell
+    shell_name = os.path.basename(shell)
+
     for key, val in resolved_env.items():
         old_key = f"_ES_OLD_{key}"
         old_val = os.environ.get(key)
         if key == "PATH" and not val:
             logger.log.warning("PATH is empty")
             continue
-        if shell in ["bash", "sh", "zsh"]:
+        if shell_name in ["bash", "sh", "zsh"]:
             export_list.append(f"export {key}={val}")
             if old_val:
                 export_list.append(f"export {old_key}={old_val}")
-        elif shell == "tcsh":
+        elif shell_name == "tcsh":
             export_list.append(f'setenv {key}:"{val}"')
             if old_val:
                 export_list.append(f'setenv {old_key}:"{old_val}"')
-        elif shell == "cmd":
+        elif shell_name == "cmd":
             export_list.append(f'set {key}="{val}"')
             if old_val:
                 export_list.append(f'set {old_key}="{old_val}"')
-        elif shell == "pwsh":
+        elif shell_name == "pwsh":
             export_list.append(f'$env:{key}="{val}"')
             if old_val:
                 export_list.append(f'$env:{old_key}="{old_val}"')
-        elif shell == "unknown":
+        elif shell_name == "unknown":
             raise Exception("unknown shell")
 
     export_list.sort()
@@ -652,24 +671,12 @@ def load_file(path: str):
     if path in load_file_cache:
         return load_file_cache[path]
 
-    data = {}
-
     if not os.path.exists(path):
-        return data
+        return {}
 
-    import yaml
-
-    with open(path) as stream:
-        try:
-            data.update(yaml.safe_load(stream))
-        except (TypeError, yaml.YAMLError) as exc:
-            logger.log.error(exc)
-            raise InvalidSource(path)
-        except yaml.parser.ParserError as err:
-            logger.log.error(err)
-            raise InvalidSource(path)
-
-    load_file_cache[path] = data
+    else:
+        data = util.validate_yaml(path)
+        load_file_cache[path] = data
 
     return data
 

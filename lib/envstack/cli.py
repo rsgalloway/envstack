@@ -145,12 +145,11 @@ def main():
         if command:
             return run_command(command, args.namespace)
         elif args.resolve is not None:
-            if len(args.resolve) == 0:
-                args.resolve = load_environ(args.namespace).keys()
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
             )
-            for key in sorted(args.resolve):
+            keys = args.resolve or resolved.keys()
+            for key in sorted(keys):
                 val = resolved.get(key)
                 print(f"{key}={val}")
         elif args.trace is not None:

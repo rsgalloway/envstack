@@ -36,6 +36,7 @@ Contains unit tests for the util.py module.
 import os
 import unittest
 
+from envstack import config
 from envstack.exceptions import CyclicalReference
 from envstack.util import encode, evaluate_modifiers, get_stack_name, safe_eval
 
@@ -127,7 +128,7 @@ class TestUtils(unittest.TestCase):
     def test_get_stack_name_empty(self):
         name = []
         result = get_stack_name(name)
-        self.assertEqual(result, "")
+        self.assertEqual(result, config.DEFAULT_NAMESPACE)
 
     def test_get_stack_name_invalid_type(self):
         name = 123

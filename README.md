@@ -105,6 +105,43 @@ scope to lower scope, left to right):
 $ envstack [STACK [STACK ...]]
 ```
 
+#### Executing Scripts
+
+Environment stack files are also executable scripts that can be run directly:
+
+
+```bash
+$ ./env/test.env
+DEPLOY_ROOT=${ROOT}/${STACK}
+ENV=${STACK}
+ENVPATH=${DEPLOY_ROOT}/env:${ROOT}/prod/env
+HELLO=${HELLO:=world}
+LOG_LEVEL=DEBUG
+PATH=${DEPLOY_ROOT}/bin:${ROOT}/prod/bin:${PATH}
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
+STACK=test
+```
+
+Run commands inside a specific environment stack file:
+
+```bash
+$ ./env/test.env -- <command>
+```
+
+For example:
+
+```bash
+$ ./env/hello.env -- echo {HELLO}
+world
+```
+
+Export a specific environment stack file:
+
+```bash
+$ ./env/hello.env --export
+```
+
 ## Setting Values
 
 Envstack uses bash-like variable expansion modifiers. Setting `$VAR` to a fixed
@@ -158,40 +195,67 @@ goodbye
 Several example or starter stacks are available in the [env folder of the
 envstack repo](https://github.com/rsgalloway/envstack/tree/master/env).
 
-To create a blank environment stack, create a new namespaced .env file and
-declare some variables.
+To create a blank environment stack, create a new envstack file and declare some
+variables.
 
-For example `foo.env` (the stack name is "foo"):
+Create a new stack file called "foobar.env" and make it executable (note: at
+least one VAR needs to be defined under all):
+
+#### foobar.env
 
 ```yaml
+#!/usr/bin/env envstack
+
 all: &default
   FOO: bar
   BAR: ${FOO}
+darwin:
+  <<: *default
+linux:
+  <<: *default
+windows:
+  <<: *default
 ```
 
-To see the resolved environment for the `foo` environment stack, run:
+Make it executable
 
 ```bash
-$ envstack foo
+$ chmod +x ./foobar.env
+```
+
+To see the resolved environment for the `foobar` stack, run:
+
+```bash
+$ envstack foobar
 FOO=bar
 BAR=$FOO
+```
+
+or execute it directly:
+
+```bash
+$ ./foobar.env
 ```
 
 To see resolved values:
 
 ```bash
-$ envstack foo -r
+$ ./foobar.env -r
 FOO=bar
 BAR=bar
 ```
 
-Variables can be platform specific (but always inherit from `all`):
+#### More Details
+
+Variables can be platform specific:
 
 ```yaml
+darwin:
+  <<: *default
+  HELLO: olleh
 linux:
   <<: *default
   HELLO: world
-
 windows:
   <<: *default
   HELLO: goodbye

@@ -160,15 +160,15 @@ def get_paths_from_var(
 def get_stack_name(name: str = config.DEFAULT_NAMESPACE):
     """
     Returns the stack name as a string. The stack name is always the last
-    element in the stack list.
+    element in the stack list or the basename of the envstack file.
 
     :param name: The input name, can be a string, tuple, or list.
     :return: The stack name as a string.
     """
+    if isinstance(name, (tuple, list)):
+        name = str(name[-1]) if name else config.DEFAULT_NAMESPACE
     if isinstance(name, str):
-        return name
-    elif isinstance(name, (tuple, list)):
-        return str(name[-1]) if name else ""
+        return os.path.splitext(os.path.basename(name))[0]
     else:
         raise ValueError("Invalid input type. Expected string, tuple, or list.")
 
@@ -344,3 +344,62 @@ def findenv(var_name):
             paths.add(path)
 
     return sorted(list(paths))
+
+
+def print_error(file_path: str, e: Exception):
+    """
+    Prints the problematic line and a few surrounding lines for context.
+
+    :param file_path: Path to the file.
+    :param e: The exception.
+    """
+    try:
+        with open(file_path, "r") as file:
+            lines = file.readlines()
+            if hasattr(e, "problem_mark") and e.problem_mark:
+                line_num = e.problem_mark.line - 1
+                # problematic line and a few surrounding lines for context
+                start = max(0, line_num - 1)
+                end = min(len(lines), line_num + 2)
+                for i in range(start, end):
+                    prefix = ">> " if i == line_num else "   "
+                    print(f"{prefix}{i + 1}: {lines[i].rstrip()}")
+    except Exception as ex:
+        print("read error:", ex)
+
+
+def validate_yaml(file_path: str):
+    """
+    Loads a YAML file and prints helpful error hints if invalid.
+
+    :param file_path: Path to the YAML file to validate.
+    """
+    import yaml
+
+    required_keys = {"all", "darwin", "linux", "windows"}
+
+    try:
+        with open(file_path, "r") as stream:
+            data = yaml.safe_load(stream.read())
+
+        if not isinstance(data, dict):
+            raise yaml.YAMLError("invalid data structure")
+
+        missing_keys = required_keys - data.keys()
+        if missing_keys:
+            raise yaml.YAMLError(f"missing keys: {', '.join(sorted(missing_keys))}")
+
+        return data
+
+    except yaml.YAMLError as e:
+        if hasattr(e, "problem_mark") and e.problem_mark:
+            mark = e.problem_mark
+            print(f'  File "{file_path}" line {mark.line}, column {mark.column}:')
+        print_error(file_path, e)
+        if hasattr(e, "problem") and e.problem:
+            print(f"SyntaxError: {e.problem}")
+        else:
+            print(f'  File "{file_path}":')
+            print(f"SyntaxError: {e}")
+
+    return {}

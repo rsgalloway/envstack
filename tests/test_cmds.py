@@ -123,7 +123,7 @@ LOG_LEVEL=${LOG_LEVEL:=INFO}
 NUMBER_LIST=[1, 2, 3]
 PATH=${DEPLOY_ROOT}/bin:${PATH}
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
-ROOT=/var/tmp/pipe
+ROOT=${HOME}/.local/pipe
 STACK=thing
 """
         command = "%s thing" % self.envstack_bin
@@ -208,8 +208,10 @@ STACK=foobar
         self.assertEqual(output, expected_output)
 
     def test_thing(self):
-        expected_output = """CHAR_LIST=['a', 'b', 'c', 'goodbye']
-DEPLOY_ROOT=/var/tmp/pipe/prod
+        home = os.getenv("HOME")
+        deploy_root = f"{home}/.local/pipe/prod"  # linux only for now
+        expected_output = f"""CHAR_LIST=['a', 'b', 'c', 'goodbye']
+DEPLOY_ROOT={deploy_root}
 HELLO=goodbye
 """
         command = "%s thing -r DEPLOY_ROOT HELLO CHAR_LIST" % self.envstack_bin
