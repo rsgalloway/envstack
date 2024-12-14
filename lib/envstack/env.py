@@ -106,7 +106,7 @@ class EnvVar(string.Template, str):
         try:
             val = EnvVar(self.safe_substitute(env))
         except RuntimeError as err:
-            if "maximum recursion depth exceeded" in str(err):
+            if "maximum recursion" in str(err):
                 raise CyclicalReference(self.template)
             else:
                 raise InvalidSyntax(err)
@@ -680,11 +680,9 @@ def load_file(path: str):
         try:
             data.update(yaml.safe_load(stream))
         except (TypeError, yaml.YAMLError) as exc:
-            logger.log.error(exc)
-            raise InvalidSource(path)
+            raise InvalidSource(path) from None
         except yaml.parser.ParserError as err:
-            logger.log.error(err)
-            raise InvalidSource(path)
+            raise InvalidSource(path) from None
 
     load_file_cache[path] = data
 
