@@ -120,7 +120,7 @@ ROOT=/mnt/pipe
 STACK=test
 ```
 
-You can resolve the with `-r` or run commands inside the environment stack:
+Run commands inside a specific environment stack file:
 
 ```bash
 $ ./env/test.env -- <command>
