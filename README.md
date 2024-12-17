@@ -375,6 +375,16 @@ $ envstack -- echo {HELLO}
 world
 ```
 
+Running a node command:
+
+```bash
+$ echo "console.log('Hello ' + process.env.HELLO)" > index.js
+$ node index.js 
+Hello undefined
+$ envstack hello -- node index.js 
+Hello world
+```
+
 Running Python commands in the default stack:
 
 ```bash

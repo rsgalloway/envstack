@@ -34,12 +34,46 @@ Contains unit tests for the env.py module.
 """
 
 import os
+import shutil
 import sys
 import unittest
+import tempfile
 
 import envstack
 from envstack.env import Env, EnvVar, Scope, Source
 from envstack.util import dict_diff
+
+
+def create_test_root():
+    """Creates a temporary directory with the contents of the "env" folder."""
+
+    # create a temporary directory
+    root = tempfile.mkdtemp()
+
+    # copy the contents of the "env" folder to the temp dir
+    env_path = os.path.join(os.path.dirname(__file__), "..", "env")
+
+    for env in ("prod", "dev"):
+        shutil.copytree(env_path, os.path.join(root, env, "env"))
+
+    return root
+
+
+def update_env_file(file_path: str, key: str, value: str):
+    """Updates a key in a YAML file with a new value."""
+    import yaml
+
+    # read the YAML file
+    with open(file_path, "r") as f:
+        data = yaml.safe_load(f)
+
+    for _, env_config in data.items():
+        if isinstance(env_config, dict) and key in env_config:
+            env_config[key] = value
+
+    # write the modified data back to the file
+    with open(file_path, "w") as f:
+        yaml.safe_dump(data, f, sort_keys=False)
 
 
 class TestEnvVar(unittest.TestCase):
@@ -155,6 +189,8 @@ class TestInit(unittest.TestCase):
         """Tests init with default stack."""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["ROOT"] = "/var/tmp"  # cannot override ROOT
+        os.environ["ENV"] = "foobar"  # cannot override ENV
         original_env = os.environ.copy()
         sys_path = sys.path.copy()
         path = os.getenv("PATH")
@@ -230,6 +266,77 @@ class TestInit(unittest.TestCase):
         self.assertEqual(diffs["changed"], {})
         self.assertEqual(diffs["removed"], {})
         self.assertEqual(diffs["unchanged"], original_env)
+
+
+class TestIssues(unittest.TestCase):
+    def setUp(self):
+        self.root = create_test_root()
+        os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
+        os.environ["INTERACTIVE"] = "0"
+
+    def tearDown(self):
+        envstack.revert()
+        shutil.rmtree(self.root)
+
+    def test_issue_30_init(self):
+        """Tests issue #30 with envstack.init()."""
+
+        # update default.env to point to test root
+        default_env_file = os.path.join(self.root, "prod", "env", "default.env")
+        update_env_file(default_env_file, "ROOT", self.root)
+
+        # update the dev hello.env to modify the PYEXE
+        hello_env_file = os.path.join(self.root, "dev", "env", "hello.env")
+        update_env_file(hello_env_file, "PYEXE", "/usr/bin/foobar")
+
+        # set the ENVPATH to the test root
+        os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
+
+        # prod stack should have default value
+        envstack.init("hello")
+        self.assertEqual(os.getenv("ROOT"), self.root)
+        self.assertEqual(os.getenv("PYEXE"), "/usr/bin/python")
+        envstack.revert()
+
+        # dev stack should have custom value
+        envstack.init("dev", "hello")
+        self.assertEqual(os.getenv("ROOT"), self.root)
+        self.assertEqual(os.getenv("PYEXE"), "/usr/bin/foobar")
+        envstack.revert()
+
+    def test_issue_30_sources_default(self):
+        """Tests issue #30 with load_environ and checking default sources."""
+        from envstack.env import load_environ
+
+        # load hello stack
+        env = load_environ("hello")
+        paths = [str(source.path) for source in env.sources]
+
+        expected_paths = [
+            os.path.join(self.root, "prod", "env", "default.env"),
+            os.path.join(self.root, "prod", "env", "hello.env"),
+        ]
+        self.assertEqual(paths, expected_paths)
+
+    def test_issue_30_sources_dev(self):
+        """Tests issue #30 with load_environ and checking dev sources."""
+        from envstack.env import load_environ
+
+        # update default.env to point to test root
+        default_env_file = os.path.join(self.root, "prod", "env", "default.env")
+        update_env_file(default_env_file, "ROOT", self.root)
+
+        # load dev and hello stacks
+        env = load_environ(["dev", "hello"])
+        paths = [str(source.path) for source in env.sources]
+
+        expected_paths = [
+            os.path.join(self.root, "prod", "env", "default.env"),
+            os.path.join(self.root, "prod", "env", "dev.env"),
+            os.path.join(self.root, "prod", "env", "hello.env"),
+            os.path.join(self.root, "dev", "env", "hello.env"),
+        ]
+        self.assertEqual(paths, expected_paths)
 
 
 if __name__ == "__main__":

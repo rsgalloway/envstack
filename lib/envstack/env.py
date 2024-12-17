@@ -50,6 +50,71 @@ load_file_cache = {}
 # stores environment when calling envstack.save()
 saved_environ = None
 
+# stores seen stack names when getting sources
+seen_stacks = set()
+
+
+class Scope(path.Path):
+    """Scope class."""
+
+    def __init__(self, path: str = None):
+        """
+        :param path: scope path (default is CWD)
+        """
+        self.path = path or os.getcwd()
+
+
+class Source(object):
+    """envstack .env source file."""
+
+    def __init__(self, path):
+        """
+        :param path: path to .env file.
+        """
+        self.path = path
+        self.__data = {}
+
+    def __eq__(self, other):
+        if not isinstance(other, Source):
+            return False
+        return self.path == other.path
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+    def __repr__(self):
+        return f'<Source "{self.path}">'
+
+    def __str__(self):
+        return self.path
+
+    def exists(self):
+        """Returns True if the .env file exists"""
+        return os.path.exists(self.path)
+
+    def includes(self):
+        """Returns list of included environments, defined in
+        .env files above the "all:" statment as:
+
+            include: [name1, name2, ... nameN]
+        """
+        if not self.__data:
+            self.load()
+        return self.__data.get("include", [])
+
+    def length(self):
+        """Returns the char length of the path"""
+        return len(self.path)
+
+    def load(self, platform=config.PLATFORM):
+        """Reads .env from .path, and returns an Env class object"""
+        if self.path and not self.__data:
+            self.__data = load_file(self.path)
+        return self.__data.get(platform, self.__data.get("all", {}))
+
 
 class EnvVar(string.Template, str):
     """A string class for supporting $-substitutions, e.g.: ::
@@ -180,6 +245,17 @@ class Env(dict):
     def __init__(self, *args, **kwargs):
         super(Env, self).__init__(*args, **kwargs)
         self.scope = os.getcwd()
+        self.sources = []
+
+    def load_source(self, source: Source, platform=config.PLATFORM):
+        """Loads environment from a given Source object. Appends to sources
+        list.
+
+        :param source: Source object.
+        :param platform: name of platform (linux, darwin, windows).
+        """
+        self.sources.append(source)
+        self.update(source.load(platform=platform))
 
     def copy(self):
         """Returns a copy of this Env."""
@@ -208,68 +284,6 @@ class Env(dict):
         self.scope = path
 
 
-class Scope(path.Path):
-    """Scope class."""
-
-    def __init__(self, path: str = None):
-        """
-        :param path: scope path (default is CWD)
-        """
-        self.path = path or os.getcwd()
-
-
-class Source(object):
-    """envstack .env source file."""
-
-    def __init__(self, path):
-        """
-        :param path: path to .env file.
-        """
-        self.path = path
-        self.__data = {}
-
-    def __eq__(self, other):
-        if not isinstance(other, Source):
-            return False
-        return self.path == other.path
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return hash(self.__repr__())
-
-    def __repr__(self):
-        return f'<Source "{self.path}">'
-
-    def __str__(self):
-        return self.path
-
-    def exists(self):
-        """Returns True if the .env file exists"""
-        return os.path.exists(self.path)
-
-    def includes(self):
-        """Returns list of included environments, defined in
-        .env files above the "all:" statment as:
-
-            include: [name1, name2, ... nameN]
-        """
-        if not self.__data:
-            self.load()
-        return self.__data.get("include", [])
-
-    def length(self):
-        """Returns the char length of the path"""
-        return len(self.path)
-
-    def load(self, platform=config.PLATFORM):
-        """Reads .env from .path, and returns an Env class object"""
-        if self.path and not self.__data:
-            self.__data = load_file(self.path)
-        return self.__data.get(platform, self.__data.get("all", {}))
-
-
 def clear_file_cache():
     """Clears global file cache."""
     global load_file_cache
@@ -277,17 +291,21 @@ def clear_file_cache():
 
 
 def get_sources(
-    *names, scope: str = None, ignore_missing: bool = config.IGNORE_MISSING
+    *names,
+    scope: str = None,
+    ignore_missing: bool = config.IGNORE_MISSING,
+    envpath: str = os.environ.get("ENVPATH", ""),
 ):
     """
     Returns a list of Source objects for a given list of .env basenames.
 
     :param names: list of .env file names to search for.
     :param scope: filesystem path defining the scope to walk up to.
+    :param ignore_missing: ignore missing .env files.
+    :param envpath: colon-separated list of directories to search for .env files
     :raises TemplateNotFound: if a file is not found in ENVPATH or scope.
-    :returns: list of Source objects.
+    :returns: list of Source objects for the given stack names.
     """
-
     # TODO: smarter file caching (issue #26)
     # clear_file_cache()
 
@@ -308,26 +326,28 @@ def get_sources(
             current_path = current_path.parent
         return [str(p) for p in paths]
 
-    # construct search paths from $ENVPATH and current scope
-    envpath = os.environ.get("ENVPATH", "")
+    # construct search paths from ${ENVPATH} and scope
     envpath_dirs = [Path(p).resolve() for p in envpath.split(":") if p.strip()]
     scope_dirs = _walk_to_scope(scope)
     envpath_dirs.reverse()
     search_paths = envpath_dirs + scope_dirs
 
     def _find_files(file_basename):
+        """Find .env files in the search paths."""
         if not file_basename.endswith(".env"):
             file_basename += ".env"
         found_files = []
         for directory in search_paths:
             potential_file = Path(directory) / file_basename
-            if potential_file.exists():
+            if potential_file.exists() and potential_file not in found_files:
                 found_files.append(potential_file)
         if not found_files and not ignore_missing:
             raise TemplateNotFound(f"{file_basename} not found in ENVPATH or scope.")
         return found_files
 
     def _load_file(file_basename):
+        """Recursively load .env files and their includes."""
+        seen_stacks.add(os.path.splitext(file_basename)[0])
         file_paths = _find_files(file_basename)
 
         # process each file independently
@@ -339,10 +359,15 @@ def get_sources(
                 raise ValueError(f"Cyclic dependency detected in {file_basename}")
 
             source = Source(file_path)
+            if source in sources:
+                continue
+
             loading_stack.add(file_basename)
 
-            # parse included files recursively
+            # parse included files recursively, don't include if already seen
             for include_basename in source.includes():
+                if include_basename in seen_stacks:
+                    continue
                 _load_file(include_basename)
 
             # add current file to the loaded list after processing includes
@@ -396,7 +421,6 @@ def clear(
     :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
-
     env = load_environ(name, scope=scope)
 
     # track the environment variables to export
@@ -469,7 +493,6 @@ def export(
     :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
-
     # resolve environment variables
     resolved_env = resolve_environ(load_environ(name, scope=scope))
 
@@ -512,7 +535,6 @@ def export(
 
 def save():
     """Saves the current environment for later restoration."""
-
     global saved_environ
 
     if not saved_environ:
@@ -532,9 +554,13 @@ def revert():
 
         >>> envstack.revert()
     """
-
     global saved_environ
+    global seen_stacks
 
+    # clear the seen stacks
+    seen_stacks = set()
+
+    # nothing to revert to
     if saved_environ is None:
         return
 
@@ -576,7 +602,6 @@ def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
     :param *name: list of stack namespaces.
     :param ignore_missing: ignore missing .env files.
     """
-
     # save environment to restore later using envstack.revert()
     save()
 
@@ -607,6 +632,7 @@ def resolve_environ(env: dict):
     return resolved
 
 
+# TODO: make 'name' arg a list (*names) in next minor release
 def load_environ(
     name: str = config.DEFAULT_NAMESPACE,
     sources: list = None,
@@ -626,7 +652,7 @@ def load_environ(
 
         >>> env = load_environ(name, scope="/path/to/scope")
 
-    :param name: namespace (basename of env files).
+    :param name: list of stack names to load (basename of env files).
     :param sources: list of env files (optional).
     :param platform: name of platform (linux, darwin, windows).
     :param scope: environment scope (default: cwd).
@@ -635,12 +661,11 @@ def load_environ(
     """
     if type(name) == str:
         name = [name]
-
     if not name:
         name = [config.DEFAULT_NAMESPACE]
 
-    # get the sources for the given stack(s)
-    sources = get_sources(*name, scope=scope, ignore_missing=ignore_missing)
+    # TODO: do we need to add a revert here?
+    #revert()
 
     # create the environment to be returned
     env = Env()
@@ -648,11 +673,32 @@ def load_environ(
     if scope:
         env.set_scope(scope)
 
-    # load env files first
-    for source in sources:
-        env.update(source.load(platform=platform))
+    # initial ${ENVPATH} value
+    envpath = os.getenv("ENVPATH", os.getcwd())
 
-    # add the current env stack name to the environment
+    # dedupe sources based on paths
+    seen_paths = []
+
+    # get and load stack sources in order
+    for stack_name in name:
+        sources = get_sources(
+            stack_name,
+            envpath=envpath,
+            scope=scope,
+            ignore_missing=ignore_missing,
+        )
+        for source in sources:
+            # dedupe sources (may override previous sources)
+            if source.path in seen_paths:
+                continue
+            env.load_source(source, platform=platform)
+            seen_paths.append(source.path)
+
+        # resolve ${ENVPATH}
+        # TODO: use expandvars() instead of resolve_environ()
+        envpath = resolve_environ(env).get("ENVPATH", envpath)
+
+    # add the stack name to the environment
     if not env.get("STACK"):
         env["STACK"] = util.get_stack_name(name)
 
@@ -665,7 +711,6 @@ def load_file(path: str):
     :param path: path to envstack env file.
     :returns: loaded yaml data as dict.
     """
-
     global load_file_cache
 
     if path in load_file_cache:
@@ -689,7 +734,6 @@ def trace_var(*name, var: str = None, scope: str = None):
     :param scope: environment scope (default: cwd).
     :returns: source path.
     """
-
     # get the sources for the given stack(s)
     sources = get_sources(*name, scope=scope, ignore_missing=True)
     sources.reverse()
