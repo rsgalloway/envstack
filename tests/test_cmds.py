@@ -34,8 +34,11 @@ Contains unit tests for running commands.
 """
 
 import os
+import shutil
 import subprocess
 import unittest
+
+from test_env import create_test_root, update_env_file
 
 
 class TestUnresolved(unittest.TestCase):
@@ -361,6 +364,41 @@ class TestDistman(unittest.TestCase):
             self.python_cmd,
         )
         expected_output = "/mnt/pipe/foobar\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+
+class TestIssues(unittest.TestCase):
+    def setUp(self):
+        self.root = create_test_root()
+        self.envstack_bin = os.path.join(
+            os.path.dirname(__file__), "..", "bin", "envstack"
+        )
+        os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
+        os.environ["INTERACTIVE"] = "0"
+
+    def tearDown(self):
+        shutil.rmtree(self.root)
+
+    def test_issue_30(self):
+        default_env_file = os.path.join(self.root, "prod", "env", "default.env")
+        update_env_file(default_env_file, "ROOT", self.root)
+        hello_env_file = os.path.join(self.root, "dev", "env", "hello.env")
+        update_env_file(hello_env_file, "PYEXE", "/usr/bin/foobar")
+
+        # test "default"
+        command = "%s hello -- echo {PYEXE}" % self.envstack_bin
+        expected_output = "/usr/bin/python\n"
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+        # test "dev"
+        command = "%s dev hello -- echo {PYEXE}" % self.envstack_bin
+        expected_output = "/usr/bin/foobar\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )
