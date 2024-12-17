@@ -54,6 +54,68 @@ saved_environ = None
 seen_stacks = set()
 
 
+class Scope(path.Path):
+    """Scope class."""
+
+    def __init__(self, path: str = None):
+        """
+        :param path: scope path (default is CWD)
+        """
+        self.path = path or os.getcwd()
+
+
+class Source(object):
+    """envstack .env source file."""
+
+    def __init__(self, path):
+        """
+        :param path: path to .env file.
+        """
+        self.path = path
+        self.__data = {}
+
+    def __eq__(self, other):
+        if not isinstance(other, Source):
+            return False
+        return self.path == other.path
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash(self.__repr__())
+
+    def __repr__(self):
+        return f'<Source "{self.path}">'
+
+    def __str__(self):
+        return self.path
+
+    def exists(self):
+        """Returns True if the .env file exists"""
+        return os.path.exists(self.path)
+
+    def includes(self):
+        """Returns list of included environments, defined in
+        .env files above the "all:" statment as:
+
+            include: [name1, name2, ... nameN]
+        """
+        if not self.__data:
+            self.load()
+        return self.__data.get("include", [])
+
+    def length(self):
+        """Returns the char length of the path"""
+        return len(self.path)
+
+    def load(self, platform=config.PLATFORM):
+        """Reads .env from .path, and returns an Env class object"""
+        if self.path and not self.__data:
+            self.__data = load_file(self.path)
+        return self.__data.get(platform, self.__data.get("all", {}))
+
+
 class EnvVar(string.Template, str):
     """A string class for supporting $-substitutions, e.g.: ::
 
@@ -183,6 +245,17 @@ class Env(dict):
     def __init__(self, *args, **kwargs):
         super(Env, self).__init__(*args, **kwargs)
         self.scope = os.getcwd()
+        self.sources = []
+
+    def load_source(self, source: Source, platform=config.PLATFORM):
+        """Loads environment from a given Source object. Appends to sources
+        list.
+
+        :param source: Source object.
+        :param platform: name of platform (linux, darwin, windows).
+        """
+        self.sources.append(source)
+        self.update(source.load(platform=platform))
 
     def copy(self):
         """Returns a copy of this Env."""
@@ -209,68 +282,6 @@ class Env(dict):
         :param path: path of scope.
         """
         self.scope = path
-
-
-class Scope(path.Path):
-    """Scope class."""
-
-    def __init__(self, path: str = None):
-        """
-        :param path: scope path (default is CWD)
-        """
-        self.path = path or os.getcwd()
-
-
-class Source(object):
-    """envstack .env source file."""
-
-    def __init__(self, path):
-        """
-        :param path: path to .env file.
-        """
-        self.path = path
-        self.__data = {}
-
-    def __eq__(self, other):
-        if not isinstance(other, Source):
-            return False
-        return self.path == other.path
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    def __hash__(self):
-        return hash(self.__repr__())
-
-    def __repr__(self):
-        return f'<Source "{self.path}">'
-
-    def __str__(self):
-        return self.path
-
-    def exists(self):
-        """Returns True if the .env file exists"""
-        return os.path.exists(self.path)
-
-    def includes(self):
-        """Returns list of included environments, defined in
-        .env files above the "all:" statment as:
-
-            include: [name1, name2, ... nameN]
-        """
-        if not self.__data:
-            self.load()
-        return self.__data.get("include", [])
-
-    def length(self):
-        """Returns the char length of the path"""
-        return len(self.path)
-
-    def load(self, platform=config.PLATFORM):
-        """Reads .env from .path, and returns an Env class object"""
-        if self.path and not self.__data:
-            self.__data = load_file(self.path)
-        return self.__data.get(platform, self.__data.get("all", {}))
 
 
 def clear_file_cache():
@@ -674,10 +685,11 @@ def load_environ(
         for source in sources:
             if source.path in seen_paths:
                 continue
-            env.update(source.load(platform=platform))
+            env.load_source(source, platform=platform)
             seen_paths.append(source.path)
 
         # resolve ${ENVPATH}
+        # TODO: use expandvars() instead of resolve_environ()
         envpath = resolve_environ(env).get("ENVPATH", envpath)
 
     # add the stack name to the environment

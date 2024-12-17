@@ -159,8 +159,8 @@ def main():
                 path = trace_var(*args.namespace, var=trace)
                 print("{0}: {1}".format(trace, path))
         elif args.sources:
-            sources = get_sources(*args.namespace, scope=args.scope)
-            for source in sources:
+            env = load_environ(args.namespace, platform=args.platform)
+            for source in env.sources:
                 print(source.path)
         elif args.clear:
             print(clear(args.namespace, config.SHELL))
