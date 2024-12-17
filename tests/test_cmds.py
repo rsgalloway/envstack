@@ -383,8 +383,13 @@ class TestIssues(unittest.TestCase):
         shutil.rmtree(self.root)
 
     def test_issue_30_echo(self):
+        """Test that the correct value of PYEXE is used."""
+
+        # update default.env to point to test root
         default_env_file = os.path.join(self.root, "prod", "env", "default.env")
         update_env_file(default_env_file, "ROOT", self.root)
+
+        # update the dev hello.env to modify the PYEXE
         hello_env_file = os.path.join(self.root, "dev", "env", "hello.env")
         update_env_file(hello_env_file, "PYEXE", "/usr/bin/foobar")
 
@@ -405,8 +410,13 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_issue_30_sources(self):
+        """Test that the correct sources are used."""
+
+        # update default.env to point to test root
         default_env_file = os.path.join(self.root, "prod", "env", "default.env")
         update_env_file(default_env_file, "ROOT", self.root)
+
+        # update the dev hello.env to modify the PYEXE
         hello_env_file = os.path.join(self.root, "dev", "env", "hello.env")
         update_env_file(hello_env_file, "PYEXE", "/usr/bin/foobar")
 

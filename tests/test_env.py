@@ -269,32 +269,74 @@ class TestInit(unittest.TestCase):
 
 
 class TestIssues(unittest.TestCase):
-    def test_issue_30(self):
-        root = create_test_root()
+    def setUp(self):
+        self.root = create_test_root()
+        os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
+        os.environ["INTERACTIVE"] = "0"
 
-        # update the default.env and hello.env files
-        default_env_file = os.path.join(root, "prod", "env", "default.env")
-        update_env_file(default_env_file, "ROOT", root)
-        hello_env_file = os.path.join(root, "dev", "env", "hello.env")
+    def tearDown(self):
+        envstack.revert()
+        shutil.rmtree(self.root)
+
+    def test_issue_30_init(self):
+        """Tests issue #30 with envstack.init()."""
+
+        # update default.env to point to test root
+        default_env_file = os.path.join(self.root, "prod", "env", "default.env")
+        update_env_file(default_env_file, "ROOT", self.root)
+
+        # update the dev hello.env to modify the PYEXE
+        hello_env_file = os.path.join(self.root, "dev", "env", "hello.env")
         update_env_file(hello_env_file, "PYEXE", "/usr/bin/foobar")
 
         # set the ENVPATH to the test root
-        os.environ["ENVPATH"] = os.path.join(root, "prod", "env")
+        os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
 
         # prod stack should have default value
         envstack.init("hello")
-        self.assertEqual(os.getenv("ROOT"), root)
+        self.assertEqual(os.getenv("ROOT"), self.root)
         self.assertEqual(os.getenv("PYEXE"), "/usr/bin/python")
         envstack.revert()
 
         # dev stack should have custom value
         envstack.init("dev", "hello")
-        self.assertEqual(os.getenv("ROOT"), root)
+        self.assertEqual(os.getenv("ROOT"), self.root)
         self.assertEqual(os.getenv("PYEXE"), "/usr/bin/foobar")
         envstack.revert()
 
-        # clean up temp files
-        shutil.rmtree(root)
+    def test_issue_30_sources_default(self):
+        """Tests issue #30 with load_environ and checking default sources."""
+        from envstack.env import load_environ
+
+        # load hello stack
+        env = load_environ("hello")
+        paths = [str(source.path) for source in env.sources]
+
+        expected_paths = [
+            os.path.join(self.root, "prod", "env", "default.env"),
+            os.path.join(self.root, "prod", "env", "hello.env"),
+        ]
+        self.assertEqual(paths, expected_paths)
+
+    def test_issue_30_sources_dev(self):
+        """Tests issue #30 with load_environ and checking dev sources."""
+        from envstack.env import load_environ
+
+        # update default.env to point to test root
+        default_env_file = os.path.join(self.root, "prod", "env", "default.env")
+        update_env_file(default_env_file, "ROOT", self.root)
+
+        # load dev and hello stacks
+        env = load_environ(["dev", "hello"])
+        paths = [str(source.path) for source in env.sources]
+
+        expected_paths = [
+            os.path.join(self.root, "prod", "env", "default.env"),
+            os.path.join(self.root, "prod", "env", "dev.env"),
+            os.path.join(self.root, "prod", "env", "hello.env"),
+            os.path.join(self.root, "dev", "env", "hello.env"),
+        ]
+        self.assertEqual(paths, expected_paths)
 
 
 if __name__ == "__main__":

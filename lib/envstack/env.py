@@ -651,7 +651,7 @@ def load_environ(
 
         >>> env = load_environ(name, scope="/path/to/scope")
 
-    :param name: namespace (basename of env files).
+    :param name: list of stack names to load (basename of env files).
     :param sources: list of env files (optional).
     :param platform: name of platform (linux, darwin, windows).
     :param scope: environment scope (default: cwd).
@@ -662,6 +662,9 @@ def load_environ(
         name = [name]
     if not name:
         name = [config.DEFAULT_NAMESPACE]
+
+    # TODO: do we need to add a revert here?
+    #revert()
 
     # create the environment to be returned
     env = Env()
