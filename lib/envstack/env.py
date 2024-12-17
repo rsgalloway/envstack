@@ -544,7 +544,12 @@ def revert():
         >>> envstack.revert()
     """
     global saved_environ
+    global seen_stacks
 
+    # clear the seen stacks
+    seen_stacks = set()
+
+    # nothing to revert to
     if saved_environ is None:
         return
 
