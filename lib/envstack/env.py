@@ -632,6 +632,7 @@ def resolve_environ(env: dict):
     return resolved
 
 
+# TODO: make 'name' arg a list (*names) in next minor release
 def load_environ(
     name: str = config.DEFAULT_NAMESPACE,
     sources: list = None,
@@ -672,20 +673,22 @@ def load_environ(
     if scope:
         env.set_scope(scope)
 
+    # initial ${ENVPATH} value
     envpath = os.getenv("ENVPATH", os.getcwd())
 
     # dedupe sources based on paths
     seen_paths = []
 
-    # get and load sources in order
-    for name in name:
+    # get and load stack sources in order
+    for stack_name in name:
         sources = get_sources(
-            name,
+            stack_name,
             envpath=envpath,
             scope=scope,
             ignore_missing=ignore_missing,
         )
         for source in sources:
+            # dedupe sources (may override previous sources)
             if source.path in seen_paths:
                 continue
             env.load_source(source, platform=platform)
