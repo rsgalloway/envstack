@@ -34,12 +34,46 @@ Contains unit tests for the env.py module.
 """
 
 import os
+import shutil
 import sys
 import unittest
+import tempfile
 
 import envstack
 from envstack.env import Env, EnvVar, Scope, Source
 from envstack.util import dict_diff
+
+
+def create_test_root():
+    """Creates a temporary directory with the contents of the "env" folder."""
+
+    # create a temporary directory
+    root = tempfile.mkdtemp()
+
+    # copy the contents of the "env" folder to the temp dir
+    env_path = os.path.join(os.path.dirname(__file__), "..", "env")
+
+    for env in ("prod", "dev"):
+        shutil.copytree(env_path, os.path.join(root, env, "env"))
+
+    return root
+
+
+def update_env_file(file_path: str, key: str, value: str):
+    """Updates a key in a YAML file with a new value."""
+    import yaml
+
+    # read the YAML file
+    with open(file_path, "r") as f:
+        data = yaml.safe_load(f)
+
+    for _, env_config in data.items():
+        if isinstance(env_config, dict) and key in env_config:
+            env_config[key] = value
+
+    # write the modified data back to the file
+    with open(file_path, "w") as f:
+        yaml.safe_dump(data, f, sort_keys=False)
 
 
 class TestEnvVar(unittest.TestCase):
@@ -232,6 +266,35 @@ class TestInit(unittest.TestCase):
         self.assertEqual(diffs["changed"], {})
         self.assertEqual(diffs["removed"], {})
         self.assertEqual(diffs["unchanged"], original_env)
+
+
+class TestIssues(unittest.TestCase):
+    def test_issue_30(self):
+        root = create_test_root()
+
+        # update the default.env and hello.env files
+        default_env_file = os.path.join(root, "prod", "env", "default.env")
+        update_env_file(default_env_file, "ROOT", root)
+        hello_env_file = os.path.join(root, "dev", "env", "hello.env")
+        update_env_file(hello_env_file, "PYEXE", "/usr/bin/foobar")
+
+        # set the ENVPATH to the test root
+        os.environ["ENVPATH"] = os.path.join(root, "prod", "env")
+
+        # prod stack should have default value
+        envstack.init("hello")
+        self.assertEqual(os.getenv("ROOT"), root)
+        self.assertEqual(os.getenv("PYEXE"), "/usr/bin/python")
+        envstack.revert()
+
+        # dev stack should have custom value
+        envstack.init("dev", "hello")
+        self.assertEqual(os.getenv("ROOT"), root)
+        self.assertEqual(os.getenv("PYEXE"), "/usr/bin/foobar")
+        envstack.revert()
+
+        # clean up temp files
+        shutil.rmtree(root)
 
 
 if __name__ == "__main__":
