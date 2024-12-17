@@ -155,6 +155,8 @@ class TestInit(unittest.TestCase):
         """Tests init with default stack."""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+        os.environ["ROOT"] = "/var/tmp"  # cannot override ROOT
+        os.environ["ENV"] = "foobar"  # cannot override ENV
         original_env = os.environ.copy()
         sys_path = sys.path.copy()
         path = os.getenv("PATH")
