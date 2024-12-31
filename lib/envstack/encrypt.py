@@ -51,9 +51,11 @@ from envstack.logger import log
 def get_encryption_key(env_var="SYMMETRIC_KEY"):
     """
     Load or generate the encryption key. Store in environment variable.
-    Looks for base64 key in the ${SYMMETRIC_KEY} environment variable. If not
-    found, generates a new 256-bit key and stores it in the environment.
+    By default, this function looks for base64 key in the ${SYMMETRIC_KEY}
+    environment variable. If not found, generates a new 256-bit key and stores
+    it in the environment.
 
+    :param env_var: The environment variable to use for the key.
     :return: 256-bit encryption key.
     """
     key_env = os.getenv(env_var)
