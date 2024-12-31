@@ -33,10 +33,11 @@ __doc__ = """
 Contains custom yaml constructor classes and functions.
 """
 
+import hashlib
 import string
-import yaml
+from base64 import b64decode, b64encode
 
-from base64 import b64encode, b64decode
+import yaml
 
 
 class Template(string.Template, str):
@@ -93,19 +94,38 @@ class MD5Node(BaseNode):
 
     yaml_tag = "!md5"
 
+    @classmethod
+    def from_yaml(cls, loader, node):
+        return cls(node.value)
+
+    @classmethod
+    def to_yaml(cls, dumper, data):
+        md5_hash = hashlib.md5(data.key.encode()).hexdigest()
+        return dumper.represent_scalar(cls.yaml_tag, md5_hash)
+
 
 class EncryptedNode(BaseNode):
-    """Encrypted string node."""
+    """Default encrypted string node using AES-GCM."""
 
-    yaml_tag = "!encrypted"
+    yaml_tag = "!encrypt"
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        from envstack.encrypt import decrypt
+
+        return cls(decrypt(node.value))
+
+    @classmethod
+    def to_yaml(cls, dumper, data):
+        from envstack.encrypt import encrypt
+
+        return dumper.represent_scalar(cls.yaml_tag, encrypt(data.key))
 
 
 class CustomLoader(yaml.SafeLoader):
     required_keys = {"include", "all", "darwin", "linux", "windows"}
 
     def construct_mapping(self, node, deep=False):
-        # print("CustomLoader.construct_mapping", node)
-        # print("---")
         mapping = super().construct_mapping(node, deep=deep)
         for key, value in mapping.items():
             if key in self.required_keys:
@@ -150,11 +170,13 @@ class CustomDumper(yaml.SafeDumper):
             self.newanchors.clear()
 
     def represent_list(self, data):
-        print("CustomDumper.represent_list", data)
         return super().represent_list(data, flow_style=True)
+
 
 # add custom constructors and representers
 yaml.SafeLoader.add_constructor(Base64Node.yaml_tag, Base64Node.from_yaml)
 yaml.SafeDumper.add_representer(Base64Node, Base64Node.to_yaml)
 yaml.SafeLoader.add_constructor(EncryptedNode.yaml_tag, EncryptedNode.from_yaml)
 yaml.SafeDumper.add_representer(EncryptedNode, EncryptedNode.to_yaml)
+yaml.SafeLoader.add_constructor(MD5Node.yaml_tag, MD5Node.from_yaml)
+yaml.SafeDumper.add_representer(MD5Node, MD5Node.to_yaml)

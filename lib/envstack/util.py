@@ -36,10 +36,10 @@ Contains common utility functions and classes.
 import os
 import re
 import sys
+from collections import OrderedDict
 
 from envstack import config
 from envstack.exceptions import CyclicalReference
-from collections import OrderedDict
 
 # value for unresolvable variables
 null = ""
@@ -430,7 +430,7 @@ def dump_yaml(file_path: str, data: dict, unquote: bool = True):
     :param data: The dictionary to dump.
     :param unquote: Unquote single quoted strings.
     """
-    from envstack.node import yaml, CustomDumper
+    from envstack.node import CustomDumper, yaml
 
     partitioned_data = partition_platform_data(data)
 
@@ -527,11 +527,12 @@ def partition_platform_data(data):
 
 if __name__ == "__main__":
     from pprint import pprint
+
     from envstack.env import Source
-    from envstack.node import Base64Node
+    from envstack.node import Base64Node, MD5Node
 
     default_env = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "env", "test.env")
+        os.path.join(os.path.dirname(__file__), "..", "..", "env", "secrets.env")
     )
     test_env = "/var/tmp/test.env"
 
@@ -543,6 +544,7 @@ if __name__ == "__main__":
     # make some updates
     s1.data["linux"]["ROOT"] = "/var/tmp"
     s1.data["all"]["KEY"] = Base64Node("this is a secret")
+    s1.data["all"]["MD5"] = MD5Node("this is hashed")
 
     s1.write(test_env)
     s2 = Source(test_env)
