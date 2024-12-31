@@ -72,7 +72,7 @@ class Source(object):
         :param path: path to .env file.
         """
         self.path = path
-        self.__data = {}
+        self.data = {}
 
     def __eq__(self, other):
         if not isinstance(other, Source):
@@ -101,9 +101,9 @@ class Source(object):
 
             include: [name1, name2, ... nameN]
         """
-        if not self.__data:
+        if not self.data:
             self.load()
-        return self.__data.get("include", [])
+        return self.data.get("include", [])
 
     def length(self):
         """Returns the char length of the path"""
@@ -111,9 +111,13 @@ class Source(object):
 
     def load(self, platform=config.PLATFORM):
         """Reads .env from .path, and returns an Env class object"""
-        if self.path and not self.__data:
-            self.__data = load_file(self.path)
-        return self.__data.get(platform, self.__data.get("all", {}))
+        if self.path and not self.data:
+            self.data = load_file(self.path)
+        return self.data.get(platform, self.data.get("all", {}))
+
+    def write(self, filepath: str = None):
+        """Writes the source data to the .env file."""
+        util.dump_yaml(filepath or self.path, self.data)
 
 
 class EnvVar(string.Template, str):
@@ -665,7 +669,7 @@ def load_environ(
         name = [config.DEFAULT_NAMESPACE]
 
     # TODO: do we need to add a revert here?
-    #revert()
+    # revert()
 
     # create the environment to be returned
     env = Env()

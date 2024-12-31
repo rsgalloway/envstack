@@ -374,13 +374,15 @@ def validate_yaml(file_path: str):
 
     :param file_path: Path to the YAML file to validate.
     """
-    import yaml
+
+    from envstack.node import yaml
 
     required_keys = {"all", "darwin", "linux", "windows"}
 
     try:
         with open(file_path, "r") as stream:
             data = yaml.safe_load(stream.read())
+            # data = yaml.load(stream.read(), Loader=CustomLoader)
 
         if not isinstance(data, dict):
             raise yaml.YAMLError("invalid data structure")
@@ -394,7 +396,7 @@ def validate_yaml(file_path: str):
     except yaml.YAMLError as e:
         if hasattr(e, "problem_mark") and e.problem_mark:
             mark = e.problem_mark
-            print(f'  File "{file_path}" line {mark.line}, column {mark.column}:')
+            print(f'  File "{file_path}" line {mark.line + 1}, column {mark.column}:')
         print_error(file_path, e)
         if hasattr(e, "problem") and e.problem:
             print(f"SyntaxError: {e.problem}")
@@ -403,3 +405,147 @@ def validate_yaml(file_path: str):
             print(f"SyntaxError: {e}")
 
     return {}
+
+
+def unquote_strings(file_path: str):
+    """
+    Unquotes all the single quote strings in a given file.
+
+    :param file_path: Path to the file.
+    """
+    with open(file_path, "r") as file:
+        content = file.read()
+
+    updated_content = re.sub(r"'([^']*)'", r"\1", content)
+
+    with open(file_path, "w") as file:
+        file.write(updated_content)
+
+
+def dump_yaml(file_path: str, data: dict, unquote: bool = True):
+    """
+    Dumps a dictionary to a YAML file.
+
+    :param file_path: Path to the output YAML file.
+    :param data: The dictionary to dump.
+    :param unquote: Unquote single quoted strings.
+    """
+    from envstack.node import yaml, CustomDumper
+
+    partitioned_data = partition_platform_data(data)
+
+    # write the platform partidioned data to the env file
+    with open(file_path, "w") as file:
+        file.write("#!/usr/bin/env envstack\n")
+        if data.get("include"):
+            file.write(f"include: {data['include']}\n")
+            del partitioned_data["include"]
+        yaml.dump(
+            partitioned_data,
+            file,
+            Dumper=CustomDumper,
+            sort_keys=False,
+            default_flow_style=False,
+        )
+
+    if os.path.exists(file_path):
+        # unquote the merge keys because yaml doesn't like them quoted
+        if unquote:
+            unquote_strings(file_path)
+
+        # make the env stack file executable
+        try:
+            os.chmod(file_path, 0o755)
+        except Exception:
+            pass
+
+
+def partition_platform_data(data):
+    """
+    Given a data dictionary with keys 'all', 'darwin', 'linux', 'windows',
+    this function finds which key-value pairs are common across all platforms,
+    and which are unique to each platform. Platform-specific values go in their
+    respective dicts.
+
+    :param data: dictionary to partition.
+    :returns: platform partitioned dictionary.
+    """
+
+    # platforms of interest (darwin, linux, windows)
+    # platforms = [k for k in data.keys() if k not in ("all", "include")]
+    platforms = ["darwin", "linux", "windows"]
+
+    # get the union of keys from all platforms
+    all_platform_keys = set()
+    for p in platforms:
+        all_platform_keys |= data.get(p, {}).keys()
+
+    # determine which keys are common to all platforms
+    common_keys = []
+    for key in all_platform_keys:
+        if all(key in data[p] for p in platforms):
+            # get first value for comparison later
+            # first_value = data[platforms[0]][key].value
+            first_value = data[platforms[0]][key]
+            # call it common if all platforms have the same value
+            # if all(data[p][key].value == first_value for p in platforms):
+            if all(data[p][key] == first_value for p in platforms):
+                common_keys.append(key)
+
+    # build a new all dict for common items
+    new_all = {}
+    for k in common_keys:
+        if k in data["all"]:
+            new_all[k] = data["all"][k]
+        else:
+            new_all[k] = data[platforms[0]][k]
+
+    # keep in all anything that is platform-agnostic
+    for k, v in data["all"].items():
+        if k not in all_platform_keys:
+            new_all[k] = v
+
+    # build dicts for each platform with only platform‑specific keys
+    new_platform_dicts = {}
+    for p in platforms:
+        new_platform_dicts[p] = {"<<": "*all"}
+        for k, v in data[p].items():
+            if k not in common_keys:
+                new_platform_dicts[p][k] = v
+
+    # combine with platform-specific dicts
+    new_data = {"all": new_all}
+    for p in platforms:
+        new_data[p] = new_platform_dicts[p]
+
+    # add include if it exists
+    if data.get("include"):
+        new_data["include"] = data["include"]
+
+    return new_data
+
+
+if __name__ == "__main__":
+    from pprint import pprint
+    from envstack.env import Source
+    from envstack.node import Base64Node
+
+    default_env = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "env", "test.env")
+    )
+    test_env = "/var/tmp/test.env"
+
+    s1 = Source(default_env)
+    d = s1.load()
+    print(f"# {default_env}")
+    pprint(d)
+
+    # make some updates
+    s1.data["linux"]["ROOT"] = "/var/tmp"
+    s1.data["all"]["KEY"] = Base64Node("this is a secret")
+
+    s1.write(test_env)
+    s2 = Source(test_env)
+    d = s2.load()
+    print(f"# {test_env}")
+    pprint(d)
