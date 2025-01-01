@@ -49,7 +49,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from envstack.logger import log
 
 
-def get_encryption_key(env_var="SYMMETRIC_KEY"):
+def get_encryption_key(env_var: str = "SYMMETRIC_KEY", env: dict = os.environ):
     """
     Load or generate the encryption key. Store in environment variable.
     By default, this function looks for base64 key in the ${SYMMETRIC_KEY}
@@ -57,9 +57,10 @@ def get_encryption_key(env_var="SYMMETRIC_KEY"):
     it in the environment.
 
     :param env_var: The environment variable to use for the key.
+    :param env: The environment to use.
     :return: 256-bit encryption key.
     """
-    key_env = os.getenv(env_var)
+    key_env = env.get(env_var)
     if key_env:
         return b64decode(key_env)
     else:
@@ -69,7 +70,7 @@ def get_encryption_key(env_var="SYMMETRIC_KEY"):
         return key
 
 
-def encrypt_data(secret, key):
+def encrypt_data(secret: str, key: str):
     """Encrypt a secret using AES-GCM.
 
     :param secret: The secret to encrypt.
@@ -88,7 +89,7 @@ def encrypt_data(secret, key):
     }
 
 
-def decrypt_data(encrypted_data, key):
+def decrypt_data(encrypted_data: dict, key: str):
     """Decrypt a secret using AES-GCM.
 
     :param encrypted_data: Dictionary containing nonce, ciphertext, and tag.
@@ -104,7 +105,7 @@ def decrypt_data(encrypted_data, key):
     return unpad_data(padded_data)
 
 
-def pad_data(data):
+def pad_data(data: dict):
     """Pad data to be block-aligned for AES encryption.
 
     :param data: The data to pad.
@@ -114,7 +115,7 @@ def pad_data(data):
     return padder.update(data.encode()) + padder.finalize()
 
 
-def unpad_data(data):
+def unpad_data(data: dict):
     """Unpad data after decryption.
 
     :param data: The data to unpad.
@@ -124,7 +125,7 @@ def unpad_data(data):
     return unpadder.update(data) + unpadder.finalize()
 
 
-def compact_store(encrypted_data):
+def compact_store(encrypted_data: dict):
     """Combine nonce, ciphertext, and tag into a single binary blob.
 
     :param encrypted_data: Dictionary containing nonce, ciphertext, and tag.
@@ -140,7 +141,7 @@ def compact_store(encrypted_data):
     return base64.b64encode(nonce + ciphertext + tag).decode()
 
 
-def compact_load(compact_data):
+def compact_load(compact_data: str):
     """Separate nonce, ciphertext, and tag from a compact binary blob.
 
     :param compact_data: Base64-encoded binary blob.
@@ -167,7 +168,7 @@ def compact_load(compact_data):
     }
 
 
-def encrypt(secret):
+def encrypt(secret: str):
     """Convenience function to encrypt a secret using AES-GCM.
 
     :param secret: The secret to encrypt.
@@ -190,7 +191,7 @@ def encrypt(secret):
         return results
 
 
-def decrypt(data):
+def decrypt(data: str):
     """Convenience function to decrypt a secret using AES-GCM.
 
     :param data: Base64-encoded binary blob.

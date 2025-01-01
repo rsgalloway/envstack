@@ -471,6 +471,9 @@ def partition_platform_data(data):
     :returns: platform partitioned dictionary.
     """
 
+    if "all" not in data:
+        raise ValueError("missing 'all' key in data")
+
     # platforms of interest (darwin, linux, windows)
     # platforms = [k for k in data.keys() if k not in ("all", "include")]
     platforms = ["darwin", "linux", "windows"]
@@ -509,7 +512,7 @@ def partition_platform_data(data):
     new_platform_dicts = {}
     for p in platforms:
         new_platform_dicts[p] = {"<<": "*all"}
-        for k, v in data[p].items():
+        for k, v in data.get(p, {}).items():
             if k not in common_keys:
                 new_platform_dicts[p][k] = v
 

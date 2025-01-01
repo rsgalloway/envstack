@@ -125,7 +125,7 @@ class EncryptedNode(BaseNode):
 class CustomLoader(yaml.SafeLoader):
     required_keys = {"include", "all", "darwin", "linux", "windows"}
 
-    def construct_mapping(self, node, deep=False):
+    def construct_mapping(self, node: yaml.Node, deep: bool = False):
         mapping = super().construct_mapping(node, deep=deep)
         for key, value in mapping.items():
             if key in self.required_keys:
@@ -153,7 +153,7 @@ class CustomDumper(yaml.SafeDumper):
         self.basekey = None
         self.newanchors = {}
 
-    def anchor_node(self, node):
+    def anchor_node(self, node: yaml.Node):
         self.depth += 1
         if self.depth == 2:
             assert isinstance(node, yaml.ScalarNode), (
