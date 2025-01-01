@@ -54,14 +54,14 @@ class BaseNode(yaml.YAMLObject):
 
     yaml_tag = None
 
-    def __init__(self, key):
-        self.key = key
+    def __init__(self, value):
+        self.value = value
 
     def __repr__(self):
-        return f"{self.__class__.__name__}('{self.key}')"
+        return f"{self.__class__.__name__}('{self.value}')"
 
     def __str__(self):
-        return str(self.key)
+        return str(self.value)
 
     @classmethod
     def from_yaml(cls, loader, node):
@@ -69,7 +69,7 @@ class BaseNode(yaml.YAMLObject):
 
     @classmethod
     def to_yaml(cls, dumper, data):
-        return dumper.represent_scalar(cls.yaml_tag, data.key)
+        return dumper.represent_scalar(cls.yaml_tag, data.value)
 
 
 class Base64Node(BaseNode):
@@ -84,9 +84,9 @@ class Base64Node(BaseNode):
 
     @classmethod
     def to_yaml(cls, dumper, data):
-        encoded = b64encode(data.key.encode())
+        encoded = b64encode(data.value.encode())
         return dumper.represent_scalar(cls.yaml_tag, encoded.decode(), style=None)
-        # return dumper.represent_scalar(cls.yaml_tag, data.key)
+        # return dumper.represent_scalar(cls.yaml_tag, data.value)
 
 
 class MD5Node(BaseNode):
@@ -119,7 +119,7 @@ class EncryptedNode(BaseNode):
     def to_yaml(cls, dumper, data):
         from envstack.encrypt import encrypt
 
-        return dumper.represent_scalar(cls.yaml_tag, encrypt(data.key))
+        return dumper.represent_scalar(cls.yaml_tag, encrypt(data.value))
 
 
 class CustomLoader(yaml.SafeLoader):

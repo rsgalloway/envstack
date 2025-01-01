@@ -38,8 +38,7 @@ import sys
 import traceback
 
 from envstack import __version__, config
-from envstack.env import (clear, export, load_environ, resolve_environ,
-                          trace_var)
+from envstack.env import clear, export, load_environ, resolve_environ, trace_var
 from envstack.logger import setup_stream_handler
 from envstack.wrapper import run_command
 
