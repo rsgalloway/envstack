@@ -100,7 +100,7 @@ class MD5Node(BaseNode):
 
     @classmethod
     def to_yaml(cls, dumper, data):
-        md5_hash = hashlib.md5(data.key.encode()).hexdigest()
+        md5_hash = hashlib.md5(data.value.encode()).hexdigest()
         return dumper.represent_scalar(cls.yaml_tag, md5_hash)
 
 
@@ -180,3 +180,31 @@ yaml.SafeLoader.add_constructor(EncryptedNode.yaml_tag, EncryptedNode.from_yaml)
 yaml.SafeDumper.add_representer(EncryptedNode, EncryptedNode.to_yaml)
 yaml.SafeLoader.add_constructor(MD5Node.yaml_tag, MD5Node.from_yaml)
 yaml.SafeDumper.add_representer(MD5Node, MD5Node.to_yaml)
+
+
+if __name__ == "__main__":
+    import os
+    from pprint import pprint
+
+    from envstack.env import Source
+
+    default_env = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "env", "secrets.env")
+    )
+    test_env = "/var/tmp/test.env"
+
+    s1 = Source(default_env)
+    d = s1.load()
+    print(f"# {default_env}")
+    pprint(d)
+
+    # make some updates
+    s1.data["linux"]["ROOT"] = "/var/tmp"
+    s1.data["all"]["KEY"] = Base64Node("this is a secret")
+    s1.data["all"]["MD5"] = MD5Node("this is hashed")
+
+    s1.write(test_env)
+    s2 = Source(test_env)
+    d = s2.load()
+    print(f"# {test_env}")
+    pprint(d)

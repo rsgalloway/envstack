@@ -523,31 +523,3 @@ def partition_platform_data(data):
         new_data["include"] = data["include"]
 
     return new_data
-
-
-if __name__ == "__main__":
-    from pprint import pprint
-
-    from envstack.env import Source
-    from envstack.node import Base64Node, MD5Node
-
-    default_env = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "env", "secrets.env")
-    )
-    test_env = "/var/tmp/test.env"
-
-    s1 = Source(default_env)
-    d = s1.load()
-    print(f"# {default_env}")
-    pprint(d)
-
-    # make some updates
-    s1.data["linux"]["ROOT"] = "/var/tmp"
-    s1.data["all"]["KEY"] = Base64Node("this is a secret")
-    s1.data["all"]["MD5"] = MD5Node("this is hashed")
-
-    s1.write(test_env)
-    s2 = Source(test_env)
-    d = s2.load()
-    print(f"# {test_env}")
-    pprint(d)
