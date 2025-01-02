@@ -34,6 +34,7 @@ Contains custom yaml constructor classes and functions.
 """
 
 import hashlib
+import os
 import string
 from base64 import b64decode, b64encode
 
@@ -79,14 +80,16 @@ class Base64Node(BaseNode):
 
     @classmethod
     def from_yaml(cls, loader, node):
-        # return cls(b64decode(node.value).decode())
         return cls(node.value)
 
     @classmethod
     def to_yaml(cls, dumper, data):
         encoded = b64encode(data.value.encode())
         return dumper.represent_scalar(cls.yaml_tag, encoded.decode(), style=None)
-        # return dumper.represent_scalar(cls.yaml_tag, data.value)
+
+    def resolve(self):
+        """Returns decoded value."""
+        return b64decode(self.value).decode()
 
 
 class MD5Node(BaseNode):
@@ -111,8 +114,6 @@ class EncryptedNode(BaseNode):
 
     @classmethod
     def from_yaml(cls, loader, node):
-        # from envstack.encrypt import decrypt
-        # return cls(decrypt(node.value))
         return cls(node.value)
 
     @classmethod
@@ -120,6 +121,12 @@ class EncryptedNode(BaseNode):
         from envstack.encrypt import encrypt
 
         return dumper.represent_scalar(cls.yaml_tag, encrypt(data.value))
+
+    def resolve(self, env: dict = os.environ):
+        """Decrypt the value using the environment."""
+        from envstack.encrypt import decrypt
+
+        return decrypt(self.value, env=env)
 
 
 class CustomLoader(yaml.SafeLoader):

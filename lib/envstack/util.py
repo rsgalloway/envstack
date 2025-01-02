@@ -40,7 +40,6 @@ from collections import OrderedDict
 
 from envstack import config
 from envstack.node import Base64Node, EncryptedNode
-from envstack.encrypt import b64decode, decrypt
 from envstack.exceptions import CyclicalReference
 
 # value for unresolvable variables
@@ -242,12 +241,12 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
     except RecursionError:
         raise CyclicalReference(f"Cyclical reference detected in {expression}")
 
-    # evaluate list elements
+    # evaluate other data types
     except TypeError:
         if isinstance(expression, Base64Node):
-            result = b64decode(expression.value).decode()
+            result = expression.resolve()
         elif isinstance(expression, EncryptedNode):
-            result = decrypt(expression.value, env=environ)
+            result = expression.resolve(env=environ)
         elif isinstance(expression, list):
             result = [
                 variable_pattern.sub(substitute_variable, str(v))
