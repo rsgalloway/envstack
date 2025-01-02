@@ -195,6 +195,7 @@ def decrypt(data: str, env: dict = os.environ):
     """Convenience function to decrypt a secret using AES-GCM.
 
     :param data: Base64-encoded binary blob.
+    :env: The environment to use for the encryption key.
     :returns: The decrypted secret.
     """
 
