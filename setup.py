@@ -74,6 +74,7 @@ setup(
     },
     install_requires=[
         "PyYAML==5.1.2",
+        "cryptography==43.0.1",
     ],
     python_requires=">=3.6",
     zip_safe=False,
