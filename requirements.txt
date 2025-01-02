@@ -1,1 +1,2 @@
 PyYAML==5.1.2
+cryptography==43.0.1
