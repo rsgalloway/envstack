@@ -38,7 +38,13 @@ import unittest
 
 from envstack import config
 from envstack.exceptions import CyclicalReference
-from envstack.util import encode, evaluate_modifiers, get_stack_name, safe_eval
+from envstack.util import (
+    encode,
+    evaluate_modifiers,
+    get_stack_name,
+    partition_platform_data,
+    safe_eval,
+)
 
 
 class TestEvaluateModifiers(unittest.TestCase):
@@ -135,6 +141,36 @@ class TestUtils(unittest.TestCase):
         with self.assertRaises(ValueError):
             get_stack_name(name)
 
+    def test_unquote_strings(self):
+        content = """#!/usr/bin/env envstack
+include: ['other']
+all: &all
+  KEY: !base64 'VGhpcyBpcyBlbmNyeXB0ZWQ='
+darwin:
+  '<<': '*all'
+        """
+        import tempfile
+        from envstack.util import unquote_strings
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
+            temp_file.write(content)
+
+        unquote_strings(temp_file.name)
+
+        with open(temp_file.name, "r") as modified_file:
+            modified_content = modified_file.read()
+
+        expected_content = """#!/usr/bin/env envstack
+include: [other]
+all: &all
+  KEY: !base64 VGhpcyBpcyBlbmNyeXB0ZWQ=
+darwin:
+  <<: *all
+        """
+        self.assertEqual(modified_content, expected_content)
+
+        os.remove(temp_file.name)
+
 
 class TestSafeEval(unittest.TestCase):
     def test_safe_eval_string(self):
@@ -166,6 +202,61 @@ class TestSafeEval(unittest.TestCase):
         value = "invalid"
         result = safe_eval(value)
         self.assertEqual(result, "invalid")
+
+
+class TestPartitionPlatformData(unittest.TestCase):
+    def test_partition_platform_data(self):
+        data = {
+            "all": {
+                "key1": "value1",
+                "key2": "value2",
+                "key3": "value3",
+            },
+            "darwin": {
+                "key1": "value1",
+                "key2": "value2",
+                "key3": "darwin_value3",
+                "key4": "darwin_value4",
+            },
+            "linux": {
+                "key1": "value1",
+                "key2": "value2",
+                "key3": "linux_value3",
+                "key4": "linux_value4",
+            },
+            "windows": {
+                "key1": "value1",
+                "key2": "value2",
+                "key3": "windows_value3",
+                "key4": "windows_value4",
+            },
+        }
+
+        expected_result = {
+            "all": {
+                "key1": "value1",
+                "key2": "value2",
+                # "key3": "value3",  # key3 removed, is that what we want?
+            },
+            "darwin": {
+                "<<": "*all",
+                "key3": "darwin_value3",
+                "key4": "darwin_value4",
+            },
+            "linux": {
+                "<<": "*all",
+                "key3": "linux_value3",
+                "key4": "linux_value4",
+            },
+            "windows": {
+                "<<": "*all",
+                "key3": "windows_value3",
+                "key4": "windows_value4",
+            },
+        }
+
+        result = partition_platform_data(data)
+        self.assertEqual(result, expected_result)
 
 
 class TestIssue18(unittest.TestCase):
