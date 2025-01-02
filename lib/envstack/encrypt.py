@@ -65,7 +65,10 @@ def get_encryption_key(var_name: str = "SYMMETRIC_KEY", env: dict = os.environ):
         return b64decode(key_env)
     else:
         key = secrets.token_bytes(32)  # 32 bytes = 256 bits
-        env[var_name] = b64encode(key).decode()
+        # load_environ iterates over env, so we can't modify it in the loop
+        # RuntimeError: dictionary changed size during iteration
+        # env[var_name] = b64encode(key).decode()
+        os.environ[var_name] = b64encode(key).decode()
         log.info(f"set {var_name}: {b64encode(key).decode()}")
         return key
 

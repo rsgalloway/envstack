@@ -69,8 +69,8 @@ class BaseNode(yaml.YAMLObject):
         return cls(node.value)
 
     @classmethod
-    def to_yaml(cls, dumper, data):
-        return dumper.represent_scalar(cls.yaml_tag, data.value)
+    def to_yaml(cls, dumper, node):
+        return dumper.represent_scalar(cls.yaml_tag, node.value)
 
 
 class Base64Node(BaseNode):
@@ -83,8 +83,8 @@ class Base64Node(BaseNode):
         return cls(node.value)
 
     @classmethod
-    def to_yaml(cls, dumper, data):
-        encoded = b64encode(data.value.encode())
+    def to_yaml(cls, dumper, node):
+        encoded = b64encode(node.value.encode())
         return dumper.represent_scalar(cls.yaml_tag, encoded.decode(), style=None)
 
     def resolve(self):
@@ -102,8 +102,8 @@ class MD5Node(BaseNode):
         return cls(node.value)
 
     @classmethod
-    def to_yaml(cls, dumper, data):
-        md5_hash = hashlib.md5(data.value.encode()).hexdigest()
+    def to_yaml(cls, dumper, node):
+        md5_hash = hashlib.md5(node.value.encode()).hexdigest()
         return dumper.represent_scalar(cls.yaml_tag, md5_hash)
 
 
@@ -117,10 +117,10 @@ class EncryptedNode(BaseNode):
         return cls(node.value)
 
     @classmethod
-    def to_yaml(cls, dumper, data):
+    def to_yaml(cls, dumper, node):
         from envstack.encrypt import encrypt
 
-        return dumper.represent_scalar(cls.yaml_tag, encrypt(data.value))
+        return dumper.represent_scalar(cls.yaml_tag, encrypt(node.value))
 
     def resolve(self, env: dict = os.environ):
         """Decrypt the value using the environment."""
@@ -194,11 +194,13 @@ if __name__ == "__main__":
     from pprint import pprint
 
     from envstack.env import Source
+    from envstack.logger import setup_stream_handler
 
-    default_env = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "..", "..", "env", "secrets.env")
-    )
-    test_env = "/var/tmp/test.env"
+    setup_stream_handler()
+
+    envdir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "env"))
+    default_env = os.path.abspath(os.path.join(envdir, "secrets.env"))
+    test_env = os.path.join(envdir, "nodetest.env")
 
     s1 = Source(default_env)
     d = s1.load()
@@ -206,9 +208,10 @@ if __name__ == "__main__":
     pprint(d)
 
     # make some updates
-    s1.data["linux"]["ROOT"] = "/var/tmp"
     s1.data["all"]["KEY"] = Base64Node("this is a secret")
     s1.data["all"]["MD5"] = MD5Node("this is hashed")
+    s1.data["all"]["SECRET"] = EncryptedNode("super_secret_password")
+    s1.data["linux"]["ROOT"] = "/var/tmp"
 
     s1.write(test_env)
     s2 = Source(test_env)
