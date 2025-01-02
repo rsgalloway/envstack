@@ -620,18 +620,23 @@ def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
     util.load_sys_path()
 
 
-def resolve_environ(env: dict):
+def resolve_environ(env: dict, key: str = None):
     """Resolves all variables in a given unresolved environment, returning a
     new environment dict.
 
     :param env: unresolved environment.
+    :param key: key to resolve (optional).
     :returns: resolved environment.
     """
     resolved = Env()
 
-    for key, value in env.items():
-        evaluated_value = util.evaluate_modifiers(value, env)
-        resolved[key] = evaluated_value
+    if key:
+        resolved[key] = util.evaluate_modifiers(env.get(key), env)
+
+    else:
+        for key, value in env.items():
+            evaluated_value = util.evaluate_modifiers(value, env)
+            resolved[key] = evaluated_value
 
     return resolved
 
@@ -700,7 +705,7 @@ def load_environ(
 
         # resolve ${ENVPATH}
         # TODO: use expandvars() instead of resolve_environ()
-        envpath = resolve_environ(env).get("ENVPATH", envpath)
+        envpath = resolve_environ(env, "ENVPATH").get("ENVPATH", envpath)
 
     # add the stack name to the environment
     if not env.get("STACK"):
