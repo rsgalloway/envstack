@@ -79,8 +79,8 @@ class Base64Node(BaseNode):
 
     @classmethod
     def from_yaml(cls, loader, node):
-        return cls(b64decode(node.value).decode())
-        # return cls(node.value)
+        # return cls(b64decode(node.value).decode())
+        return cls(node.value)
 
     @classmethod
     def to_yaml(cls, dumper, data):
@@ -111,9 +111,9 @@ class EncryptedNode(BaseNode):
 
     @classmethod
     def from_yaml(cls, loader, node):
-        from envstack.encrypt import decrypt
-
-        return cls(decrypt(node.value))
+        # from envstack.encrypt import decrypt
+        # return cls(decrypt(node.value))
+        return cls(node.value)
 
     @classmethod
     def to_yaml(cls, dumper, data):

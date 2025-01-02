@@ -49,23 +49,23 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from envstack.logger import log
 
 
-def get_encryption_key(env_var: str = "SYMMETRIC_KEY", env: dict = os.environ):
+def get_encryption_key(var_name: str = "SYMMETRIC_KEY", env: dict = os.environ):
     """
     Load or generate the encryption key. Store in environment variable.
     By default, this function looks for base64 key in the ${SYMMETRIC_KEY}
     environment variable. If not found, generates a new 256-bit key and stores
     it in the environment.
 
-    :param env_var: The environment variable to use for the key.
+    :param var_name: The environment variable to use for the key.
     :param env: The environment to use.
     :return: 256-bit encryption key.
     """
-    key_env = env.get(env_var)
+    key_env = env.get(var_name)
     if key_env:
         return b64decode(key_env)
     else:
         key = secrets.token_bytes(32)  # 32 bytes = 256 bits
-        os.environ[env_var] = b64encode(key).decode()
+        os.environ[var_name] = b64encode(key).decode()
         print(f"Generated Key (Base64): {b64encode(key).decode()}")
         return key
 
@@ -191,7 +191,7 @@ def encrypt(secret: str):
         return results
 
 
-def decrypt(data: str):
+def decrypt(data: str, env: dict = os.environ):
     """Convenience function to decrypt a secret using AES-GCM.
 
     :param data: Base64-encoded binary blob.
@@ -201,7 +201,7 @@ def decrypt(data: str):
     results = ""
 
     try:
-        key = get_encryption_key()
+        key = get_encryption_key(env=env)
         encrypted_data = compact_load(data)
         decrypted = decrypt_data(encrypted_data, key)
         results = decrypted.decode()

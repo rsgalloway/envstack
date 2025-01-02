@@ -39,6 +39,8 @@ import sys
 from collections import OrderedDict
 
 from envstack import config
+from envstack.node import Base64Node, EncryptedNode
+from envstack.encrypt import b64decode, decrypt
 from envstack.exceptions import CyclicalReference
 
 # value for unresolvable variables
@@ -242,7 +244,11 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
 
     # evaluate list elements
     except TypeError:
-        if isinstance(expression, list):
+        if isinstance(expression, Base64Node):
+            result = b64decode(expression.value).decode()
+        elif isinstance(expression, EncryptedNode):
+            result = decrypt(expression.value, env=environ)
+        elif isinstance(expression, list):
             result = [
                 variable_pattern.sub(substitute_variable, str(v))
                 if isinstance(v, str)
@@ -434,7 +440,8 @@ def dump_yaml(file_path: str, data: dict, unquote: bool = True):
 
     partitioned_data = partition_platform_data(data)
 
-    # write the platform partidioned data to the env file
+    # write the platform partidioned data to the env file,
+    # add a shebang line to make it executable and add the include files
     with open(file_path, "w") as file:
         file.write("#!/usr/bin/env envstack\n")
         if data.get("include"):
