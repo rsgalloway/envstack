@@ -65,8 +65,8 @@ def get_encryption_key(var_name: str = "SYMMETRIC_KEY", env: dict = os.environ):
         return b64decode(key_env)
     else:
         key = secrets.token_bytes(32)  # 32 bytes = 256 bits
-        os.environ[var_name] = b64encode(key).decode()
-        print(f"Generated Key (Base64): {b64encode(key).decode()}")
+        env[var_name] = b64encode(key).decode()
+        log.info(f"set {var_name}: {b64encode(key).decode()}")
         return key
 
 
