@@ -331,7 +331,7 @@ def get_sources(
         return [str(p) for p in paths]
 
     # construct search paths from ${ENVPATH} and scope
-    envpath_dirs = [Path(p).resolve() for p in envpath.split(":") if p.strip()]
+    envpath_dirs = [Path(p).resolve() for p in str(envpath).split(":") if p.strip()]
     scope_dirs = _walk_to_scope(scope)
     envpath_dirs.reverse()
     search_paths = envpath_dirs + scope_dirs
@@ -618,6 +618,34 @@ def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
 
     # update sys.path from PYTHONPATH
     util.load_sys_path()
+
+
+def bake_environ(name: str, filename: str = None):
+    """Bakes a given env stack into a single source .env file.
+
+        $ envstack <name> --bake <filename>
+
+    :param name: stack namespace.
+    :param filename: path to save the baked environment.
+    """
+    env = load_environ(name)
+
+    # create a new source file
+    outfile = Source(filename)
+
+    # merge the sources into the outfile
+    for source in env.sources:
+        for key, value in source.data.items():
+            if isinstance(value, dict):
+                outfile.data.setdefault(key, {}).update(value)
+            else:
+                outfile.data[key] = value
+
+    # clear includes because data is baked
+    outfile.data["include"] = []
+
+    # write the baked environment to the file
+    outfile.write()
 
 
 def resolve_environ(env: dict, key: str = None):

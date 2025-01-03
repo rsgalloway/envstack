@@ -176,9 +176,10 @@ def get_stack_name(name: str = config.DEFAULT_NAMESPACE):
 
 def evaluate_modifiers(expression: str, environ: dict = os.environ):
     """
-    Evaluates Bash-like variable expansion modifiers.
+    Evaluates Bash-like variable expansion modifiers in a string, resolves
+    custom node types, and evaluates lists and dictionaries.
 
-    Supports:
+    Supported modifiers:
     - values like "world" (no substitution)
     - ${VAR} for direct substitution (empty string if unset)
     - ${VAR:=default} to set and use a default value if unset
@@ -429,7 +430,12 @@ def unquote_strings(file_path: str):
 
 def dump_yaml(file_path: str, data: dict, unquote: bool = True):
     """
-    Dumps a dictionary to a YAML file.
+    Dumps a dictionary to a YAML file with custom formatting:
+
+    - unquotes single quoted strings
+    - partitions platform data
+    - adds a shebang line to make the file executable
+    - adds an include line if it exists in the data
 
     :param file_path: Path to the output YAML file.
     :param data: The dictionary to dump.
@@ -440,7 +446,7 @@ def dump_yaml(file_path: str, data: dict, unquote: bool = True):
     partitioned_data = partition_platform_data(data)
 
     # write the platform partidioned data to the env file,
-    # add a shebang line to make it executable and add the include files
+    # add a shebang line to make it executable and add the includes
     with open(file_path, "w") as file:
         file.write("#!/usr/bin/env envstack\n")
         if data.get("include"):

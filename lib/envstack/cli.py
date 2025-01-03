@@ -38,7 +38,14 @@ import sys
 import traceback
 
 from envstack import __version__, config
-from envstack.env import clear, export, load_environ, resolve_environ, trace_var
+from envstack.env import (
+    bake_environ,
+    clear,
+    export,
+    load_environ,
+    resolve_environ,
+    trace_var,
+)
 from envstack.logger import setup_stream_handler
 from envstack.wrapper import run_command
 
@@ -75,6 +82,11 @@ def parse_args():
         nargs="*",
         default=[config.DEFAULT_NAMESPACE],
         help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
+    )
+    parser.add_argument(
+        "--bake",
+        metavar="FILENAME",
+        help="bake the env stack to a single file",
     )
     parser.add_argument(
         "--clear",
@@ -140,6 +152,8 @@ def main():
     try:
         if command:
             return run_command(command, args.namespace)
+        elif args.bake:
+            bake_environ(args.namespace, args.bake)
         elif args.resolve is not None:
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
