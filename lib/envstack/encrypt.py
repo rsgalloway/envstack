@@ -40,9 +40,6 @@ import secrets
 from base64 import b64decode, b64encode
 
 import cryptography.exceptions
-
-# from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
-# from cryptography.hazmat.primitives.hashes import SHA256
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
