@@ -83,14 +83,25 @@ class Base64Node(BaseNode):
 
     yaml_tag = "!base64"
 
+    def __init__(self, value):
+        super().__init__(value)
+        self.original_value = None
+
     @classmethod
     def from_yaml(cls, loader, node):
-        return cls(node.value)
+        """Returns a new Base64Node instance."""
+        node = cls(node.value)
+        node.original_value = node.value
+        return node
 
     @classmethod
     def to_yaml(cls, dumper, node):
-        encoded = b64encode(node.value.encode())
-        return dumper.represent_scalar(cls.yaml_tag, encoded.decode(), style=None)
+        """Encrypts the value before writing to yaml."""
+        if node.value == node.original_value:
+            encrypted = node.value
+        else:
+            encrypted = b64encode(node.value.encode()).decode()
+        return dumper.represent_scalar(cls.yaml_tag, encrypted)
 
     def resolve(self):
         """Returns base64 decoded value."""
@@ -104,10 +115,12 @@ class MD5Node(BaseNode):
 
     @classmethod
     def from_yaml(cls, loader, node):
+        """Returns a new MD5Node instance."""
         return cls(node.value)
 
     @classmethod
     def to_yaml(cls, dumper, node):
+        """Encrypts the value before writing to yaml."""
         md5_hash = hashlib.md5(node.value.encode()).hexdigest()
         return dumper.represent_scalar(cls.yaml_tag, md5_hash)
 
@@ -117,13 +130,25 @@ class EncryptedNode(BaseNode):
 
     yaml_tag = "!encrypt"
 
+    def __init__(self, value):
+        super().__init__(value)
+        self.original_value = None
+
     @classmethod
     def from_yaml(cls, loader, node):
-        return cls(node.value)
+        """Returns a new EncryptedNode instance."""
+        node = cls(node.value)
+        node.original_value = node.value
+        return node
 
     @classmethod
     def to_yaml(cls, dumper, node):
-        return dumper.represent_scalar(cls.yaml_tag, encrypt(node.value))
+        """Encrypts the value before writing to yaml."""
+        if node.value == node.original_value:
+            encrypted = node.value
+        else:
+            encrypted = encrypt(node.value)
+        return dumper.represent_scalar(cls.yaml_tag, encrypted)
 
     def resolve(self, env: dict = os.environ):
         """Returns the decrypted value."""
