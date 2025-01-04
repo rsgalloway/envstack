@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+# envstack_completions.sh
 #
-# Copyright (c) 2024, Ryan Galloway (ryan@rsgalloway.com)
+# Copyright (c) 2025, Ryan Galloway (ryan@rsgalloway.com)
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -28,15 +28,40 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 #
+# This script provides tab completion for the `envstack` command.
+#
+# INSTALLATION:
+# copy to /etc/bash_completion.d/ or source in your .bashrc
+#
 
-__doc__ = """
-Contains a simple executable for the envstack cli.py module.
-"""
+_envstack_completions() {
+    local cur="${COMP_WORDS[COMP_CWORD]}"
 
-import re
-import sys
-from envstack.cli import main
+    # These are the valid completions for envstack's positional argument(s).
+    # You can hardcode them or dynamically generate them.
+    # local options="test build deploy"
 
-if __name__ == "__main__":
-    sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
-    sys.exit(main())
+    # Extract the directories from the $ENVPATH variable
+    IFS=':' read -ra directories <<< "$ENVPATH"
+
+    # Initialize an empty array to store the basenames
+    local basenames=()
+
+    # Iterate over each directory
+    for directory in "${directories[@]}"; do
+        # Check if the directory exists
+        if [[ -d "$directory" ]]; then
+            # Get the basenames of the files in the directory and append them to the array
+            basenames+=($(basename -a "$directory"/* | sed 's/\.[^.]*$//'))
+        fi
+    done
+
+    # Set options to the basenames
+    local options="${basenames[@]}"
+
+    # Tell Bash which options match the current word being typed
+    COMPREPLY=( $(compgen -W "${options}" -- "${cur}") )
+}
+
+# Associate the function `_envstack_completions` with the command `envstack`
+complete -F _envstack_completions envstack
