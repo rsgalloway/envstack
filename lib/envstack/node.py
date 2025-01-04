@@ -40,6 +40,8 @@ from base64 import b64decode, b64encode
 
 import yaml
 
+from envstack.encrypt import decrypt, encrypt
+
 
 class Template(string.Template, str):
     def __init__(self, value):
@@ -118,14 +120,10 @@ class EncryptedNode(BaseNode):
 
     @classmethod
     def to_yaml(cls, dumper, node):
-        from envstack.encrypt import encrypt
-
         return dumper.represent_scalar(cls.yaml_tag, encrypt(node.value))
 
     def resolve(self, env: dict = os.environ):
         """Decrypt the value using the environment."""
-        from envstack.encrypt import decrypt
-
         return decrypt(self.value, env=env)
 
 

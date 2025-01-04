@@ -39,8 +39,8 @@ import sys
 from collections import OrderedDict
 
 from envstack import config
-from envstack.node import Base64Node, EncryptedNode
 from envstack.exceptions import CyclicalReference
+from envstack.node import Base64Node, EncryptedNode
 
 # value for unresolvable variables
 null = ""

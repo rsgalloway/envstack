@@ -67,7 +67,7 @@ class Scope(path.Path):
 class Source(object):
     """envstack .env source file."""
 
-    def __init__(self, path):
+    def __init__(self, path: str = None):
         """
         :param path: path to .env file.
         """
