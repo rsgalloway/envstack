@@ -74,6 +74,9 @@ class BaseNode(yaml.YAMLObject):
     def to_yaml(cls, dumper, node):
         return dumper.represent_scalar(cls.yaml_tag, node.value)
 
+    def resolve(self):
+        return self.value
+
 
 class Base64Node(BaseNode):
     """Base64 encoded string node."""
@@ -90,7 +93,7 @@ class Base64Node(BaseNode):
         return dumper.represent_scalar(cls.yaml_tag, encoded.decode(), style=None)
 
     def resolve(self):
-        """Returns decoded value."""
+        """Returns base64 decoded value."""
         return b64decode(self.value).decode()
 
 
@@ -123,7 +126,7 @@ class EncryptedNode(BaseNode):
         return dumper.represent_scalar(cls.yaml_tag, encrypt(node.value))
 
     def resolve(self, env: dict = os.environ):
-        """Decrypt the value using the environment."""
+        """Returns the decrypted value."""
         return decrypt(self.value, env=env)
 
 
