@@ -116,7 +116,7 @@ STACK=hello
     def test_thing(self):
         expected_output = """CHAR_LIST=['a', 'b', 'c', '${HELLO}']
 DEPLOY_ROOT=${ROOT}/${ENV}
-DICT={'a': 1, 'b': 2, 'c': 3}
+DICT={'a': 1, 'b': 2, 'c': '${INT}'}
 ENV=prod
 ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 FLOAT=1.0

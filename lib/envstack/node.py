@@ -35,6 +35,7 @@ Contains custom yaml constructor classes and functions.
 
 import hashlib
 import os
+import re
 import string
 from base64 import b64decode, b64encode
 
@@ -177,7 +178,8 @@ class CustomLoader(yaml.SafeLoader):
 
 class CustomDumper(yaml.SafeDumper):
     """
-    Custom Dumper class to handle anchors and references.
+    Custom Dumper class to handle anchors, references and flow style for nested
+    mappings.
     """
 
     def __init__(self, *args, **kwargs):
@@ -187,23 +189,52 @@ class CustomDumper(yaml.SafeDumper):
         self.newanchors = {}
 
     def anchor_node(self, node: yaml.Node):
+        """Anchor the node and set the basekey for the node."""
+        # increase depth on entering anchor_node
         self.depth += 1
+
+        # set basekey for the node
         if self.depth == 2:
             assert isinstance(node, yaml.ScalarNode), (
                 "yaml node not a string: %s" % node
             )
             self.basekey = str(node.value)
             node.value = self.basekey
+
+        # set anchor for the node
         if self.depth == 3:
             assert self.basekey, "could not find base key for value: %s" % node
             self.newanchors[node] = self.basekey
+
         super(CustomDumper, self).anchor_node(node)
         if self.newanchors:
             self.anchors.update(self.newanchors)
             self.newanchors.clear()
 
-    def represent_list(self, data):
-        return super().represent_list(data, flow_style=True)
+    def quote_vars(self, node):
+        """Quote variables in the node value."""
+        if isinstance(node, yaml.ScalarNode):
+            if re.match(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}", node.value):
+                node.style = '"%s"' % node.value
+
+    def represent_data(self, data):
+        """Represent data and set flow_style for nested mappings."""
+        # increase depth on entering represent_data
+        self.depth += 1
+        node = super().represent_data(data)
+        self.depth -= 1
+
+        # use flow style for nested mappings
+        if isinstance(node, yaml.MappingNode) and self.depth >= 2:
+            node.flow_style = True
+            for _, value in node.value:
+                self.quote_vars(value)
+        elif isinstance(node, yaml.SequenceNode) and self.depth >= 2:
+            node.flow_style = True
+            for element in node.value:
+                self.quote_vars(element)
+
+        return node
 
 
 # add custom constructors and representers
@@ -213,34 +244,3 @@ yaml.SafeLoader.add_constructor(EncryptedNode.yaml_tag, EncryptedNode.from_yaml)
 yaml.SafeDumper.add_representer(EncryptedNode, EncryptedNode.to_yaml)
 yaml.SafeLoader.add_constructor(MD5Node.yaml_tag, MD5Node.from_yaml)
 yaml.SafeDumper.add_representer(MD5Node, MD5Node.to_yaml)
-
-
-if __name__ == "__main__":
-    import os
-    from pprint import pprint
-
-    from envstack.env import Source
-    from envstack.logger import setup_stream_handler
-
-    setup_stream_handler()
-
-    envdir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "env"))
-    default_env = os.path.abspath(os.path.join(envdir, "secrets.env"))
-    test_env = os.path.join(envdir, "nodetest.env")
-
-    s1 = Source(default_env)
-    d = s1.load()
-    print(f"# {default_env}")
-    pprint(d)
-
-    # make some updates
-    s1.data["all"]["KEY"] = Base64Node("this is a secret")
-    s1.data["all"]["MD5"] = MD5Node("this is hashed")
-    s1.data["all"]["SECRET"] = EncryptedNode("super_secret_password")
-    s1.data["linux"]["ROOT"] = "/var/tmp"
-
-    s1.write(test_env)
-    s2 = Source(test_env)
-    d = s2.load()
-    print(f"# {test_env}")
-    pprint(d)

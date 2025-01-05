@@ -45,8 +45,11 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from envstack.logger import log
 
+# environment variable to store the encryption key
+KEY_VAR_NAME = "SYMMETRIC_KEY"
 
-def get_encryption_key(var_name: str = "SYMMETRIC_KEY", env: dict = os.environ):
+
+def get_encryption_key(var_name: str = KEY_VAR_NAME, env: dict = os.environ):
     """
     Load or generate the encryption key. Store in environment variable.
     By default, this function looks for base64 key in the ${SYMMETRIC_KEY}

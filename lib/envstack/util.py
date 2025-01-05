@@ -199,7 +199,7 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         operator = match.group(2)
         argument = match.group(3)
         override = os.getenv(var_name, null)
-        value = environ.get(var_name, override)
+        value = str(environ.get(var_name, override))
         varstr = "${%s}" % var_name
 
         # check for self-referential values
