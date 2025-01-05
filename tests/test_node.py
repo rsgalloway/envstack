@@ -59,10 +59,12 @@ envpath = os.path.join(os.path.dirname(__file__), "..", "env")
 
 class TestBase64Node(unittest.TestCase):
     def test_from_yaml(self):
+        """test the base64 from_yaml method"""
         node = Base64Node.from_yaml(None, yaml.ScalarNode("tag", "value"))
         self.assertEqual(node.value, "value")
 
     def test_to_yaml(self):
+        """test the base64 to_yaml method"""
         node = Base64Node("value")
         dumper = CustomDumper(None)
         result = node.to_yaml(dumper, node)
@@ -72,6 +74,7 @@ class TestBase64Node(unittest.TestCase):
         self.assertEqual(result.value, expected_value)
 
     def test_resolve(self):
+        """test the base64 resolve method"""
         value = b64encode("value".encode()).decode()
         node = Base64Node(value)
         self.assertEqual(node.value, value)
@@ -81,10 +84,12 @@ class TestBase64Node(unittest.TestCase):
 
 class TestMD5Node(unittest.TestCase):
     def test_from_yaml(self):
+        """test the MD5 from_yaml method"""
         node = MD5Node.from_yaml(None, yaml.ScalarNode("tag", "value"))
         self.assertEqual(node.value, "value")
 
     def test_to_yaml(self):
+        """test the MD5 to_yaml method"""
         node = MD5Node("value")
         dumper = CustomDumper(None)
         result = node.to_yaml(dumper, node)
@@ -96,10 +101,12 @@ class TestMD5Node(unittest.TestCase):
 
 class TestEncryptedNode(unittest.TestCase):
     def test_from_yaml(self):
+        """test the EncryptedNode from_yaml method"""
         node = EncryptedNode.from_yaml(None, yaml.ScalarNode("tag", "value"))
         self.assertEqual(node.value, "value")
 
     def test_to_yaml(self):
+        """test the EncryptedNode to_yaml method"""
         node = EncryptedNode("value")
         dumper = CustomDumper(None)
         result = node.to_yaml(dumper, node)
@@ -107,6 +114,7 @@ class TestEncryptedNode(unittest.TestCase):
         self.assertEqual(result.tag, EncryptedNode.yaml_tag)
 
     def test_resolve_invalid_key(self):
+        """test the EncryptedNode resolve method with an invalid key"""
         os.environ[KEY_VAR_NAME] = "invalid_key"
         value = "super_secret_password"
         encrypted = encrypt(value)
@@ -118,6 +126,7 @@ class TestEncryptedNode(unittest.TestCase):
         self.assertEqual(resolved, "")
 
     def test_resolve_success(self):
+        """test the EncryptedNode resolve method with a valid key"""
         os.environ[KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
         value = "super_secret_password"
         encrypted = encrypt(value)
@@ -131,15 +140,18 @@ class TestEncryptedNode(unittest.TestCase):
 
 class TestTemplate(unittest.TestCase):
     def test_init(self):
+        """test the Template __init__ method"""
         template = Template("value")
         self.assertEqual(template.value, "value")
 
     def test_repr(self):
+        """test the Template __repr__ method"""
         template = Template("value")
         result = repr(template)
         self.assertEqual(result, "Template(value=value)")
 
     def test_str(self):
+        """test the Template __str__ method"""
         template = Template("value")
         result = str(template)
         self.assertEqual(result, "value")
@@ -147,6 +159,7 @@ class TestTemplate(unittest.TestCase):
 
 class TestCustomLoader(unittest.TestCase):
     def test_construct_mapping(self):
+        """test the CustomLoader construct_mapping method"""
         envfile = os.path.join(envpath, "test.env")
         loader = CustomLoader(open(envfile, "r"))
         node = yaml.MappingNode("tag", [])
@@ -156,12 +169,14 @@ class TestCustomLoader(unittest.TestCase):
 
 class TestCustomDumper(unittest.TestCase):
     def test_init(self):
+        """test the CustomDumper __init__ method"""
         dumper = CustomDumper(None)
         self.assertEqual(dumper.depth, 0)
         self.assertIsNone(dumper.basekey)
         self.assertEqual(dumper.newanchors, {})
 
     def test_anchor_node(self):
+        """test the CustomDumper anchor_node method"""
         dumper = CustomDumper(None)
         node = yaml.ScalarNode("tag", "value")
         dumper.anchor_node(node)
@@ -181,6 +196,7 @@ class TestCustomDumper(unittest.TestCase):
         self.assertEqual(dumper.basekey, "value")
 
     def test_represent_list(self):
+        """test the CustomDumper represent_list method"""
         dumper = CustomDumper(None)
         data = [1, 2, 3]
         result = dumper.represent_list(data)
@@ -190,14 +206,17 @@ class TestCustomDumper(unittest.TestCase):
 
 class TestSecretsEnv(unittest.TestCase):
     def setUp(self):
+        """set up the test environment"""
         self.root = tempfile.mkdtemp()
         os.environ[KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
 
     def tearDown(self):
+        """tear down the test environment"""
         shutil.rmtree(self.root)
         del os.environ[KEY_VAR_NAME]
 
     def test_encrypted_nodes(self):
+        """test loading and dumping encrypted nodes"""
         envfile = os.path.join(envpath, "secrets.env")
         testfile1 = os.path.join(self.root, "test1.env")
         testfile2 = os.path.join(self.root, "test2.env")

@@ -217,32 +217,3 @@ def decrypt(data: str, env: dict = os.environ):
         log.error("unhandled exception: %s", e)
     finally:
         return results
-
-
-if __name__ == "__main__":
-    key = get_encryption_key()
-
-    # encrypt a secret
-    secret = "my_super_secret_password"
-    encrypted = encrypt_data(secret, key)
-    print(f"encrypted: {encrypted}")
-
-    # store as a single base64 string for convenience (optional)
-    # encrypted_string = f"{encrypted['nonce']}:{encrypted['ciphertext']}:{encrypted['tag']}"
-    # print(f"Encrypted String (for storage): {encrypted_string}")
-
-    # decrypt the secret
-    # nonce, ciphertext, tag = encrypted_string.split(":")
-    # decrypted = decrypt({"nonce": nonce, "ciphertext": ciphertext, "tag": tag}, key)
-    # print(f"Decrypted Secret: {decrypted.decode()}")
-
-    # example usage
-    compact_data = compact_store(encrypted)
-    print(f"compact_data: {compact_data}")
-
-    reconstructed_data = compact_load(compact_data)
-    print(f"reconstructed_data: {reconstructed_data}")
-
-    # decrypt using reconstructed data
-    decrypted = decrypt_data(reconstructed_data, key)
-    print(f"decrypted: {decrypted.decode()}")
