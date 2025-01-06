@@ -37,11 +37,10 @@ import hashlib
 import os
 import re
 import string
-from base64 import b64decode, b64encode
 
 import yaml
 
-from envstack.encrypt import decrypt, encrypt
+from envstack.encrypt import AESGCMEncryptor, Base64Encryptor, FernetEncryptor
 
 
 class Template(string.Template, str):
@@ -101,12 +100,12 @@ class Base64Node(BaseNode):
         if node.value == node.original_value:
             encrypted = node.value
         else:
-            encrypted = b64encode(node.value.encode()).decode()
+            encrypted = Base64Encryptor().encrypt(node.value)
         return dumper.represent_scalar(cls.yaml_tag, encrypted)
 
     def resolve(self):
         """Returns base64 decoded value."""
-        return b64decode(self.value).decode()
+        return Base64Encryptor().decrypt(self.value)
 
 
 class MD5Node(BaseNode):
@@ -148,12 +147,42 @@ class EncryptedNode(BaseNode):
         if node.value == node.original_value:
             encrypted = node.value
         else:
-            encrypted = encrypt(node.value)
+            encrypted = AESGCMEncryptor().encrypt(node.value)
         return dumper.represent_scalar(cls.yaml_tag, encrypted)
 
     def resolve(self, env: dict = os.environ):
         """Returns the decrypted value."""
-        return decrypt(self.value, env=env)
+        return AESGCMEncryptor(env=env).decrypt(self.value)
+
+
+class FernetNode(BaseNode):
+    """Default encrypted string node using Fernet."""
+
+    yaml_tag = "!fernet"
+
+    def __init__(self, value):
+        super().__init__(value)
+        self.original_value = None
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        """Returns a new FernetNode instance."""
+        node = cls(node.value)
+        node.original_value = node.value
+        return node
+
+    @classmethod
+    def to_yaml(cls, dumper, node):
+        """Encrypts the value before writing to yaml."""
+        if node.value == node.original_value:
+            encrypted = node.value
+        else:
+            encrypted = FernetEncryptor().encrypt(node.value)
+        return dumper.represent_scalar(cls.yaml_tag, encrypted)
+
+    def resolve(self, env: dict = os.environ):
+        """Returns the decrypted value."""
+        return FernetEncryptor(env=env).decrypt(self.value)
 
 
 class CustomLoader(yaml.SafeLoader):
@@ -242,5 +271,7 @@ yaml.SafeLoader.add_constructor(Base64Node.yaml_tag, Base64Node.from_yaml)
 yaml.SafeDumper.add_representer(Base64Node, Base64Node.to_yaml)
 yaml.SafeLoader.add_constructor(EncryptedNode.yaml_tag, EncryptedNode.from_yaml)
 yaml.SafeDumper.add_representer(EncryptedNode, EncryptedNode.to_yaml)
+yaml.SafeLoader.add_constructor(FernetNode.yaml_tag, FernetNode.from_yaml)
+yaml.SafeDumper.add_representer(FernetNode, FernetNode.to_yaml)
 yaml.SafeLoader.add_constructor(MD5Node.yaml_tag, MD5Node.from_yaml)
 yaml.SafeDumper.add_representer(MD5Node, MD5Node.to_yaml)

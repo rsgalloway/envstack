@@ -40,7 +40,7 @@ from collections import OrderedDict
 
 from envstack import config
 from envstack.exceptions import CyclicalReference
-from envstack.node import Base64Node, EncryptedNode
+from envstack.node import Base64Node, EncryptedNode, FernetNode
 
 # value for unresolvable variables
 null = ""
@@ -247,6 +247,8 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         if isinstance(expression, Base64Node):
             result = expression.resolve()
         elif isinstance(expression, EncryptedNode):
+            result = expression.resolve(env=environ)
+        elif isinstance(expression, FernetNode):
             result = expression.resolve(env=environ)
         elif isinstance(expression, list):
             result = [

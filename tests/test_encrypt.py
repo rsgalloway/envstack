@@ -33,127 +33,76 @@ __doc__ = """
 Contains unit tests for the encrypt.py module.
 """
 
-import os
 import unittest
 from unittest.mock import patch
 
 from envstack.encrypt import (
-    KEY_VAR_NAME,
-    b64encode,
-    get_encryption_key,
-    encrypt_data,
-    decrypt_data,
-    pad_data,
-    unpad_data,
-    compact_store,
-    compact_load,
-    encrypt,
-    decrypt,
+    AESGCMEncryptor,
+    Base64Encryptor,
+    FernetEncryptor,
 )
 
+class TestBase64Encryptor(unittest.TestCase):
+    def setUp(self):
+        self.encryptor = Base64Encryptor()
 
-class TestEncrypt(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        """set up a test encryption key"""
-        cls.key = os.urandom(32)
+    def test_encrypt(self):
+        """Test encrypting data using Base64Encryptor"""
+        data = "my_secret"
+        encrypted_data = self.encryptor.encrypt(data)
+        self.assertIsInstance(encrypted_data, str)
 
-    def test_get_encryption_key_existing_key(self):
-        """test getting an existing encryption key from environment variable"""
-        with patch.dict(os.environ, {KEY_VAR_NAME: "VGVzdA=="}):
-            key = get_encryption_key()
-            self.assertEqual(key, b"Test")
+    def test_decrypt(self):
+        """Test decrypting data using Base64Encryptor"""
+        data = "bXlfc2VjcmV0"
+        decrypted_data = self.encryptor.decrypt(data)
+        self.assertEqual(decrypted_data, "my_secret")
 
-    def test_get_encryption_key_new_key(self):
-        """test generating a new encryption key and storing it in environment variable"""
-        with patch.dict(os.environ, clear=True):
-            key = get_encryption_key()
-            self.assertIsInstance(key, bytes)
-            self.assertEqual(len(key), 32)
-            self.assertEqual(os.environ[KEY_VAR_NAME], b64encode(key).decode())
+
+class TestAESGCMEncryptor(unittest.TestCase):
+    def setUp(self):
+        self.encryptor = AESGCMEncryptor()
 
     def test_encrypt_data(self):
-        """test encrypting data"""
-        secret = "my_secret"
-        encrypted_data = encrypt_data(secret, self.key)
+        """Test encrypt_data"""
+        data = "my_secret"
+        encrypted_data = self.encryptor.encrypt_data(data)
         self.assertIsInstance(encrypted_data, dict)
         self.assertIn("nonce", encrypted_data)
         self.assertIn("ciphertext", encrypted_data)
         self.assertIn("tag", encrypted_data)
 
     def test_decrypt_data(self):
-        """test encrypting and decrypting data"""
-        secret = "my_secret"
-        encrypted_data = encrypt_data(secret, self.key)
-        decrypted_data = decrypt_data(encrypted_data, self.key)
+        """Test encrypt_data and decrypt_data"""
+        data = "my_secret"
+        encrypted_data = self.encryptor.encrypt_data(data)
+        decrypted_data = self.encryptor.decrypt_data(encrypted_data)
         self.assertEqual(decrypted_data, b"my_secret")
 
-    def test_pad_data(self):
-        """test padding data"""
-        data = "test"
-        padded_data = pad_data(data)
-        self.assertIsInstance(padded_data, bytes)
+    def test_encrypt_decrypt(self):
+        """Test encrypting and decrypting data"""
+        data = "my_secret"
+        encrypted_data = self.encryptor.encrypt(data)
+        decrypted_data = self.encryptor.decrypt(encrypted_data)
+        self.assertEqual(decrypted_data, data)
 
-    def test_unpad_data(self):
-        """test unpadding data, with valid PKCS7 padding"""
-        padded_data = b"test"
-        padding_length = 16 - (len(padded_data) % 16)
-        padded_data += bytes([padding_length]) * padding_length
-        unpadded_data = unpad_data(padded_data)
-        self.assertEqual(unpadded_data, b"test")
 
-    def test_compact_store(self):
-        """test compacting and storing data"""
-        encrypted_data = {
-            "nonce": "VGVzdA==",
-            "ciphertext": "VGVzdA==",
-            "tag": "VGVzdA==",
-        }
-        compacted_data = compact_store(encrypted_data)
-        self.assertIsInstance(compacted_data, str)
-
-    def test_compact_load(self):
-        """test loading and separating compacted data"""
-        compacted_data = "VGVzdA==VGVzdA==VGVzdA=="
-        loaded_data = compact_load(compacted_data)
-        self.assertIsInstance(loaded_data, dict)
-        self.assertIn("nonce", loaded_data)
-        self.assertIn("ciphertext", loaded_data)
-        self.assertIn("tag", loaded_data)
+class TestFernetEncryptor(unittest.TestCase):
+    def setUp(self):
+        self.encryptor = FernetEncryptor()
 
     def test_encrypt(self):
-        """test encrypting a secret"""
-        secret = "my_secret"
-        encrypted_secret = encrypt(secret)
-        self.assertIsInstance(encrypted_secret, str)
+        """Test encrypting data using FernetEncryptor"""
+        data = "my_secret"
+        encrypted_data = self.encryptor.encrypt(data)
+        self.assertIsInstance(encrypted_data, str)
 
     def test_decrypt(self):
-        """test decrypting a secret"""
-        encrypted_secret = "VGVzdA==VGVzdA==VGVzdA=="
-        decrypted_secret = decrypt(encrypted_secret)
-        self.assertIsInstance(decrypted_secret, str)
-
-
-class TestExamples(unittest.TestCase):
-    def test_misc(self):
-        """various example usage tests"""
-        key = get_encryption_key()
-
-        # encrypt a secret
-        secret = "my_super_secret_password"
-        encrypted = encrypt_data(secret, key)
-        self.assertEqual(type(encrypted), dict)
-
-        # example usage
-        compact_data = compact_store(encrypted)
-        self.assertEqual(type(compact_data), str)
-
-        reconstructed_data = compact_load(compact_data)
-        self.assertEqual(encrypted, reconstructed_data)
-
-        # decrypt using reconstructed data
-        decrypted = decrypt_data(reconstructed_data, key)
-        self.assertEqual(secret, decrypted.decode())
+        """Test encrypting and decrypting data"""
+        data = "my_secret"
+        encrypted_data = self.encryptor.encrypt(data)
+        decrypted_data = self.encryptor.decrypt(encrypted_data)
+        self.assertEqual(decrypted_data, "my_secret")
 
 
 if __name__ == "__main__":

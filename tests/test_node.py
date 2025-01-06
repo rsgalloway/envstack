@@ -42,7 +42,7 @@ from hashlib import md5
 
 import yaml
 
-from envstack.encrypt import KEY_VAR_NAME, encrypt
+from envstack.encrypt import AESGCMEncryptor, Base64Encryptor, FernetEncryptor
 from envstack.env import Source
 from envstack.node import (
     Base64Node,
@@ -113,23 +113,30 @@ class TestEncryptedNode(unittest.TestCase):
         self.assertIsInstance(result, yaml.ScalarNode)
         self.assertEqual(result.tag, EncryptedNode.yaml_tag)
 
-    def test_resolve_invalid_key(self):
-        """test the EncryptedNode resolve method with an invalid key"""
-        os.environ[KEY_VAR_NAME] = "invalid_key"
+    def test_resolve_fail(self):
+        """test the EncryptedNode resolve method with different keys"""
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
         value = "super_secret_password"
-        encrypted = encrypt(value)
+        encrypted = AESGCMEncryptor().encrypt(value)
         node = EncryptedNode.from_yaml(
             None, yaml.ScalarNode(EncryptedNode.yaml_tag, encrypted)
         )
-        self.assertEqual(node.value, encrypted)
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jBADsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
         resolved = node.resolve()
         self.assertEqual(resolved, "")
 
+    def test_resolve_invalid_key(self):
+        """test the EncryptedNode resolve method with an invalid key"""
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "invalid"
+        value = "super_secret_password"
+        with self.assertRaises(ValueError):
+            AESGCMEncryptor().encrypt(value)
+
     def test_resolve_success(self):
         """test the EncryptedNode resolve method with a valid key"""
-        os.environ[KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
         value = "super_secret_password"
-        encrypted = encrypt(value)
+        encrypted = AESGCMEncryptor().encrypt(value)
         node = EncryptedNode.from_yaml(
             None, yaml.ScalarNode(EncryptedNode.yaml_tag, encrypted)
         )
@@ -208,12 +215,12 @@ class TestSecretsEnv(unittest.TestCase):
     def setUp(self):
         """set up the test environment"""
         self.root = tempfile.mkdtemp()
-        os.environ[KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
 
     def tearDown(self):
         """tear down the test environment"""
         shutil.rmtree(self.root)
-        del os.environ[KEY_VAR_NAME]
+        del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
 
     def test_encrypted_nodes(self):
         """test loading and dumping encrypted nodes"""

@@ -40,72 +40,199 @@ import secrets
 from base64 import b64decode, b64encode
 
 import cryptography.exceptions
+from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives import padding
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 from envstack.logger import log
 
-# environment variable to store the encryption key
-KEY_VAR_NAME = "SYMMETRIC_KEY"
+
+class Base64Encryptor(object):
+    """Encrypt and decrypt secrets using base64 encoding."""
+
+    def __init__(self):
+        super().__init__()
+
+    def encrypt(self, data: str):
+        """Encrypt a secret using base64 encoding."""
+        return b64encode(data.encode()).decode()
+
+    def decrypt(self, data: str):
+        """Decrypt a secret using base64 encoding."""
+        return b64decode(data).decode()
 
 
-def get_encryption_key(var_name: str = KEY_VAR_NAME, env: dict = os.environ):
-    """
-    Load or generate the encryption key. Store in environment variable.
-    By default, this function looks for base64 key in the ${SYMMETRIC_KEY}
-    environment variable. If not found, generates a new 256-bit key and stores
-    it in the environment.
+class FernetEncryptor(object):
+    """Encrypt and decrypt secrets using Fernet symmetric encryption."""
 
-    :param var_name: The environment variable to use for the key.
-    :param env: The environment to use.
-    :return: 256-bit encryption key.
-    """
-    key_env = env.get(var_name)
-    if key_env:
-        return b64decode(key_env)
-    else:
-        key = secrets.token_bytes(32)  # 32 bytes = 256 bits
-        # load_environ iterates over env, so we can't modify it in the loop:
-        # RuntimeError: dictionary changed size during iteration
-        # env[var_name] = b64encode(key).decode()
-        os.environ[var_name] = b64encode(key).decode()
-        log.info(f"set {var_name}: {b64encode(key).decode()}")
-        return key
+    KEY_VAR_NAME = "FERNET_KEY"
+
+    def __init__(self, key: str = None, env: dict = os.environ):
+        if key:
+            self.key = Fernet(key)
+        else:
+            self.key = self.get_key(env)
+
+    def get_key(self, env: dict = os.environ):
+        """Load or generate the encryption key and store in ${FERNET_KEY}.
+
+        By default, this function looks for base64 key in `env`. If not found,
+        it generates a new 256-bit key and stores it in os.environ.
+
+        :param env: The environment to look for a key.
+        :return: encryption key.
+        """
+        key = env.get(self.KEY_VAR_NAME)
+        if key:
+            return Fernet(key)
+        else:
+            key = Fernet.generate_key()
+            # load_environ iterates over env, so we can't modify it in the loop:
+            # RuntimeError: dictionary changed size during iteration
+            # env[var_name] = b64encode(key).decode()
+            os.environ[self.KEY_VAR_NAME] = key.decode()
+            log.info(f"set {self.KEY_VAR_NAME}: {key.decode()}")
+            return Fernet(key)
+
+    def encrypt(self, data: str):
+        """Encrypt a secret using Fernet.
+
+        :param data: The secret to encrypt.
+        :return: Base64-encoded binary blob.
+        """
+        results = ""
+        try:
+            results = self.key.encrypt(data.encode()).decode()
+        except InvalidToken:
+            log.error("invalid encryption key")
+        except Exception as e:
+            log.error("unhandled exception: %s", e)
+        finally:
+            return results
+
+    def decrypt(self, data: str):
+        """Decrypt a secret using Fernet.
+
+        :param data: Base64-encoded binary blob.
+        :return: The decrypted secret.
+        """
+        results = ""
+        try:
+            results = self.key.decrypt(data.encode()).decode()
+        except InvalidToken:
+            log.error("invalid encryption key")
+        except Exception as e:
+            log.error("unhandled exception: %s", e)
+        finally:
+            return results
 
 
-def encrypt_data(secret: str, key: str):
-    """Encrypt a secret using AES-GCM.
+class AESGCMEncryptor(object):
+    """Encrypt and decrypt secrets using AES-GCM symmetric encryption."""
 
-    :param secret: The secret to encrypt.
-    :param key: The encryption key.
-    :return: Dictionary containing nonce, ciphertext, and tag.
-    """
-    nonce = os.urandom(12)  # GCM requires a 12-byte nonce
-    cipher = Cipher(algorithms.AES(key), modes.GCM(nonce))
-    encryptor = cipher.encryptor()
-    padded_data = pad_data(secret)
-    ciphertext = encryptor.update(padded_data) + encryptor.finalize()
-    return {
-        "nonce": b64encode(nonce).decode(),
-        "ciphertext": b64encode(ciphertext).decode(),
-        "tag": b64encode(encryptor.tag).decode(),
-    }
+    KEY_VAR_NAME = "SYMMETRIC_KEY"
 
+    def __init__(self, key: str = None, env: dict = os.environ):
+        if key:
+            self.key = key
+        else:
+            self.key = self.get_key(env)
 
-def decrypt_data(encrypted_data: dict, key: str):
-    """Decrypt a secret using AES-GCM.
+    def get_key(self, env: dict = os.environ):
+        """Load or generate the encryption key and store in ${SYMMETRIC_KEY}.
 
-    :param encrypted_data: Dictionary containing nonce, ciphertext, and tag.
-    :param key: The encryption key.
-    :returns: The decrypted secret.
-    """
-    nonce = b64decode(encrypted_data["nonce"])
-    ciphertext = b64decode(encrypted_data["ciphertext"])
-    tag = b64decode(encrypted_data["tag"])
-    cipher = Cipher(algorithms.AES(key), modes.GCM(nonce, tag))
-    decryptor = cipher.decryptor()
-    padded_data = decryptor.update(ciphertext) + decryptor.finalize()
-    return unpad_data(padded_data)
+        By default, this function looks for base64 key in `env`. If not found,
+        it generates a new 256-bit key and stores it in os.environ.
+
+        :param env: The environment to use.
+        :return: 256-bit encryption key.
+        """
+        key = env.get(self.KEY_VAR_NAME)
+        if key:
+            try:
+                return b64decode(key)
+            except binascii.Error as e:
+                raise ValueError("invalid base64 encoding: %s" % e)
+        else:
+            key = secrets.token_bytes(32)  # 32 bytes = 256 bits
+            # load_environ iterates over env, so we can't modify it in the loop:
+            # RuntimeError: dictionary changed size during iteration
+            # env[var_name] = b64encode(key).decode()
+            os.environ[self.KEY_VAR_NAME] = b64encode(key).decode()
+            log.info(f"set {self.KEY_VAR_NAME}: {b64encode(key).decode()}")
+            return key
+
+    def encrypt_data(self, secret: str):
+        """Encrypt a secret using AES-GCM.
+
+        :param secret: The secret to encrypt.
+        :param key: The encryption key.
+        :return: Dictionary containing nonce, ciphertext, and tag.
+        """
+        nonce = os.urandom(12)  # GCM requires a 12-byte nonce
+        cipher = Cipher(algorithms.AES(self.key), modes.GCM(nonce))
+        encryptor = cipher.encryptor()
+        padded_data = pad_data(secret)
+        ciphertext = encryptor.update(padded_data) + encryptor.finalize()
+        return {
+            "nonce": b64encode(nonce).decode(),
+            "ciphertext": b64encode(ciphertext).decode(),
+            "tag": b64encode(encryptor.tag).decode(),
+        }
+
+    def decrypt_data(self, encrypted_data: dict):
+        """Decrypt a secret using AES-GCM.
+
+        :param encrypted_data: Dictionary containing nonce, ciphertext, and tag.
+        :param key: The encryption key.
+        :returns: The decrypted secret.
+        """
+        nonce = b64decode(encrypted_data["nonce"])
+        ciphertext = b64decode(encrypted_data["ciphertext"])
+        tag = b64decode(encrypted_data["tag"])
+        cipher = Cipher(algorithms.AES(self.key), modes.GCM(nonce, tag))
+        decryptor = cipher.decryptor()
+        padded_data = decryptor.update(ciphertext) + decryptor.finalize()
+        return unpad_data(padded_data)
+
+    def encrypt(self, secret: str):
+        """Convenience function to encrypt a secret using AES-GCM.
+
+        :param secret: The secret to encrypt.
+        :returns: Base64-encoded binary blob.
+        """
+        results = ""
+        try:
+            encrypted_data = self.encrypt_data(secret)
+            results = compact_store(encrypted_data)
+        except binascii.Error as e:
+            log.error("invalid base64 encoding: %s", e)
+        except cryptography.exceptions.InvalidTag as e:
+            log.error("invalid encryption key")
+        except Exception as e:
+            log.error("unhandled exception: %s", e)
+        finally:
+            return results
+
+    def decrypt(self, data: str):
+        """Convenience function to decrypt a secret using AES-GCM.
+
+        :param data: Base64-encoded binary blob.
+        :returns: The decrypted secret.
+        """
+        results = ""
+        try:
+            encrypted_data = compact_load(data)
+            decrypted = self.decrypt_data(encrypted_data)
+            results = decrypted.decode()
+        except binascii.Error as e:
+            log.error("invalid base64 encoding: %s", e)
+        except cryptography.exceptions.InvalidTag as e:
+            log.error("invalid encryption key")
+        except Exception as e:
+            log.error("unhandled exception: %s", e)
+        finally:
+            return results
 
 
 def pad_data(data: dict):
@@ -134,7 +261,6 @@ def compact_store(encrypted_data: dict):
     :param encrypted_data: Dictionary containing nonce, ciphertext, and tag.
     :returns: Base64-encoded binary blob.
     """
-
     # convert all parts to binary (bytes) if they are in base64
     nonce = base64.b64decode(encrypted_data["nonce"])
     ciphertext = base64.b64decode(encrypted_data["ciphertext"])
@@ -150,7 +276,6 @@ def compact_load(compact_data: str):
     :param compact_data: Base64-encoded binary blob.
     :returns: Dictionary containing nonce, ciphertext, and tag.
     """
-
     # decode the base64-encoded string
     binary_data = base64.b64decode(compact_data)
 
@@ -169,51 +294,3 @@ def compact_load(compact_data: str):
         "ciphertext": base64.b64encode(ciphertext).decode(),
         "tag": base64.b64encode(tag).decode(),
     }
-
-
-def encrypt(secret: str):
-    """Convenience function to encrypt a secret using AES-GCM.
-
-    :param secret: The secret to encrypt.
-    :returns: Base64-encoded binary blob.
-    """
-
-    results = ""
-
-    try:
-        key = get_encryption_key()
-        encrypted_data = encrypt_data(secret, key)
-        results = compact_store(encrypted_data)
-    except binascii.Error as e:
-        log.error("invalid base64 encoding: %s", e)
-    except cryptography.exceptions.InvalidTag as e:
-        log.error("invalid encryption key")
-    except Exception as e:
-        log.error("unhandled exception: %s", e)
-    finally:
-        return results
-
-
-def decrypt(data: str, env: dict = os.environ):
-    """Convenience function to decrypt a secret using AES-GCM.
-
-    :param data: Base64-encoded binary blob.
-    :env: The environment to use for the encryption key.
-    :returns: The decrypted secret.
-    """
-
-    results = ""
-
-    try:
-        key = get_encryption_key(env=env)
-        encrypted_data = compact_load(data)
-        decrypted = decrypt_data(encrypted_data, key)
-        results = decrypted.decode()
-    except binascii.Error as e:
-        log.error("invalid base64 encoding: %s", e)
-    except cryptography.exceptions.InvalidTag as e:
-        log.error("invalid encryption key")
-    except Exception as e:
-        log.error("unhandled exception: %s", e)
-    finally:
-        return results
