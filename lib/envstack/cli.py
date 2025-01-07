@@ -159,7 +159,7 @@ def main():
                 load_environ(args.namespace, platform=args.platform)
             )
             keys = args.resolve or resolved.keys()
-            for key in sorted(keys):
+            for key in sorted(str(k) for k in keys):
                 val = resolved.get(key)
                 print(f"{key}={val}")
         elif args.trace is not None:
