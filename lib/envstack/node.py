@@ -266,12 +266,21 @@ class CustomDumper(yaml.SafeDumper):
         return node
 
 
+def add_custom_node_type(node_type):
+    """Add custom node type to yaml. Node type must be a subclass of BaseNode,
+    with local implementation of from_yaml and to_yaml methods, and definition
+    of yaml_tag.
+
+    :param node_type: Custom node class.
+    """
+
+    try:
+        yaml.SafeLoader.add_constructor(node_type.yaml_tag, node_type.from_yaml)
+        yaml.SafeDumper.add_representer(node_type, node_type.to_yaml)
+    except Exception as e:
+        print(f"error adding custom node type {node_type}: {e}")
+
+
 # add custom constructors and representers
-yaml.SafeLoader.add_constructor(Base64Node.yaml_tag, Base64Node.from_yaml)
-yaml.SafeDumper.add_representer(Base64Node, Base64Node.to_yaml)
-yaml.SafeLoader.add_constructor(EncryptedNode.yaml_tag, EncryptedNode.from_yaml)
-yaml.SafeDumper.add_representer(EncryptedNode, EncryptedNode.to_yaml)
-yaml.SafeLoader.add_constructor(FernetNode.yaml_tag, FernetNode.from_yaml)
-yaml.SafeDumper.add_representer(FernetNode, FernetNode.to_yaml)
-yaml.SafeLoader.add_constructor(MD5Node.yaml_tag, MD5Node.from_yaml)
-yaml.SafeDumper.add_representer(MD5Node, MD5Node.to_yaml)
+for node in [Base64Node, EncryptedNode, FernetNode, MD5Node]:
+    add_custom_node_type(node)
