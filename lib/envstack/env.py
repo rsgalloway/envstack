@@ -38,6 +38,8 @@ import re
 import string
 from pathlib import Path
 
+import yaml  # noqa
+
 from envstack import config, logger, path, util
 from envstack.exceptions import *
 
@@ -605,14 +607,14 @@ def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
     # save environment to restore later using envstack.revert()
     save()
 
-    # clear old sys.path values
+    # clear old sys.path values from PYTHONPATH
     util.clear_sys_path()
 
     # load the stack and update the environment
     env = resolve_environ(load_environ(name, ignore_missing=ignore_missing))
     os.environ.update(util.encode(env))
 
-    # update sys.path from PYTHONPATH
+    # update sys.path from resolved PYTHONPATH
     util.load_sys_path()
 
 
@@ -665,7 +667,7 @@ def load_environ(
         name = [config.DEFAULT_NAMESPACE]
 
     # TODO: do we need to add a revert here?
-    #revert()
+    # revert()
 
     # create the environment to be returned
     env = Env()
