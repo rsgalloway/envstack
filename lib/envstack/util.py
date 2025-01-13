@@ -37,9 +37,10 @@ import glob
 import os
 import re
 import sys
-import yaml
 from ast import literal_eval
 from collections import OrderedDict
+
+import yaml
 
 from envstack import config
 from envstack.exceptions import CyclicalReference
