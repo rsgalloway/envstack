@@ -342,9 +342,19 @@ class TestIssues(unittest.TestCase):
         """Tests issue #36 with init and yaml import."""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
+
+        # clear sys path to simulate no yaml module
         sys.path = []
-        envstack.init("dev")
-        import yaml
+
+        # init the dev environment
+        try:
+            envstack.init("dev")
+            import yaml
+            success = yaml is not None
+        except ImportError:
+            success = False
+
+        self.assertTrue(success)
         self.assertTrue("yaml" in sys.modules)
         self.assertTrue(len(sys.path) > 0)
 
