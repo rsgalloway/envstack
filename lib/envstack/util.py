@@ -33,9 +33,12 @@ __doc__ = """
 Contains common utility functions and classes.
 """
 
+import glob
 import os
 import re
 import sys
+import yaml
+from ast import literal_eval
 from collections import OrderedDict
 
 from envstack import config
@@ -295,8 +298,6 @@ def safe_eval(value: str):
     :returns: evaluated value.
     """
     try:
-        from ast import literal_eval
-
         eval_func = literal_eval
     except ImportError:
         # warning: security issue
@@ -318,8 +319,6 @@ def get_stacks():
     """
     Returns a list of all stack names found in the environment paths.
     """
-    import glob
-
     paths = get_paths_from_var("ENVPATH")
     stacks = set()
 
@@ -382,9 +381,6 @@ def validate_yaml(file_path: str):
 
     :param file_path: Path to the YAML file to validate.
     """
-
-    from envstack.node import yaml
-
     required_keys = {"all", "darwin", "linux", "windows"}
 
     try:
