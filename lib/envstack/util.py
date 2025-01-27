@@ -482,8 +482,9 @@ def partition_platform_data(data):
     :returns: platform partitioned dictionary.
     """
 
+    # make sure the "all" key is present, where platform agnostic values go
     if "all" not in data:
-        raise ValueError("missing 'all' key in data")
+        data["all"] = {}
 
     # platforms of interest (darwin, linux, windows)
     # platforms = [k for k in data.keys() if k not in ("all", "include")]
