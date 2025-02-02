@@ -41,6 +41,7 @@ from envstack import __version__, config
 from envstack.env import (
     bake_environ,
     clear,
+    encrypt_environ,
     export,
     load_environ,
     resolve_environ,
@@ -84,14 +85,25 @@ def parse_args():
         help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
     parser.add_argument(
-        "--bake",
+        "-o",
+        "--out",
         metavar="FILENAME",
-        help="bake the env stack to a single file",
+        help="write the env stack to a new stack file",
+    )
+    parser.add_argument(
+        "--bake",
+        action="store_true",
+        help="bake the env stack to a single env stack",
     )
     parser.add_argument(
         "--clear",
         action="store_true",
         help="generate unset commands for %s" % config.SHELL,
+    )
+    parser.add_argument(
+        "--encrypt",
+        action="store_true",
+        help="encrypt one or more environment variables",
     )
     parser.add_argument(
         "--export",
@@ -152,8 +164,13 @@ def main():
     try:
         if command:
             return run_command(command, args.namespace)
-        elif args.bake:
-            bake_environ(args.namespace, args.bake)
+        elif args.encrypt:
+            env = encrypt_environ(args.namespace, filename=args.out)
+            if not args.out:
+                for key in env:
+                    print(f"{key}={env[key]}")
+        elif args.out:
+            bake_environ(args.namespace, filename=args.out)
         elif args.resolve is not None:
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)

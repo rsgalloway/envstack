@@ -483,6 +483,37 @@ def clear(
     return exp
 
 
+def encrypt_environ(
+    name: str = config.DEFAULT_NAMESPACE,
+    scope: str = None,
+    filename: str = None,
+):
+    """Encrypts all values in a given env stack.
+
+    :param name: stack namespace.
+    :param scope: environment scope (default: cwd).
+    :param filename: path to save the encrypted environment.
+    :returns: encrypted environment.
+    """
+
+    from envstack.node import Base64Node, FernetNode
+
+    env = load_environ(name, scope=scope)
+    encrypted_env = Env()
+
+    for key, value in env.items():
+        encrypted_env[key] = Base64Node(value)
+
+    # TODO: iterate over env sources and partition data
+    if filename:
+        outfile = Source(filename)
+        # outfile.data = util.partition_platform_data(encrypted_env)
+        outfile.data["all"] = encrypted_env
+        outfile.write()
+
+    return encrypted_env
+
+
 def export(
     name: str = config.DEFAULT_NAMESPACE,
     shell: str = config.SHELL,
@@ -622,7 +653,7 @@ def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
     util.load_sys_path()
 
 
-def bake_environ(name: str, filename: str = None):
+def bake_environ(name: str, filename: str = None, scope: str = None):
     """Bakes a given env stack into a single source .env file.
 
         $ envstack <name> --bake <filename>
@@ -630,7 +661,7 @@ def bake_environ(name: str, filename: str = None):
     :param name: stack namespace.
     :param filename: path to save the baked environment.
     """
-    env = load_environ(name)
+    env = load_environ(name, scope=scope)
 
     # create a new source file
     outfile = Source(filename)
@@ -642,9 +673,6 @@ def bake_environ(name: str, filename: str = None):
                 outfile.data.setdefault(key, {}).update(value)
             else:
                 outfile.data[key] = value
-
-    # clear includes because data is baked
-    outfile.data["include"] = []
 
     # write the baked environment to the file
     outfile.write()
@@ -660,6 +688,12 @@ def resolve_environ(env: dict, key: str = None):
     """
     resolved = Env()
 
+    # TODO: encrypted variables do not fully resolve, e.g.
+    #   DEPLOY_ROOT: !base64 JHtST09UfS8ke0VOVn0=
+    # resolves to original string value:
+    #   DEPLOY_ROOT=${ROOT}/${ENV}
+    # not the fully resolved, expanded value:
+    #   DEPLOY_ROOT=/mnt/pipe/prod
     if key:
         resolved[key] = util.evaluate_modifiers(env.get(key), env)
 
