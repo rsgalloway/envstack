@@ -445,17 +445,20 @@ def dump_yaml(file_path: str, data: dict, unquote: bool = True):
     partitioned_data = partition_platform_data(data)
 
     # write the platform partidioned data to the env file,
-    # add a shebang line to make it executable and add the includes
+    # add shebang to make it executable
     with open(file_path, "w") as file:
         file.write("#!/usr/bin/env envstack\n")
         if data.get("include"):
             file.write(f"include: {data['include']}\n")
+        else:
+            file.write(f"include: []\n")
+        if "include" in partitioned_data:
             del partitioned_data["include"]
         yaml.dump(
             partitioned_data,
             file,
             Dumper=CustomDumper,
-            sort_keys=False,
+            sort_keys=True,
             default_flow_style=False,
         )
 
@@ -508,7 +511,7 @@ def partition_platform_data(data):
                 common_keys.append(key)
 
     # build a new all dict for common items
-    new_all = {}
+    new_all = {"<<": "*all"}  # avoids syntax errors when no vars are present
     for k in common_keys:
         if k in data["all"]:
             new_all[k] = data["all"][k]
