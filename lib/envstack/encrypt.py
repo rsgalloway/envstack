@@ -65,7 +65,7 @@ class Base64Encryptor(object):
 class FernetEncryptor(object):
     """Encrypt and decrypt secrets using Fernet symmetric encryption."""
 
-    KEY_VAR_NAME = "FERNET_KEY"
+    KEY_VAR_NAME = "ENVSTACK_FERNET_KEY"
 
     def __init__(self, key: str = None, env: dict = os.environ):
         if key:
@@ -74,7 +74,7 @@ class FernetEncryptor(object):
             self.key = self.get_key(env)
 
     def get_key(self, env: dict = os.environ):
-        """Load or generate the encryption key and store in ${FERNET_KEY}.
+        """Load or generate the encryption key and store in ${ENVSTACK_FERNET_KEY}.
 
         By default, this function looks for base64 key in `env`. If not found,
         it generates a new 256-bit key and stores it in os.environ.
@@ -130,7 +130,7 @@ class FernetEncryptor(object):
 class AESGCMEncryptor(object):
     """Encrypt and decrypt secrets using AES-GCM symmetric encryption."""
 
-    KEY_VAR_NAME = "SYMMETRIC_KEY"
+    KEY_VAR_NAME = "ENVSTACK_SYMMETRIC_KEY"
 
     def __init__(self, key: str = None, env: dict = os.environ):
         if key:
@@ -139,7 +139,7 @@ class AESGCMEncryptor(object):
             self.key = self.get_key(env)
 
     def get_key(self, env: dict = os.environ):
-        """Load or generate the encryption key and store in ${SYMMETRIC_KEY}.
+        """Load or generate the encryption key and store in ${ENVSTACK_SYMMETRIC_KEY}.
 
         By default, this function looks for base64 key in `env`. If not found,
         it generates a new 256-bit key and stores it in os.environ.
