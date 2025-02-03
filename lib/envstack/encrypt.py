@@ -55,11 +55,11 @@ class Base64Encryptor(object):
 
     def encrypt(self, data: str):
         """Encrypt a secret using base64 encoding."""
-        return b64encode(data.encode()).decode()
+        return b64encode(str(data).encode()).decode()
 
     def decrypt(self, data: str):
         """Decrypt a secret using base64 encoding."""
-        return b64decode(data).decode()
+        return b64decode(str(data)).decode()
 
 
 class FernetEncryptor(object):

@@ -41,6 +41,7 @@ from pathlib import Path
 import yaml  # noqa
 
 from envstack import config, logger, path, util
+from envstack.node import Base64Node
 from envstack.exceptions import *
 
 # value delimiter pattern (splits values by os.pathsep)
@@ -116,6 +117,10 @@ class Source(object):
         if self.path and not self.data:
             self.data = load_file(self.path)
         return self.data.get(platform, self.data.get("all", {}))
+
+    def namespace(self):
+        """Returns the namespace of the source file."""
+        return os.path.basename(self.path).split(".")[0]
 
     def write(self, filepath: str = None):
         """Writes the source data to the .env file."""
@@ -483,35 +488,65 @@ def clear(
     return exp
 
 
-def encrypt_environ(
+def bake_environ(
     name: str = config.DEFAULT_NAMESPACE,
     scope: str = None,
+    depth: int = 0,
     filename: str = None,
+    encrypt: bool = False,
 ):
-    """Encrypts all values in a given env stack.
+    """Bakes a given env stack into a single source .env file.
+
+        $ envstack <name> --bake <filename>
 
     :param name: stack namespace.
     :param scope: environment scope (default: cwd).
-    :param filename: path to save the encrypted environment.
-    :returns: encrypted environment.
+    :depth: depth of the environment sources to bake.
+    :param filename: path to save the baked environment.
+    :param encrypt: encrypt the environment.
     """
 
-    from envstack.node import Base64Node, FernetNode
-
     env = load_environ(name, scope=scope)
-    encrypted_env = Env()
 
-    for key, value in env.items():
-        encrypted_env[key] = Base64Node(value)
+    if not env.sources:
+        logger.log.warning("No sources found for %s" % name)
+        return env
 
-    # TODO: iterate over env sources and partition data
+    # init the encrypted environment and load the last N sources
+    baked_env = Env()
+    for source in env.sources[-depth:]:
+        baked_env.load_source(source)
+
+    # create a new source file
+    outfile = Source(filename)
+
+    # TODO: do not encrypt already encrypted values and VARs
+    def get_nodeclass(value):
+        """Returns the node class to use for a given value."""
+        if encrypt:
+            return Base64Node
+        return value.__class__
+
+    # merge the sources into the outfile
+    for source in baked_env.sources:
+        for key, value in source.data.items():
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    nodeclass = get_nodeclass(v)
+                    outfile.data.setdefault(key, {})[k] = nodeclass(v)
+            else:
+                nodeclass = get_nodeclass(value)
+                outfile.data[key] = nodeclass(value)
+
+    # clear includes if environment stack is fully baked
+    if depth == 0:
+        outfile.data["include"] = []
+
+    # write the baked environment to the file
     if filename:
-        outfile = Source(filename)
-        # outfile.data = util.partition_platform_data(encrypted_env)
-        outfile.data["all"] = encrypted_env
         outfile.write()
 
-    return encrypted_env
+    return baked_env
 
 
 def export(
@@ -651,31 +686,6 @@ def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
 
     # update sys.path from resolved PYTHONPATH
     util.load_sys_path()
-
-
-def bake_environ(name: str, filename: str = None, scope: str = None):
-    """Bakes a given env stack into a single source .env file.
-
-        $ envstack <name> --bake <filename>
-
-    :param name: stack namespace.
-    :param filename: path to save the baked environment.
-    """
-    env = load_environ(name, scope=scope)
-
-    # create a new source file
-    outfile = Source(filename)
-
-    # merge the sources into the outfile
-    for source in env.sources:
-        for key, value in source.data.items():
-            if isinstance(value, dict):
-                outfile.data.setdefault(key, {}).update(value)
-            else:
-                outfile.data[key] = value
-
-    # write the baked environment to the file
-    outfile.write()
 
 
 def resolve_environ(env: dict, key: str = None):

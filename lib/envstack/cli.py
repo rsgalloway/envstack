@@ -41,7 +41,6 @@ from envstack import __version__, config
 from envstack.env import (
     bake_environ,
     clear,
-    encrypt_environ,
     export,
     load_environ,
     resolve_environ,
@@ -164,13 +163,8 @@ def main():
     try:
         if command:
             return run_command(command, args.namespace)
-        elif args.encrypt:
-            env = encrypt_environ(args.namespace, filename=args.out)
-            if not args.out:
-                for key in env:
-                    print(f"{key}={env[key]}")
         elif args.out:
-            bake_environ(args.namespace, filename=args.out)
+            bake_environ(args.namespace, filename=args.out, encrypt=args.encrypt)
         elif args.resolve is not None:
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
