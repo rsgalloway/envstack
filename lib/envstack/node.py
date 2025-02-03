@@ -87,6 +87,11 @@ class Base64Node(BaseNode):
         super().__init__(value)
         self.original_value = None
 
+    def __eq__(self, other):
+        if isinstance(other, Base64Node):
+            return self.value == other.value
+        return False
+
     @classmethod
     def from_yaml(cls, loader, node):
         """Returns a new Base64Node instance."""
