@@ -198,51 +198,32 @@ envstack repo](https://github.com/rsgalloway/envstack/tree/master/env).
 To create a blank environment stack, create a new envstack file and declare some
 variables.
 
-Create a new stack file called "foobar.env" and make it executable (note: at
-least one VAR needs to be defined under all):
+```bash
+$ envstack foobar -o foobar.env
+```
 
-#### foobar.env
+Add the `${FOO}` and `${BAR}` env vars to the foobar.env environment stack file:
 
 ```yaml
 #!/usr/bin/env envstack
-
-all: &default
+all: &all
   FOO: bar
   BAR: ${FOO}
 darwin:
-  <<: *default
+  <<: *all
 linux:
-  <<: *default
+  <<: *all
 windows:
-  <<: *default
+  <<: *all
 ```
 
-Make it executable
-
-```bash
-$ chmod +x ./foobar.env
-```
-
-To see the resolved environment for the `foobar` stack, run:
-
-```bash
-$ envstack foobar
-FOO=bar
-BAR=$FOO
-```
-
-or execute it directly:
-
-```bash
-$ ./foobar.env
-```
-
-To see resolved values:
+Get the resolved environment for the `foobar` stack:
 
 ```bash
 $ ./foobar.env -r
-FOO=bar
 BAR=bar
+FOO=bar
+STACK=foobar
 ```
 
 #### More Details
@@ -251,20 +232,17 @@ Variables can be platform specific:
 
 ```yaml
 darwin:
-  <<: *default
   HELLO: olleh
 linux:
-  <<: *default
   HELLO: world
 windows:
-  <<: *default
   HELLO: goodbye
 ```
 
 Variables can reference other variables:
 
 ```yaml
-all: &default
+all: &all
   FOO: ${BAR}
   BAR: ${BAZ}
   BAZ: ${BIZ}
@@ -416,7 +394,7 @@ environment stack that sets a value for `${PYEXE}`:
 
 #### hello.env
 ```yaml
-all: &default
+all: &all
   PYEXE: /usr/bin/python
 ```
 

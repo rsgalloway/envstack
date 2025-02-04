@@ -495,22 +495,18 @@ def bake_environ(
     filename: str = None,
     encrypt: bool = False,
 ):
-    """Bakes a given env stack into a single source .env file.
+    """Bakes one or more environment stacks into a single source .env file.
 
-        $ envstack <name> --bake <filename>
+        $ envstack [STACK] -o <filename>
 
     :param name: stack namespace.
     :param scope: environment scope (default: cwd).
-    :depth: depth of the environment sources to bake.
+    :param depth: depth of source files to incldue (default: all).
     :param filename: path to save the baked environment.
-    :param encrypt: encrypt the environment.
+    :param encrypt: encrypt the values.
     """
 
     env = load_environ(name, scope=scope)
-
-    if not env.sources:
-        logger.log.warning("No sources found for %s" % name)
-        return env
 
     # init the encrypted environment and load the last N sources
     baked_env = Env()
