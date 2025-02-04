@@ -92,7 +92,7 @@ class Source(object):
         return f'<Source "{self.path}">'
 
     def __str__(self):
-        return self.path
+        return str(self.path)
 
     def exists(self):
         """Returns True if the .env file exists"""
@@ -506,17 +506,19 @@ def bake_environ(
     :param encrypt: encrypt the values.
     """
 
-    env = load_environ(name, scope=scope)
+    # ensure stack name is a list
+    if isinstance(name, str):
+        name = [name]
 
-    # init the encrypted environment and load the last N sources
-    baked_env = Env()
-    for source in env.sources[-depth:]:
-        baked_env.load_source(source)
+    # load the sources for the given stack(s)
+    sources = get_sources(*name, scope=scope, ignore_missing=True)
 
-    # create a new source file
-    outfile = Source(filename)
+    # create a baked source
+    baked = Source(filename)
 
-    # TODO: do not encrypt already encrypted values and VARs
+    # TODO:
+    # - support more encryption node types
+    # - do not encrypt already encrypted values and VARs
     def get_nodeclass(value):
         """Returns the node class to use for a given value."""
         if encrypt:
@@ -524,23 +526,27 @@ def bake_environ(
         return value.__class__
 
     # merge the sources into the outfile
-    for source in baked_env.sources:
+    for source in sources[-depth:]:
         for key, value in source.data.items():
             if isinstance(value, dict):
                 for k, v in value.items():
                     nodeclass = get_nodeclass(v)
-                    outfile.data.setdefault(key, {})[k] = nodeclass(v)
+                    baked.data.setdefault(key, {})[k] = nodeclass(v)
             else:
                 nodeclass = get_nodeclass(value)
-                outfile.data[key] = nodeclass(value)
+                baked.data[key] = nodeclass(value)
 
     # clear includes if environment stack is fully baked
     if depth == 0:
-        outfile.data["include"] = []
+        baked.data["include"] = []
 
     # write the baked environment to the file
     if filename:
-        outfile.write()
+        baked.write()
+
+    # create the baked environment
+    baked_env = Env()
+    baked_env.update(baked.load())
 
     return baked_env
 
