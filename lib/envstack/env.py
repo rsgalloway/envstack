@@ -41,7 +41,7 @@ from pathlib import Path
 import yaml  # noqa
 
 from envstack import config, logger, path, util
-from envstack.node import Base64Node
+from envstack.node import EncryptedNode
 from envstack.exceptions import *
 
 # value delimiter pattern (splits values by os.pathsep)
@@ -516,13 +516,11 @@ def bake_environ(
     # create a baked source
     baked = Source(filename)
 
-    # TODO:
-    # - support more encryption node types
-    # - do not encrypt already encrypted values and VARs
+    # TODO: do not encrypt already encrypted values and VARs
     def get_nodeclass(value):
         """Returns the node class to use for a given value."""
         if encrypt:
-            return Base64Node
+            return EncryptedNode
         return value.__class__
 
     # merge the sources into the outfile

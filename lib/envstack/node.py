@@ -35,11 +35,11 @@ Contains custom yaml constructor classes and functions.
 
 import hashlib
 import os
-import re
 import string
 
 import yaml
 
+from envstack.logger import log
 from envstack.encrypt import AESGCMEncryptor, Base64Encryptor, FernetEncryptor
 
 
@@ -66,6 +66,11 @@ class BaseNode(yaml.YAMLObject):
     def __str__(self):
         return str(self.value)
 
+    def __eq__(self, other):
+        if isinstance(other, self.__class__):
+            return self.value == other.value
+        return False
+
     @classmethod
     def from_yaml(cls, loader, node):
         return cls(node.value)
@@ -74,7 +79,8 @@ class BaseNode(yaml.YAMLObject):
     def to_yaml(cls, dumper, node):
         return dumper.represent_scalar(cls.yaml_tag, node.value)
 
-    def resolve(self):
+    def resolve(self, env: dict = os.environ):
+        """Returns the decoded value."""
         return self.value
 
 
@@ -86,11 +92,6 @@ class Base64Node(BaseNode):
     def __init__(self, value):
         super().__init__(value)
         self.original_value = None
-
-    def __eq__(self, other):
-        if isinstance(other, Base64Node):
-            return self.value == other.value
-        return False
 
     @classmethod
     def from_yaml(cls, loader, node):
@@ -108,7 +109,7 @@ class Base64Node(BaseNode):
             encrypted = Base64Encryptor().encrypt(node.value)
         return dumper.represent_scalar(cls.yaml_tag, encrypted)
 
-    def resolve(self):
+    def resolve(self, env: dict = os.environ):
         """Returns base64 decoded value."""
         return Base64Encryptor().decrypt(self.value)
 
@@ -131,7 +132,7 @@ class MD5Node(BaseNode):
 
 
 class EncryptedNode(BaseNode):
-    """Default encrypted string node using AES-GCM."""
+    """Default encryption node. Supports multiple encryption schemes."""
 
     yaml_tag = "!encrypt"
 
@@ -140,8 +141,63 @@ class EncryptedNode(BaseNode):
         self.original_value = None
 
     @classmethod
+    def encryptor(cls, env: dict = os.environ):
+        """Returns the encryptor class based on the environment."""
+        if env.get(AESGCMEncryptor.KEY_VAR_NAME):
+            return AESGCMEncryptor(env=env)
+        elif env.get(FernetEncryptor.KEY_VAR_NAME):
+            return FernetEncryptor(env=env)
+        else:
+            return Base64Encryptor()
+
+    @classmethod
     def from_yaml(cls, loader, node):
         """Returns a new EncryptedNode instance."""
+        node = cls(node.value)
+        node.original_value = node.value
+        return node
+
+    @classmethod
+    def to_yaml(cls, dumper, node):
+        """Encrypts the value before writing (do not double encrypt)."""
+        if node.value == node.original_value:
+            encrypted = node.value
+        else:
+            encrypted = cls.encryptor().encrypt(node.value)
+        return dumper.represent_scalar(cls.yaml_tag, encrypted)
+
+    def resolve(self, env: dict = os.environ):
+        """Returns the decrypted value."""
+        try:
+            # update the environment with the encryption keys
+            env.update(
+                {
+                    AESGCMEncryptor.KEY_VAR_NAME: os.getenv(
+                        AESGCMEncryptor.KEY_VAR_NAME
+                    ),
+                    FernetEncryptor.KEY_VAR_NAME: os.getenv(
+                        FernetEncryptor.KEY_VAR_NAME
+                    ),
+                }
+            )
+            return self.encryptor(env=env).decrypt(self.value)
+        except Exception as err:
+            log.warning("Failed to decrypt value, check encryption keys.")
+            return self.value
+
+
+class AESGCMNode(BaseNode):
+    """Default encrypted node using AES-GCM."""
+
+    yaml_tag = "!aesgcm"
+
+    def __init__(self, value):
+        super().__init__(value)
+        self.original_value = None
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        """Returns a new AESGCMNode instance."""
         node = cls(node.value)
         node.original_value = node.value
         return node
@@ -161,7 +217,7 @@ class EncryptedNode(BaseNode):
 
 
 class FernetNode(BaseNode):
-    """Default encrypted string node using Fernet."""
+    """Default encrypted node using Fernet."""
 
     yaml_tag = "!fernet"
 
@@ -201,6 +257,14 @@ class CustomLoader(yaml.SafeLoader):
             try:
                 if node.tag == Base64Node.yaml_tag:
                     mapping[key] = Base64Node(value)
+                elif node.tag == EncryptedNode.yaml_tag:
+                    mapping[key] = EncryptedNode(value)
+                elif node.tag == AESGCMNode.yaml_tag:
+                    mapping[key] = AESGCMNode(value)
+                elif node.tag == FernetNode.yaml_tag:
+                    mapping[key] = FernetNode(value)
+                elif node.tag == MD5Node.yaml_tag:
+                    mapping[key] = MD5Node(value)
                 else:
                     mapping[key] = Template(value)
             except Exception as e:
@@ -287,5 +351,11 @@ def add_custom_node_type(node_type):
 
 
 # add custom constructors and representers
-for node in [Base64Node, EncryptedNode, FernetNode, MD5Node]:
+for node in [
+    AESGCMNode,
+    Base64Node,
+    EncryptedNode,
+    FernetNode,
+    MD5Node,
+]:
     add_custom_node_type(node)

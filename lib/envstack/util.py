@@ -44,7 +44,7 @@ import yaml
 
 from envstack import config
 from envstack.exceptions import CyclicalReference
-from envstack.node import Base64Node, EncryptedNode, FernetNode
+from envstack.node import AESGCMNode, Base64Node, EncryptedNode, FernetNode
 
 # value for unresolvable variables
 null = ""
@@ -247,8 +247,11 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         raise CyclicalReference(f"Cyclical reference detected in {expression}")
 
     # evaluate other data types
+    # TODO: find a better way to evaluate other data types
     except TypeError:
-        if isinstance(expression, Base64Node):
+        if isinstance(expression, AESGCMNode):
+            result = expression.resolve(env=environ)
+        elif isinstance(expression, Base64Node):
             result = expression.resolve()
         elif isinstance(expression, EncryptedNode):
             result = expression.resolve(env=environ)
