@@ -333,6 +333,44 @@ class TestBakeEnviron(unittest.TestCase):
         self.bake_environ(["dev", "thing"])
 
 
+class TestEncryptEnviron(unittest.TestCase):
+    def setUp(self):
+        self.root = create_test_root()
+        self.envpath = os.path.join(self.root, "prod", "env")
+        os.environ["ENVPATH"] = self.envpath
+        os.environ["INTERACTIVE"] = "0"
+
+    def tearDown(self):
+        envstack.revert()
+        shutil.rmtree(self.root)
+
+    def bake_environ(self, stack_name):
+        """Bakes a given stack and compares values."""
+        from envstack.env import bake_environ, load_environ
+        from envstack.node import EncryptedNode
+
+        default = load_environ(stack_name)
+        envstack.revert()  # FIXME: revert should not be required
+        encrypted = bake_environ(stack_name, encrypt=True)
+
+        # make sure environment sources are different
+        self.assertNotEqual(default.sources, encrypted.sources)
+        self.assertTrue(len(default) > 0)
+        self.assertTrue(len(encrypted) > 0)
+
+        for key, value in default.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            encrypted_value = encrypted[key]
+            self.assertTrue(isinstance(encrypted_value, EncryptedNode))
+            self.assertEqual(encrypted_value.value, value)
+            self.assertEqual(encrypted_value.resolve(), value)
+
+    def test_bake_default(self):
+        """Tests baking the default environment."""
+        self.bake_environ("default")
+
+
 class TestIssues(unittest.TestCase):
     def setUp(self):
         self.root = create_test_root()
