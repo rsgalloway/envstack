@@ -279,7 +279,7 @@ class TestBakeEnviron(unittest.TestCase):
         shutil.rmtree(self.root)
 
     def bake_environ(self, stack_name):
-        """Bakes the environment and compares the default and baked values."""
+        """Bakes a given stack and compares values."""
         from envstack.env import bake_environ, load_environ
 
         default = load_environ(stack_name)
@@ -328,7 +328,7 @@ class TestBakeEnviron(unittest.TestCase):
         """Tests baking the thing environment."""
         self.bake_environ("thing")
 
-    def test_bake_dev_test_thing(self):
+    def test_bake_dev_thing(self):
         """Tests baking the multiple environments."""
         self.bake_environ(["dev", "thing"])
 
