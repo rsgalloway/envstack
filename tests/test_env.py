@@ -267,21 +267,70 @@ class TestInit(unittest.TestCase):
         self.assertEqual(diffs["unchanged"], original_env)
 
 
-# TODO: test baked environment, and encrypted environment resolution
-# $ envstack -o encrypted.env --encrypt
-# >>> import envstack, os
-# >>> envstack.init("encrypted")
-# >>> os.getenv("HELLO")
-# '${HELLO:=world}'
-# class TestBakeEnviron(unittest.TestCase):
-#     def setUp(self):
-#         self.root = create_test_root()
-#         os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
-#         os.environ["INTERACTIVE"] = "0"
+class TestBakeEnviron(unittest.TestCase):
+    def setUp(self):
+        self.root = create_test_root()
+        self.envpath = os.path.join(self.root, "prod", "env")
+        os.environ["ENVPATH"] = self.envpath
+        os.environ["INTERACTIVE"] = "0"
 
-#     def tearDown(self):
-#         envstack.revert()
-#         shutil.rmtree(self.root)
+    def tearDown(self):
+        envstack.revert()
+        shutil.rmtree(self.root)
+
+    def bake_environ(self, stack_name):
+        """Bakes the environment and compares the default and baked values."""
+        from envstack.env import bake_environ, load_environ
+
+        default = load_environ(stack_name)
+        envstack.revert()  # FIXME: revert should not be required
+        baked = bake_environ(stack_name)
+
+        # make sure environment sources are different
+        self.assertNotEqual(default.sources, baked.sources)
+        self.assertTrue(len(default) > 0)
+        self.assertTrue(len(baked) > 0)
+
+        for key, value in default.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            self.assertEqual(baked[key], value)
+
+        # bake to a file, reload and compare
+        envstack.revert()  # FIXME: revert should not be required
+        baked_file = os.path.join(self.envpath, "baked.env")
+        baked2 = bake_environ(stack_name, filename=baked_file)
+        self.assertTrue(os.path.exists(baked_file))
+
+        envstack.revert()  # FIXME: revert should not be required
+        baked2_reloaded = load_environ("baked")
+        self.assertNotEqual(baked2.sources, baked2_reloaded.sources)
+        self.assertTrue(len(baked2) > 0)
+        self.assertTrue(len(baked2_reloaded) > 0)
+
+        for key, value in baked.items():
+            if key == "STACK":
+                continue
+            self.assertEqual(baked2_reloaded[key], value)
+
+        if os.path.exists(baked_file):
+            os.unlink(baked_file)
+
+    def test_bake_default(self):
+        """Tests baking the default environment."""
+        self.bake_environ("default")
+
+    def test_bake_dev(self):
+        """Tests baking the dev environment."""
+        self.bake_environ("dev")
+
+    def test_bake_thing(self):
+        """Tests baking the thing environment."""
+        self.bake_environ("thing")
+
+    def test_bake_dev_test_thing(self):
+        """Tests baking the multiple environments."""
+        self.bake_environ(["dev", "thing"])
 
 
 class TestIssues(unittest.TestCase):
@@ -353,6 +402,17 @@ class TestIssues(unittest.TestCase):
             os.path.join(self.root, "dev", "env", "hello.env"),
         ]
         self.assertEqual(paths, expected_paths)
+
+    # def test_issue_34(self):
+    #     """Tests issue #34 load_environ(sources)."""
+    #     from envstack.env import load_environ, Source
+    #     envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+    #     os.environ["ENVPATH"] = envpath
+    #     source = Source("/env/notfound.env")
+    #     env1 = load_environ(["hello"])
+    #     envstack.revert()  # FIXME: revert should not be required
+    #     env2 = load_environ(["hello"], sources=[source])
+    #     self.assertNotEqual(env1, env2)
 
     def test_issue_36(self):
         """Tests issue #36 with init and yaml import."""
