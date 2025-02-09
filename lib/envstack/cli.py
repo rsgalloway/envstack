@@ -83,25 +83,25 @@ def parse_args():
         default=[config.DEFAULT_NAMESPACE],
         help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
-    out_group = parser.add_argument_group("out")
-    out_group.add_argument(
+    bake_group = parser.add_argument_group("bake options")
+    bake_group.add_argument(
         "-o",
         "--out",
         metavar="FILENAME",
         help="write the env stack to a new stack file",
     )
-    out_group.add_argument(
+    bake_group.add_argument(
         "--depth",
         type=int,
         default=0,
         help="depth of environment stack to bake",
     )
-    out_group.add_argument(
+    bake_group.add_argument(
         "--encrypt",
         action="store_true",
-        help="encrypt the output",
+        help="encrypt the baked environment values",
     )
-    parser.add_argument_group(out_group)
+    parser.add_argument_group(bake_group)
     parser.add_argument(
         "--clear",
         action="store_true",
