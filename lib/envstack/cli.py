@@ -83,26 +83,29 @@ def parse_args():
         default=[config.DEFAULT_NAMESPACE],
         help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
-    parser.add_argument(
+    out_group = parser.add_argument_group("out")
+    out_group.add_argument(
         "-o",
         "--out",
         metavar="FILENAME",
         help="write the env stack to a new stack file",
     )
-    parser.add_argument(
-        "--bake",
-        action="store_true",
-        help="bake the env stack to a single env stack",
+    out_group.add_argument(
+        "--depth",
+        type=int,
+        default=0,
+        help="depth of environment stack to bake",
     )
+    out_group.add_argument(
+        "--encrypt",
+        action="store_true",
+        help="encrypt the output",
+    )
+    parser.add_argument_group(out_group)
     parser.add_argument(
         "--clear",
         action="store_true",
         help="generate unset commands for %s" % config.SHELL,
-    )
-    parser.add_argument(
-        "--encrypt",
-        action="store_true",
-        help="encrypt one or more environment variables",
     )
     parser.add_argument(
         "--export",
@@ -164,7 +167,12 @@ def main():
         if command:
             return run_command(command, args.namespace)
         elif args.out:
-            bake_environ(args.namespace, filename=args.out, encrypt=args.encrypt)
+            bake_environ(
+                args.namespace,
+                filename=args.out,
+                depth=args.depth or 0,
+                encrypt=args.encrypt,
+            )
         elif args.resolve is not None:
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
