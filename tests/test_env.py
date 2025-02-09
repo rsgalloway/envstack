@@ -267,6 +267,23 @@ class TestInit(unittest.TestCase):
         self.assertEqual(diffs["unchanged"], original_env)
 
 
+# TODO: test baked environment, and encrypted environment resolution
+# $ envstack -o encrypted.env --encrypt
+# >>> import envstack, os
+# >>> envstack.init("encrypted")
+# >>> os.getenv("HELLO")
+# '${HELLO:=world}'
+# class TestBakeEnviron(unittest.TestCase):
+#     def setUp(self):
+#         self.root = create_test_root()
+#         os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
+#         os.environ["INTERACTIVE"] = "0"
+
+#     def tearDown(self):
+#         envstack.revert()
+#         shutil.rmtree(self.root)
+
+
 class TestIssues(unittest.TestCase):
     def setUp(self):
         self.root = create_test_root()

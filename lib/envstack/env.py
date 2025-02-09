@@ -432,6 +432,7 @@ def clear(
     :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
+    # load the envrinment for the given stack and get list of sources
     env = load_environ(name, scope=scope)
 
     # track the environment variables to export
@@ -439,12 +440,13 @@ def clear(
 
     # restricted environment variables
     restricted = [
+        "ENVPATH",
+        "LD_LIBRARY_PATH",
         "PATH",
         "PYTHONPATH",
-        "ENVPATH",
+        "PROMPT",
         "PS1",
         "PWD",
-        "PROMPT",
     ]
 
     # get the name of the shell
@@ -505,7 +507,6 @@ def bake_environ(
     :param filename: path to save the baked environment.
     :param encrypt: encrypt the values.
     """
-
     # load the envrinment for the given stack and get list of sources
     env = load_environ(name, scope=scope)
     sources = env.sources
@@ -516,8 +517,7 @@ def bake_environ(
     # create a baked source
     baked = Source(filename)
 
-    # TODO: do not encrypt already encrypted values and {VAR} values
-    def get_nodeclass(value):
+    def get_node_class(value):
         """Returns the node class to use for a given value."""
         if encrypt:
             return EncryptedNode
@@ -528,11 +528,11 @@ def bake_environ(
         for key, value in source.data.items():
             if isinstance(value, dict):
                 for k, v in value.items():
-                    nodeclass = get_nodeclass(v)
-                    baked.data.setdefault(key, {})[k] = nodeclass(v)
+                    node_class = get_node_class(v)
+                    baked.data.setdefault(key, {})[k] = node_class(v)
             else:
-                nodeclass = get_nodeclass(value)
-                baked.data[key] = nodeclass(value)
+                node_class = get_node_class(value)
+                baked.data[key] = node_class(value)
 
     # clear includes if environment stack is fully baked
     if depth <= 0:
@@ -698,12 +698,6 @@ def resolve_environ(env: dict, key: str = None):
     """
     resolved = Env()
 
-    # TODO: encrypted values do not resolve, e.g.
-    # $ envstack -o encrypted.env --encrypt
-    # >>> import envstack, os
-    # >>> envstack.init("encrypted")
-    # >>> os.getenv("HELLO")
-    # '${HELLO:=world}'
     if key:
         value = env.get(key)
         resolved[key] = util.evaluate_modifiers(value, env)
