@@ -41,7 +41,7 @@ from pathlib import Path
 import yaml  # noqa
 
 from envstack import config, logger, path, util
-from envstack.node import EncryptedNode
+from envstack.node import custom_node_types, EncryptedNode
 from envstack.exceptions import *
 
 # value delimiter pattern (splits values by os.pathsep)
@@ -698,18 +698,28 @@ def resolve_environ(env: dict, key: str = None):
     """
     resolved = Env()
 
-    # TODO: encrypted variables do not fully resolve, e.g.
-    #   DEPLOY_ROOT: !base64 JHtST09UfS8ke0VOVn0=
-    # resolves to original string value:
-    #   DEPLOY_ROOT=${ROOT}/${ENV}
-    # not the fully resolved, expanded value:
-    #   DEPLOY_ROOT=/mnt/pipe/prod
+    # TODO: encrypted values do not resolve, e.g.
+    # $ envstack -o encrypted.env --encrypt
+    # >>> import envstack, os
+    # >>> envstack.init("encrypted")
+    # >>> os.getenv("HELLO")
+    # '${HELLO:=world}'
     if key:
-        resolved[key] = util.evaluate_modifiers(env.get(key), env)
+        value = env.get(key)
+        resolved[key] = util.evaluate_modifiers(value, env)
 
     else:
-        for key, value in env.copy().items():
-            evaluated_value = util.evaluate_modifiers(value, env)
+        # copy env to avoid modifying the original
+        env_copy = env.copy()
+
+        # resolve custom node types (e.g. EncryptedNode)
+        for key, value in env_copy.items():
+            if type(value) in custom_node_types:
+                env_copy[key] = value.resolve(env=env_copy)
+
+        # recursive variable resolution pass
+        for key, value in env_copy.items():
+            evaluated_value = util.evaluate_modifiers(value, environ=env_copy)
             resolved[key] = evaluated_value
 
     return resolved

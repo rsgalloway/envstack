@@ -252,7 +252,7 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         if isinstance(expression, AESGCMNode):
             result = expression.resolve(env=environ)
         elif isinstance(expression, Base64Node):
-            result = expression.resolve()
+            result = expression.resolve(env=environ)
         elif isinstance(expression, EncryptedNode):
             result = expression.resolve(env=environ)
         elif isinstance(expression, FernetNode):

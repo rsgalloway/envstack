@@ -347,11 +347,12 @@ def add_custom_node_type(node_type):
 
 
 # add custom constructors and representers
-for node in [
-    AESGCMNode,
+custom_node_types = [
     Base64Node,
     EncryptedNode,
+    AESGCMNode,
     FernetNode,
     MD5Node,
-]:
+]
+for node in custom_node_types:
     add_custom_node_type(node)
