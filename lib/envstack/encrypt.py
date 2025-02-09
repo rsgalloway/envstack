@@ -59,7 +59,11 @@ class Base64Encryptor(object):
 
     def decrypt(self, data: str):
         """Decrypt a secret using base64 encoding."""
-        return b64decode(str(data)).decode()
+        try:
+            return b64decode(data).decode()
+        except UnicodeDecodeError as e:
+            log.debug("invalid base64 encoding: %s", e)
+            return data
 
 
 class FernetEncryptor(object):
@@ -101,12 +105,16 @@ class FernetEncryptor(object):
         :return: Base64-encoded binary blob.
         """
         results = ""
+        if not data:
+            return results
         try:
-            results = self.key.encrypt(data.encode()).decode()
+            results = self.key.encrypt(str(data).encode()).decode()
         except InvalidToken:
             log.error("invalid encryption key")
+        except ValueError as e:
+            log.error("invalid value: %s", data)
         except Exception as e:
-            log.error("unhandled exception: %s", e)
+            log.error("unhandled error: %s", e)
         finally:
             return results
 
@@ -117,12 +125,16 @@ class FernetEncryptor(object):
         :return: The decrypted secret.
         """
         results = ""
+        if not data:
+            return results
         try:
-            results = self.key.decrypt(data.encode()).decode()
+            results = self.key.decrypt(str(data).encode()).decode()
         except InvalidToken:
             log.error("invalid encryption key")
+        except ValueError as e:
+            log.error("invalid value: %s", data)
         except Exception as e:
-            log.error("unhandled exception: %s", e)
+            log.error("unhandled error: %s", e)
         finally:
             return results
 
@@ -195,22 +207,26 @@ class AESGCMEncryptor(object):
         padded_data = decryptor.update(ciphertext) + decryptor.finalize()
         return unpad_data(padded_data)
 
-    def encrypt(self, secret: str):
+    def encrypt(self, data: str):
         """Convenience function to encrypt a secret using AES-GCM.
 
-        :param secret: The secret to encrypt.
+        :param data: The data to encrypt.
         :returns: Base64-encoded binary blob.
         """
         results = ""
+        if not data:
+            return results
         try:
-            encrypted_data = self.encrypt_data(secret)
+            encrypted_data = self.encrypt_data(data)
             results = compact_store(encrypted_data)
         except binascii.Error as e:
             log.error("invalid base64 encoding: %s", e)
         except cryptography.exceptions.InvalidTag as e:
             log.error("invalid encryption key")
+        except ValueError as e:
+            log.error("invalid value: %s", data)
         except Exception as e:
-            log.error("unhandled exception: %s", e)
+            log.error("unhandled error: %s", e)
         finally:
             return results
 
@@ -221,6 +237,8 @@ class AESGCMEncryptor(object):
         :returns: The decrypted secret.
         """
         results = ""
+        if not data:
+            return results
         try:
             encrypted_data = compact_load(data)
             decrypted = self.decrypt_data(encrypted_data)
@@ -229,20 +247,22 @@ class AESGCMEncryptor(object):
             log.error("invalid base64 encoding: %s", e)
         except cryptography.exceptions.InvalidTag as e:
             log.error("invalid encryption key")
+        except ValueError as e:
+            log.error("invalid value: %s", data)
         except Exception as e:
-            log.error("unhandled exception: %s", e)
+            log.error("unhandled error: %s", e)
         finally:
             return results
 
 
-def pad_data(data: dict):
+def pad_data(data: str):
     """Pad data to be block-aligned for AES encryption.
 
     :param data: The data to pad.
     :returns: The padded data.
     """
     padder = padding.PKCS7(algorithms.AES.block_size).padder()
-    return padder.update(data.encode()) + padder.finalize()
+    return padder.update(str(data).encode()) + padder.finalize()
 
 
 def unpad_data(data: dict):
