@@ -506,17 +506,17 @@ def bake_environ(
     :param encrypt: encrypt the values.
     """
 
-    # ensure stack name is a list
-    if isinstance(name, str):
-        name = [name]
+    # load the envrinment for the given stack and get list of sources
+    env = load_environ(name, scope=scope)
+    sources = env.sources
 
-    # load the sources for the given stack(s)
-    sources = get_sources(*name, scope=scope, ignore_missing=True)
+    # resolve internal environment so that encryption keys are found
+    os.environ.update(util.encode(resolve_environ(env)))
 
     # create a baked source
     baked = Source(filename)
 
-    # TODO: do not encrypt already encrypted values and VARs
+    # TODO: do not encrypt already encrypted values and {VAR} values
     def get_nodeclass(value):
         """Returns the node class to use for a given value."""
         if encrypt:
@@ -535,7 +535,7 @@ def bake_environ(
                 baked.data[key] = nodeclass(value)
 
     # clear includes if environment stack is fully baked
-    if depth == 0:
+    if depth <= 0:
         baked.data["include"] = []
 
     # write the baked environment to the file
@@ -708,7 +708,7 @@ def resolve_environ(env: dict, key: str = None):
         resolved[key] = util.evaluate_modifiers(env.get(key), env)
 
     else:
-        for key, value in env.items():
+        for key, value in env.copy().items():
             evaluated_value = util.evaluate_modifiers(value, env)
             resolved[key] = evaluated_value
 
@@ -747,9 +747,6 @@ def load_environ(
     if not name:
         name = [config.DEFAULT_NAMESPACE]
 
-    # TODO: do we need to add a revert here?
-    # revert()
-
     # create the environment to be returned
     env = Env()
     env.set_namespace(name)
@@ -777,9 +774,9 @@ def load_environ(
             env.load_source(source, platform=platform)
             seen_paths.append(source.path)
 
-        # resolve ${ENVPATH}
+        # resolve ${ENVPATH} (don't let it be None)
         # TODO: use expandvars() instead of resolve_environ()
-        envpath = resolve_environ(env, "ENVPATH").get("ENVPATH", envpath)
+        envpath = resolve_environ(env, "ENVPATH").get("ENVPATH", envpath) or envpath
 
     # add the stack name to the environment
     if not env.get("STACK"):
