@@ -35,6 +35,7 @@ Contains custom yaml constructor classes and functions.
 
 import hashlib
 import os
+import re
 import string
 
 import yaml
