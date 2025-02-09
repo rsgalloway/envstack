@@ -344,8 +344,8 @@ class TestEncryptEnviron(unittest.TestCase):
         envstack.revert()
         shutil.rmtree(self.root)
 
-    def bake_environ(self, stack_name):
-        """Bakes a given stack and compares values."""
+    def encrypt_environ(self, stack_name):
+        """Encrypts a given stack and reoslves and checks values."""
         from envstack.env import bake_environ, load_environ
         from envstack.node import EncryptedNode
 
@@ -363,12 +363,25 @@ class TestEncryptEnviron(unittest.TestCase):
                 continue
             encrypted_value = encrypted[key]
             self.assertTrue(isinstance(encrypted_value, EncryptedNode))
+            self.assertEqual(encrypted_value.original_value, None)
+            # self.assertNotEqual(encrypted_value.original_value, value)  # from_yaml only
             self.assertEqual(encrypted_value.value, value)
-            self.assertEqual(encrypted_value.resolve(), value)
+            # the 'encrypted' env may contain encryption keys
+            self.assertEqual(encrypted_value.resolve(env=encrypted), value)
 
-    def test_bake_default(self):
-        """Tests baking the default environment."""
-        self.bake_environ("default")
+        # TODO: bake to a file, reload and compare
+
+    def test_encrypt_default(self):
+        """Tests encrypting the default environment."""
+        self.encrypt_environ("default")
+
+    def test_encrypt_dev(self):
+        """Tests encrypting the dev environment."""
+        self.encrypt_environ("dev")
+
+    def test_encrypt_thing(self):
+        """Tests encrypting the thing environment."""
+        self.encrypt_environ("thing")
 
 
 class TestIssues(unittest.TestCase):
@@ -464,6 +477,7 @@ class TestIssues(unittest.TestCase):
         try:
             envstack.init("dev")
             import yaml
+
             success = yaml is not None
         except ImportError:
             success = False

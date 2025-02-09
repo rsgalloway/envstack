@@ -42,6 +42,7 @@ from envstack.encrypt import (
     FernetEncryptor,
 )
 
+
 class TestBase64Encryptor(unittest.TestCase):
     def setUp(self):
         self.encryptor = Base64Encryptor()

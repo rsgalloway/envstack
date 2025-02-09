@@ -115,13 +115,17 @@ class TestEncryptedNode(unittest.TestCase):
 
     def test_resolve_fail(self):
         """test the EncryptedNode resolve method with different keys"""
-        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        os.environ[
+            AESGCMEncryptor.KEY_VAR_NAME
+        ] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
         value = "super_secret_password"
         encrypted = AESGCMEncryptor().encrypt(value)
         node = EncryptedNode.from_yaml(
             None, yaml.ScalarNode(EncryptedNode.yaml_tag, encrypted)
         )
-        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jBADsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        os.environ[
+            AESGCMEncryptor.KEY_VAR_NAME
+        ] = "jBADsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
         resolved = node.resolve()
         self.assertEqual(resolved, "")
 
@@ -134,7 +138,9 @@ class TestEncryptedNode(unittest.TestCase):
 
     def test_resolve_success(self):
         """test the EncryptedNode resolve method with a valid key"""
-        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        os.environ[
+            AESGCMEncryptor.KEY_VAR_NAME
+        ] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
         value = "super_secret_password"
         encrypted = AESGCMEncryptor().encrypt(value)
         node = EncryptedNode.from_yaml(
@@ -215,7 +221,9 @@ class TestSecretsEnv(unittest.TestCase):
     def setUp(self):
         """set up the test environment"""
         self.root = tempfile.mkdtemp()
-        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        os.environ[
+            AESGCMEncryptor.KEY_VAR_NAME
+        ] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
 
     def tearDown(self):
         """tear down the test environment"""
