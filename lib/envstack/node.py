@@ -105,6 +105,8 @@ class Base64Node(BaseNode):
         """Encrypts the value before writing to yaml."""
         if node.value == node.original_value:
             encrypted = node.value
+        elif isinstance(node.value, cls):
+            encrypted = str(node.value)
         else:
             encrypted = Base64Encryptor().encrypt(node.value)
         return dumper.represent_scalar(cls.yaml_tag, encrypted)
@@ -162,6 +164,8 @@ class EncryptedNode(BaseNode):
         """Encrypts the value before writing (do not double encrypt)."""
         if node.value == node.original_value:
             encrypted = node.value
+        elif isinstance(node.value, cls):
+            encrypted = str(node.value)
         else:
             encrypted = cls.encryptor().encrypt(node.value)
         return dumper.represent_scalar(cls.yaml_tag, encrypted)
@@ -169,20 +173,8 @@ class EncryptedNode(BaseNode):
     def resolve(self, env: dict = os.environ):
         """Returns the decrypted value."""
         try:
-            # update the environment with the encryption keys
-            env.update(
-                {
-                    AESGCMEncryptor.KEY_VAR_NAME: os.getenv(
-                        AESGCMEncryptor.KEY_VAR_NAME
-                    ),
-                    FernetEncryptor.KEY_VAR_NAME: os.getenv(
-                        FernetEncryptor.KEY_VAR_NAME
-                    ),
-                }
-            )
             return self.encryptor(env=env).decrypt(self.value)
         except Exception as err:
-            log.warning("Failed to decrypt value, check encryption keys.")
             return self.value
 
 
@@ -207,6 +199,8 @@ class AESGCMNode(BaseNode):
         """Encrypts the value before writing to yaml."""
         if node.value == node.original_value:
             encrypted = node.value
+        elif isinstance(node.value, cls):
+            encrypted = str(node.value)
         else:
             encrypted = AESGCMEncryptor().encrypt(node.value)
         return dumper.represent_scalar(cls.yaml_tag, encrypted)
@@ -237,6 +231,8 @@ class FernetNode(BaseNode):
         """Encrypts the value before writing to yaml."""
         if node.value == node.original_value:
             encrypted = node.value
+        elif isinstance(node.value, cls):
+            encrypted = str(node.value)
         else:
             encrypted = FernetEncryptor().encrypt(node.value)
         return dumper.represent_scalar(cls.yaml_tag, encrypted)
