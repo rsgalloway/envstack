@@ -345,7 +345,43 @@ class TestEncryptEnviron(unittest.TestCase):
         shutil.rmtree(self.root)
 
     def encrypt_environ(self, stack_name):
-        """Encrypts a given stack and reoslves and checks values."""
+        """Tests load_environ with encryption."""
+        from envstack.env import load_environ, encrypt_environ
+
+        env = load_environ(stack_name)
+        encrypted = encrypt_environ(env)
+
+        # make sure environment sources are not empty
+        self.assertTrue(len(env) > 0)
+        self.assertTrue(len(encrypted) > 0)
+
+        for key, value in env.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            encrypted_value = encrypted[key].resolve(env=env)
+            self.assertEqual(encrypted_value, value)
+
+    def load_encrypted_environ(self, stack_name):
+        """Tests load_environ with encryption."""
+        from envstack.env import load_environ
+
+        default = load_environ(stack_name, encrypt=True)
+        envstack.revert()  # FIXME: revert should not be required
+        encrypted = load_environ(stack_name, encrypt=True)
+
+        # make sure environment sources are not empty
+        self.assertTrue(len(default) > 0)
+        self.assertTrue(len(encrypted) > 0)
+
+        for key, value in default.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            encrypted_value = encrypted[key]
+            self.assertEqual(encrypted_value, value)
+
+    # TODO: bake to a file, reload and compare
+    def bake_encrypted_environ(self, stack_name):
+        """Tests bake_environ with encryption."""
         from envstack.env import bake_environ, load_environ
         from envstack.node import EncryptedNode
 
@@ -353,7 +389,7 @@ class TestEncryptEnviron(unittest.TestCase):
         envstack.revert()  # FIXME: revert should not be required
         encrypted = bake_environ(stack_name, encrypt=True)
 
-        # make sure environment sources are different
+        # make sure environment sources are different and not empty
         self.assertNotEqual(default.sources, encrypted.sources)
         self.assertTrue(len(default) > 0)
         self.assertTrue(len(encrypted) > 0)
@@ -369,18 +405,22 @@ class TestEncryptEnviron(unittest.TestCase):
             # the 'encrypted' env may contain encryption keys
             self.assertEqual(encrypted_value.resolve(env=encrypted), value)
 
-        # TODO: bake to a file, reload and compare
-
     def test_encrypt_default(self):
         """Tests encrypting the default environment."""
+        self.bake_encrypted_environ("default")
+        self.load_encrypted_environ("default")
         self.encrypt_environ("default")
 
     def test_encrypt_dev(self):
         """Tests encrypting the dev environment."""
+        self.bake_encrypted_environ("dev")
+        self.load_encrypted_environ("dev")
         self.encrypt_environ("dev")
 
     def test_encrypt_thing(self):
         """Tests encrypting the thing environment."""
+        self.bake_encrypted_environ("thing")
+        self.load_encrypted_environ("thing")
         self.encrypt_environ("thing")
 
 

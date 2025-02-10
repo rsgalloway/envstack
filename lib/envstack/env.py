@@ -41,7 +41,7 @@ from pathlib import Path
 import yaml  # noqa
 
 from envstack import config, logger, path, util
-from envstack.node import custom_node_types, EncryptedNode
+from envstack.node import custom_node_types, BaseNode, EncryptedNode
 from envstack.exceptions import *
 
 # value delimiter pattern (splits values by os.pathsep)
@@ -490,65 +490,6 @@ def clear(
     return exp
 
 
-def bake_environ(
-    name: str = config.DEFAULT_NAMESPACE,
-    scope: str = None,
-    depth: int = 0,
-    filename: str = None,
-    encrypt: bool = False,
-):
-    """Bakes one or more environment stacks into a single source .env file.
-
-        $ envstack [STACK] -o <filename>
-
-    :param name: stack namespace.
-    :param scope: environment scope (default: cwd).
-    :param depth: depth of source files to incldue (default: all).
-    :param filename: path to save the baked environment.
-    :param encrypt: encrypt the values.
-    """
-    # load the envrinment for the given stack and get list of sources
-    env = load_environ(name, scope=scope)
-    sources = env.sources
-
-    # resolve internal environment so that encryption keys are found
-    os.environ.update(util.encode(resolve_environ(env)))
-
-    # create a baked source
-    baked = Source(filename)
-
-    def get_node_class(value):
-        """Returns the node class to use for a given value."""
-        if encrypt:
-            return EncryptedNode
-        return value.__class__
-
-    # merge the sources into the outfile
-    for source in sources[-depth:]:
-        for key, value in source.data.items():
-            if isinstance(value, dict):
-                for k, v in value.items():
-                    node_class = get_node_class(v)
-                    baked.data.setdefault(key, {})[k] = node_class(v)
-            else:
-                node_class = get_node_class(value)
-                baked.data[key] = node_class(value)
-
-    # clear includes if environment stack is fully baked
-    if depth <= 0:
-        baked.data["include"] = []
-
-    # write the baked environment to the file
-    if filename:
-        baked.write()
-
-    # create the baked environment
-    baked_env = Env()
-    baked_env.update(baked.load())
-
-    return baked_env
-
-
 def export(
     name: str = config.DEFAULT_NAMESPACE,
     shell: str = config.SHELL,
@@ -688,6 +629,92 @@ def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
     util.load_sys_path()
 
 
+def bake_environ(
+    name: str = config.DEFAULT_NAMESPACE,
+    scope: str = None,
+    depth: int = 0,
+    filename: str = None,
+    encrypt: bool = False,
+):
+    """Bakes one or more environment stacks into a single source .env file.
+
+        $ envstack [STACK] -o <filename>
+
+    :param name: stack namespace.
+    :param scope: environment scope (default: cwd).
+    :param depth: depth of source files to incldue (default: all).
+    :param filename: path to save the baked environment.
+    :param encrypt: encrypt the values.
+    """
+    # load the envrinment for the given stack and get list of sources
+    env = load_environ(name, scope=scope)
+    sources = env.sources
+
+    # resolve internal environment so that encryption keys are found
+    os.environ.update(util.encode(resolve_environ(env)))
+
+    # create a baked source
+    baked = Source(filename)
+
+    def get_node_class(value):
+        """Returns the node class to use for a given value."""
+        if encrypt:
+            if type(value) in custom_node_types:
+                return value.__class__
+            else:
+                return EncryptedNode
+        return value.__class__
+
+    # merge the sources into the outfile
+    for source in sources[-depth:]:
+        for key, value in source.data.items():
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    node_class = get_node_class(v)
+                    baked.data.setdefault(key, {})[k] = node_class(v)
+            else:
+                node_class = get_node_class(value)
+                baked.data[key] = node_class(value)
+
+    # clear includes if environment stack is fully baked
+    if depth <= 0:
+        baked.data["include"] = []
+
+    # write the baked environment to the file
+    if filename:
+        baked.write()
+
+    # create the baked environment
+    baked_env = Env()
+    baked_env.update(baked.load())
+
+    return baked_env
+
+
+def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
+    """Encrypts all values in a given environment, returning a new environment.
+    Note: the values will be strs, not custom node types.
+
+    :param env: environment to encrypt.
+    :param node_class: node class to use for encryption.
+    :returns: encrypted environment.
+    """
+
+    encrypted_env = Env()
+    env_copy = env.copy()
+
+    for k, v in env_copy.items():
+        if type(v) not in custom_node_types:
+            # simulate to_yaml() method for custom node types
+            node = node_class(v)
+            node.value = node.encryptor(env=env_copy).encrypt(str(v))
+            encrypted_env[k] = node
+        else:
+            encrypted_env[k] = v
+
+    return encrypted_env
+
+
 def resolve_environ(env: dict, key: str = None):
     """Resolves all variables in a given unresolved environment, returning a
     new environment dict.
@@ -726,6 +753,7 @@ def load_environ(
     platform: str = config.PLATFORM,
     scope: str = None,
     ignore_missing: bool = config.IGNORE_MISSING,
+    encrypt: bool = False,
 ):
     """Loads env stack data for a given name. Adds "STACK" key to environment,
     and sets the value to `name`.
@@ -744,6 +772,7 @@ def load_environ(
     :param platform: name of platform (linux, darwin, windows).
     :param scope: environment scope (default: cwd).
     :param ignore_missing: ignore missing .env files.
+    :encrypt: encrypt the values using available encryption methods.
     :returns: dict of environment variables.
     """
     if type(name) == str:
@@ -785,6 +814,10 @@ def load_environ(
     # add the stack name to the environment
     if not env.get("STACK"):
         env["STACK"] = util.get_stack_name(name)
+
+    # encrypt the values in the environment last
+    if encrypt:
+        return encrypt_environ(env)
 
     return env
 

@@ -196,7 +196,9 @@ def main():
         elif args.export:
             print(export(args.namespace, config.SHELL))
         else:
-            env = load_environ(args.namespace, platform=args.platform)
+            env = load_environ(
+                args.namespace, platform=args.platform, encrypt=args.encrypt
+            )
             for k, v in sorted(env.items(), key=lambda x: str(x[0])):
                 print(f"{k}={v}")
 

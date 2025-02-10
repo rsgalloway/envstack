@@ -40,6 +40,7 @@ import string
 
 import yaml
 
+from envstack import util
 from envstack.logger import log
 from envstack.encrypt import AESGCMEncryptor, Base64Encryptor, FernetEncryptor
 
@@ -172,11 +173,16 @@ class EncryptedNode(BaseNode):
         return dumper.represent_scalar(cls.yaml_tag, encrypted)
 
     def resolve(self, env: dict = os.environ):
-        """Returns the decrypted value."""
+        """Returns the decrypted original value, preserving original type.
+
+        :param env: environment with encryption keys.
+        :return: decrypted value.
+        """
         try:
-            return self.encryptor(env=env).decrypt(self.value)
+            value = self.encryptor(env=env).decrypt(self.value)
         except Exception as err:
-            return self.value
+            value = self.value
+        return util.safe_eval(value)
 
 
 class AESGCMNode(BaseNode):

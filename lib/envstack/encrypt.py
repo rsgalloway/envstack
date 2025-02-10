@@ -112,7 +112,7 @@ class FernetEncryptor(object):
         except InvalidToken:
             log.error("invalid encryption key")
         except ValueError as e:
-            log.error("invalid value: %s", data)
+            log.error("invalid value: %s", e)
         except Exception as e:
             log.error("unhandled error: %s", e)
         finally:
@@ -132,7 +132,7 @@ class FernetEncryptor(object):
         except InvalidToken:
             log.error("invalid encryption key")
         except ValueError as e:
-            log.error("invalid value: %s", data)
+            log.error("invalid value: %s", e)
         except Exception as e:
             log.error("unhandled error: %s", e)
         finally:
@@ -224,7 +224,7 @@ class AESGCMEncryptor(object):
         except cryptography.exceptions.InvalidTag as e:
             log.error("invalid encryption key")
         except ValueError as e:
-            log.error("invalid value: %s", data)
+            log.error("invalid value: %s", e)
         except Exception as e:
             log.error("unhandled error: %s", e)
         finally:
@@ -248,7 +248,7 @@ class AESGCMEncryptor(object):
         except cryptography.exceptions.InvalidTag as e:
             log.error("invalid encryption key")
         except ValueError as e:
-            log.error("invalid value: %s", data)
+            log.error("invalid value: %s", e)
         except Exception as e:
             log.error("unhandled error: %s", e)
         finally:
