@@ -693,7 +693,8 @@ def bake_environ(
 
 def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
     """Encrypts all values in a given environment, returning a new environment.
-    Note: the values will be strs, not custom node types.
+
+        $ envstack [STACK] --encrypt
 
     :param env: environment to encrypt.
     :param node_class: node class to use for encryption.
