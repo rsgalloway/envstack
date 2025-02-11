@@ -645,6 +645,7 @@ def bake_environ(
     :param depth: depth of source files to incldue (default: all).
     :param filename: path to save the baked environment.
     :param encrypt: encrypt the values.
+    :returns: baked environment.
     """
     # load the envrinment for the given stack and get list of sources
     env = load_environ(name, scope=scope)
@@ -693,6 +694,7 @@ def bake_environ(
 
 def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
     """Encrypts all values in a given environment, returning a new environment.
+    Looks for encryption keys in the environment.
 
         $ envstack [STACK] --encrypt
 
