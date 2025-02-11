@@ -173,12 +173,9 @@ ROOT=/mnt/pipe
     def test_default_command_echo(self):
         expected_output = """/mnt/pipe/prod
 """
-        unexpected_output = """/mnt/pipe/dev
-"""
         command = "%s --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
-        self.assertNotEqual(output, unexpected_output)
 
     def test_dev(self):
         expected_output = """DEPLOY_ROOT=JHtST09UfS9kZXY=
@@ -207,12 +204,9 @@ ROOT=/mnt/pipe
     def test_dev_command_echo(self):
         expected_output = """/mnt/pipe/dev
 """
-        unexpected_output = """/mnt/pipe/prod
-"""
         command = "%s dev --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
-        self.assertNotEqual(output, unexpected_output)
 
 
 class TestResolved(unittest.TestCase):
