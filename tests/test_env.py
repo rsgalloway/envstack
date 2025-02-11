@@ -41,6 +41,7 @@ import tempfile
 
 import envstack
 from envstack.env import Env, EnvVar, Scope, Source
+from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
 from envstack.util import dict_diff
 
 
@@ -339,10 +340,16 @@ class TestEncryptEnviron(unittest.TestCase):
         self.envpath = os.path.join(self.root, "prod", "env")
         os.environ["ENVPATH"] = self.envpath
         os.environ["INTERACTIVE"] = "0"
+        # remove so we use base64 encoding by default
+        if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
+        if FernetEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[FernetEncryptor.KEY_VAR_NAME]
 
     def tearDown(self):
         envstack.revert()
-        shutil.rmtree(self.root)
+        if self.root and os.path.exists(self.root):
+            shutil.rmtree(self.root)
 
     def encrypt_environ(self, stack_name):
         """Tests load_environ with encryption."""
@@ -365,7 +372,7 @@ class TestEncryptEnviron(unittest.TestCase):
         """Tests load_environ with encryption."""
         from envstack.env import load_environ
 
-        default = load_environ(stack_name, encrypt=True)
+        default = load_environ(stack_name, encrypt=False)
         envstack.revert()  # FIXME: revert should not be required
         encrypted = load_environ(stack_name, encrypt=True)
 
@@ -377,7 +384,10 @@ class TestEncryptEnviron(unittest.TestCase):
             if key == "STACK":  # skip the stack name
                 continue
             encrypted_value = encrypted[key]
-            self.assertEqual(encrypted_value, value)
+            resolved_value = encrypted_value.resolve()
+            self.assertNotEqual(encrypted_value, resolved_value)
+            self.assertNotEqual(encrypted_value, value)
+            self.assertEqual(resolved_value, value)
 
     # TODO: bake to a file, reload and compare
     def bake_encrypted_environ(self, stack_name):

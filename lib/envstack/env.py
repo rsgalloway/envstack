@@ -652,6 +652,7 @@ def bake_environ(
     sources = env.sources
 
     # resolve internal environment so that encryption keys are found
+    # (EncryptedNode looks in os.environ by default)
     os.environ.update(util.encode(resolve_environ(env)))
 
     # create a baked source
@@ -700,17 +701,25 @@ def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
 
     :param env: environment to encrypt.
     :param node_class: node class to use for encryption.
+        Defaults to EncryptedNode, which looks for encryption keys in the
+        environment to determine the encryption method.
     :returns: encrypted environment.
     """
 
     encrypted_env = Env()
+
+    # resolve internal environment so that encryption keys are found
+    # (EncryptedNode looks in os.environ by default)
+    os.environ.update(util.encode(resolve_environ(env)))
+
+    # copy the environment to avoid modifying the original
     env_copy = env.copy()
 
     for k, v in env_copy.items():
         if type(v) not in custom_node_types:
             # simulate to_yaml() method for custom node types
             node = node_class(v)
-            node.value = node.encryptor(env=env_copy).encrypt(str(v))
+            node.value = node.encryptor().encrypt(str(v))
             encrypted_env[k] = node
         else:
             encrypted_env[k] = v

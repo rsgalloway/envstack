@@ -38,6 +38,9 @@ import shutil
 import subprocess
 import unittest
 
+import envstack
+from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
+
 from test_env import create_test_root, update_env_file
 
 
@@ -145,6 +148,14 @@ class TestEncrypt(unittest.TestCase):
         os.environ["ENVPATH"] = envpath
         os.environ["INTERACTIVE"] = "0"
         os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
+        # remove so we use base64 encoding by default
+        if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
+        if FernetEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[FernetEncryptor.KEY_VAR_NAME]
+
+    def tearDown(self):
+        envstack.revert()
 
     def test_default(self):
         expected_output = """DEPLOY_ROOT=JHtST09UfS8ke0VOVn0=
@@ -159,6 +170,20 @@ STACK=ZGVmYXVsdA==
 """
         command = "%s --encrypt" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_default_AESGCM(self):
+        """Test that the AESGCM encryption works, and resolves vars since the
+        encrypted values change every time."""
+        os.environ[
+            AESGCMEncryptor.KEY_VAR_NAME
+        ] = "jBADsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/prod
+ENV=prod
+ROOT=/mnt/pipe
+"""
+        command = "%s --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, env=os.environ, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_default_resolve(self):
