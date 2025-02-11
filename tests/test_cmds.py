@@ -42,7 +42,7 @@ from test_env import create_test_root, update_env_file
 
 
 class TestUnresolved(unittest.TestCase):
-    """Tests unresolved environment variables."""
+    """Tests unresolved environment variables from the cli."""
 
     def setUp(self):
         self.envstack_bin = os.path.join(
@@ -132,6 +132,87 @@ STACK=thing
         command = "%s thing" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
+
+
+class TestEncrypt(unittest.TestCase):
+    """Tests encrypting environment variables from the cli."""
+
+    def setUp(self):
+        self.envstack_bin = os.path.join(
+            os.path.dirname(__file__), "..", "bin", "envstack"
+        )
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
+        os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
+
+    def test_default(self):
+        expected_output = """DEPLOY_ROOT=JHtST09UfS8ke0VOVn0=
+ENV=cHJvZA==
+ENVPATH=JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
+HELLO=JHtIRUxMTzo9d29ybGR9
+LOG_LEVEL=JHtMT0dfTEVWRUw6PUlORk99
+PATH=JHtERVBMT1lfUk9PVH0vYmluOiR7UEFUSH0=
+PYTHONPATH=JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
+ROOT=L21udC9waXBl
+STACK=ZGVmYXVsdA==
+"""
+        command = "%s --encrypt" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_default_resolve(self):
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/prod
+ENV=prod
+ROOT=/mnt/pipe
+"""
+        command = "%s --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_default_command_echo(self):
+        expected_output = """/mnt/pipe/prod
+"""
+        unexpected_output = """/mnt/pipe/dev
+"""
+        command = "%s --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+        self.assertNotEqual(output, unexpected_output)
+
+    def test_dev(self):
+        expected_output = """DEPLOY_ROOT=JHtST09UfS9kZXY=
+ENV=ZGV2
+ENVPATH=JHtST09UfS9kZXYvZW52OiR7Uk9PVH0vcHJvZC9lbnY6JHtFTlZQQVRIfQ==
+HELLO=JHtIRUxMTzo9d29ybGR9
+LOG_LEVEL=REVCVUc=
+PATH=JHtST09UfS9kZXYvYmluOiR7Uk9PVH0vcHJvZC9iaW46JHtQQVRIfQ==
+PYTHONPATH=JHtST09UfS9kZXYvbGliL3B5dGhvbjoke1JPT1R9L3Byb2QvbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
+ROOT=L21udC9waXBl
+STACK=ZGV2
+"""
+        command = "%s dev --encrypt" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_dev_resolve(self):
+        expected_output = """DEPLOY_ROOT=/mnt/pipe/dev
+ENV=dev
+ROOT=/mnt/pipe
+"""
+        command = "%s dev --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_dev_command_echo(self):
+        expected_output = """/mnt/pipe/dev
+"""
+        unexpected_output = """/mnt/pipe/prod
+"""
+        command = "%s dev --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+        self.assertNotEqual(output, unexpected_output)
 
 
 class TestResolved(unittest.TestCase):
