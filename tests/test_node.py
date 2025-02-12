@@ -266,23 +266,33 @@ class TestSecretsEnv(unittest.TestCase):
         self.assertEqual(d1["PASSWORD"].value, d2["PASSWORD"].value)
 
         # make some modifications
-        s1.data["all"]["KEY"] = Base64Node("this is a secret")
-        s1.data["all"]["MD5"] = MD5Node("this is hashed")
-        s1.data["all"]["SECRET"] = EncryptedNode("super_secret_password")
-        s1.data["all"]["PASSWORD"] = FernetNode("other_password")
+        updated_value_key = "this is a secret"
+        updated_value_md5 = "this is hashed"
+        updated_value_secret = "super_secret_password"
+        updated_value_password = "other_password"
+        s1.data["all"]["KEY"] = Base64Node(updated_value_key)
+        s1.data["all"]["MD5"] = MD5Node(updated_value_md5)
+        s1.data["all"]["SECRET"] = EncryptedNode(updated_value_secret)
+        s1.data["all"]["PASSWORD"] = FernetNode(updated_value_password)
         s1.data["linux"]["ROOT"] = "/var/tmp"
         s1.write(testfile2)
 
-        # verify the modifications
+        # verify the values were updated
         s3 = Source(testfile2)
         d3 = s3.load()
         self.assertEqual(d3["ROOT"], "/var/tmp")
         self.assertTrue(isinstance(d3["KEY"], Base64Node))
+        self.assertTrue(isinstance(d3["MD5"], MD5Node))
         self.assertTrue(isinstance(d3["SECRET"], EncryptedNode))
         self.assertTrue(isinstance(d3["PASSWORD"], FernetNode))
-        self.assertEqual(d3["KEY"].resolve(), "this is a secret")
-        self.assertEqual(d3["SECRET"].resolve(), "super_secret_password")
-        self.assertEqual(d3["PASSWORD"].resolve(), "other_password")
+        self.assertNotEqual(d3["KEY"].value, updated_value_key)
+        self.assertNotEqual(d3["MD5"].value, updated_value_md5)
+        self.assertNotEqual(d3["SECRET"].value, updated_value_secret)
+        self.assertNotEqual(d3["PASSWORD"].value, updated_value_password)
+        self.assertEqual(d3["KEY"].resolve(), updated_value_key)
+        self.assertEqual(d3["MD5"].resolve(), d3["MD5"].value)  # cannot unhash
+        self.assertEqual(d3["SECRET"].resolve(), updated_value_secret)
+        self.assertEqual(d3["PASSWORD"].resolve(), updated_value_password)
 
 
 if __name__ == "__main__":
