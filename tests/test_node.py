@@ -42,13 +42,14 @@ from hashlib import md5
 
 import yaml
 
-from envstack.encrypt import AESGCMEncryptor, Base64Encryptor, FernetEncryptor
+from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
 from envstack.env import Source
 from envstack.node import (
     Base64Node,
     CustomDumper,
     CustomLoader,
     EncryptedNode,
+    FernetNode,
     MD5Node,
     Template,
 )
@@ -224,11 +225,15 @@ class TestSecretsEnv(unittest.TestCase):
         os.environ[
             AESGCMEncryptor.KEY_VAR_NAME
         ] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        os.environ[
+            FernetEncryptor.KEY_VAR_NAME
+        ] = "v4-Ry7uKSOBEXMDv9x_crBBpi0eo2WCYNAIlSB1t4VE="
 
     def tearDown(self):
         """tear down the test environment"""
         shutil.rmtree(self.root)
         del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
+        del os.environ[FernetEncryptor.KEY_VAR_NAME]
 
     def test_encrypted_nodes(self):
         """test loading and dumping encrypted nodes"""
@@ -241,10 +246,13 @@ class TestSecretsEnv(unittest.TestCase):
         d1 = s1.load()
         self.assertTrue(isinstance(d1["KEY"], Base64Node))
         self.assertTrue(isinstance(d1["SECRET"], EncryptedNode))
+        self.assertTrue(isinstance(d1["PASSWORD"], FernetNode))
         self.assertNotEqual(d1["KEY"].value, None)
         self.assertNotEqual(d1["SECRET"].value, None)
+        self.assertNotEqual(d1["PASSWORD"].value, None)
         self.assertEqual(d1["KEY"].resolve(), "This is encrypted")
         self.assertEqual(d1["SECRET"].resolve(), "my_super_secret_password")
+        self.assertEqual(d1["PASSWORD"].resolve(), "password")
         s1.write(testfile1)
 
         # duplicating the stack file should preserve the encrypted values
@@ -252,13 +260,16 @@ class TestSecretsEnv(unittest.TestCase):
         d2 = s2.load()
         self.assertTrue(isinstance(d2["KEY"], Base64Node))
         self.assertTrue(isinstance(d2["SECRET"], EncryptedNode))
+        self.assertTrue(isinstance(d2["PASSWORD"], FernetNode))
         self.assertEqual(d1["KEY"].value, d2["KEY"].value)
         self.assertEqual(d1["SECRET"].value, d2["SECRET"].value)
+        self.assertEqual(d1["PASSWORD"].value, d2["PASSWORD"].value)
 
         # make some modifications
         s1.data["all"]["KEY"] = Base64Node("this is a secret")
         s1.data["all"]["MD5"] = MD5Node("this is hashed")
         s1.data["all"]["SECRET"] = EncryptedNode("super_secret_password")
+        s1.data["all"]["PASSWORD"] = FernetNode("other_password")
         s1.data["linux"]["ROOT"] = "/var/tmp"
         s1.write(testfile2)
 
@@ -268,8 +279,10 @@ class TestSecretsEnv(unittest.TestCase):
         self.assertEqual(d3["ROOT"], "/var/tmp")
         self.assertTrue(isinstance(d3["KEY"], Base64Node))
         self.assertTrue(isinstance(d3["SECRET"], EncryptedNode))
+        self.assertTrue(isinstance(d3["PASSWORD"], FernetNode))
         self.assertEqual(d3["KEY"].resolve(), "this is a secret")
         self.assertEqual(d3["SECRET"].resolve(), "super_secret_password")
+        self.assertEqual(d3["PASSWORD"].resolve(), "other_password")
 
 
 if __name__ == "__main__":
