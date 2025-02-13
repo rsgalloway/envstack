@@ -41,7 +41,7 @@ from pathlib import Path
 import yaml  # noqa
 
 from envstack import config, logger, path, util
-from envstack.node import custom_node_types, BaseNode, EncryptedNode
+from envstack.node import custom_node_types, get_keys_from_env, BaseNode, EncryptedNode
 from envstack.exceptions import *
 
 # value delimiter pattern (splits values by os.pathsep)
@@ -652,7 +652,7 @@ def bake_environ(
     sources = env.sources
 
     # resolve internal environment so that encryption keys are found
-    # (EncryptedNode looks in os.environ by default)
+    # (encryptors looks in os.environ by default)
     os.environ.update(util.encode(resolve_environ(env)))
 
     # create a baked source
@@ -705,21 +705,21 @@ def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
         environment to determine the encryption method.
     :returns: encrypted environment.
     """
-
+    # stores the encrypted environment
     encrypted_env = Env()
-
-    # resolve internal environment so that encryption keys are found
-    # (EncryptedNode looks in os.environ by default)
-    os.environ.update(util.encode(resolve_environ(env)))
 
     # copy the environment to avoid modifying the original
     env_copy = env.copy()
 
+    # resolve internal environment and look for keys in os.environ
+    resolved_env = resolve_environ(env_copy)
+    resolved_env.update(get_keys_from_env(os.environ))
+
     for k, v in env_copy.items():
         if type(v) not in custom_node_types:
-            # simulate to_yaml() method for custom node types
+            # TODO: use to_yaml() method to serialize instead?
             node = node_class(v)
-            node.value = node.encryptor().encrypt(str(v))
+            node.value = node.encryptor(env=resolved_env).encrypt(str(v))
             encrypted_env[k] = node
         else:
             encrypted_env[k] = v
@@ -727,33 +727,29 @@ def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
     return encrypted_env
 
 
-def resolve_environ(env: dict, key: str = None):
+def resolve_environ(env: dict):
     """Resolves all variables in a given unresolved environment, returning a
     new environment dict.
 
     :param env: unresolved environment.
-    :param key: key to resolve (optional).
     :returns: resolved environment.
     """
+    # stores the resolved environment
     resolved = Env()
 
-    if key:
-        value = env.get(key)
-        resolved[key] = util.evaluate_modifiers(value, env)
+    # copy env to avoid modifying the original
+    env_copy = env.copy()
+    env_copy.update(get_keys_from_env(os.environ))
 
-    else:
-        # copy env to avoid modifying the original
-        env_copy = env.copy()
+    # decrypt custom node types
+    for key, value in env_copy.items():
+        if type(value) in custom_node_types:
+            env_copy[key] = value.resolve(env=env_copy)
 
-        # resolve custom node types (e.g. EncryptedNode)
-        for key, value in env_copy.items():
-            if type(value) in custom_node_types:
-                env_copy[key] = value.resolve(env=env_copy)
-
-        # recursive variable resolution pass
-        for key, value in env_copy.items():
-            evaluated_value = util.evaluate_modifiers(value, environ=env_copy)
-            resolved[key] = evaluated_value
+    # resolve variables after decrypting custom node types
+    for key, value in env_copy.items():
+        evaluated_value = util.evaluate_modifiers(value, environ=env_copy)
+        resolved[key] = evaluated_value
 
     return resolved
 
@@ -821,7 +817,7 @@ def load_environ(
 
         # resolve ${ENVPATH} (don't let it be None)
         # TODO: use expandvars() instead of resolve_environ()
-        envpath = resolve_environ(env, "ENVPATH").get("ENVPATH", envpath) or envpath
+        envpath = resolve_environ(env).get("ENVPATH", envpath) or envpath
 
     # add the stack name to the environment
     if not env.get("STACK"):

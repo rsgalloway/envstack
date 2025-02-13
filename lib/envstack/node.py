@@ -338,6 +338,18 @@ class CustomDumper(yaml.SafeDumper):
         return node
 
 
+def get_keys_from_env(env: dict = os.environ):
+    """Return encryption keys from the environment.
+
+    :param env: Environment dictionary.
+    """
+    keys = {}
+    for key in [AESGCMEncryptor.KEY_VAR_NAME, FernetEncryptor.KEY_VAR_NAME]:
+        if key in env:
+            keys[key] = env[key]
+    return keys
+
+
 def add_custom_node_type(node_type):
     """Add custom node type to yaml. Node type must be a subclass of BaseNode,
     with local implementation of from_yaml and to_yaml methods, and definition
