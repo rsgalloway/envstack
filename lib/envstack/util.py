@@ -391,16 +391,14 @@ def validate_yaml(file_path: str):
         with open(file_path, "r") as stream:
             data = yaml.safe_load(stream.read())
             # data = yaml.load(stream.read(), Loader=CustomLoader)
-
         if not isinstance(data, dict):
             raise yaml.YAMLError("invalid data structure")
-
         missing_keys = required_keys - data.keys()
         if missing_keys:
             raise yaml.YAMLError(f"missing keys: {', '.join(sorted(missing_keys))}")
-
         return data
-
+    except OSError as e:
+        print(e)
     except yaml.YAMLError as e:
         if hasattr(e, "problem_mark") and e.problem_mark:
             mark = e.problem_mark
