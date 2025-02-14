@@ -10,8 +10,7 @@ Environment variable management system.
 [Encryption](#encryption) |
 [Usage](#usage) |
 [Python API](#python-api) |
-[Running Commands](#running-commands) |
-[Wrappers](#wrappers)
+[Running Commands](#running-commands)
 
 
 | Feature | Description |
@@ -283,7 +282,7 @@ ROOT=L21udC9waXBl
 STACK=ZGVmYXVsdA==
 ```
 
-To use AES-GCM encryption and serialize to a `encrypted.env` file:
+To use AES-GCM encryption and serialize to an `encrypted.env` file:
 
 ```bash
 $ export ENVSTACK_SYMMETRIC_KEY=jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU=
