@@ -296,6 +296,13 @@ $ envstack encrypted -r HELLO
 HELLO=world
 ```
 
+Keys can be stored in other environment stacks, e.g. a `keys.env` stack:
+
+```bash
+$ envstack keys encrypted -r HELLO
+HELLO=world
+```
+
 ## Usage
 
 To see the unresolved environment for one or more environment stacks (values are
