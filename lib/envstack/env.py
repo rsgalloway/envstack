@@ -495,11 +495,10 @@ def export(
     shell: str = config.SHELL,
     scope: str = None,
 ):
-    """Returns shell set env commands that can be sourced to set env stack
+    """Returns shell commands that can be sourced to set environment stack
     environment variables.
 
-    List of shell names: bash, sh, tcsh, cmd, pwsh
-    (see output of config.detect_shell()).
+    Supported shells: bash, sh, tcsh, cmd, pwsh (see config.detect_shell()).
 
     :param name: stack namespace.
     :param shell: name of shell (default: current shell).
@@ -547,7 +546,7 @@ def export(
 
 
 def save():
-    """Saves the current environment for later restoration."""
+    """Caches the current environment for later restoration."""
     global saved_environ
 
     if not saved_environ:
@@ -556,8 +555,8 @@ def save():
 
 
 def revert():
-    """Reverts the environment to the saved environment. Updates sys.path using
-    paths found in PYTHONPATH.
+    """Reverts the environment to the last cached version. Updates sys.path
+    using paths found in PYTHONPATH.
 
     Initialize the default environment stack:
 
@@ -739,17 +738,19 @@ def resolve_environ(env: dict):
 
     # copy env to avoid modifying the original
     env_copy = env.copy()
-    env_copy.update(get_keys_from_env(os.environ))
+
+    # make a copy that contains the encryption keys
+    env_keys = env.copy()
+    env_keys.update(get_keys_from_env(os.environ))
 
     # decrypt custom node types
     for key, value in env_copy.items():
         if type(value) in custom_node_types:
-            env_copy[key] = value.resolve(env=env_copy)
+            env_copy[key] = value.resolve(env=env_keys)
 
     # resolve variables after decrypting custom node types
     for key, value in env_copy.items():
-        evaluated_value = util.evaluate_modifiers(value, environ=env_copy)
-        resolved[key] = evaluated_value
+        resolved[key] = util.evaluate_modifiers(value, environ=env_copy)
 
     return resolved
 
