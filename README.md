@@ -255,16 +255,21 @@ include: [default, test]
 
 ## Encryption
 
-Supported encryption algorithms include AES-GCM, Fernet, and Base64. This allows
+Supported encryption algorithms include
+[AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode),
+[Fernet](https://github.com/fernet/spec/),
+and
+[Base64](https://en.wikipedia.org/wiki/Base64). This allows
 you to securely encrypt and decrypt sensitive environment variables.
 
-Supported encryption algorithms and the environment variable keys to use:
+To use AES-GCM or Fernet, and encryption key must be found somewhere in the
+environment. No key is required for Base64 encryption (the default):
 
 | Algorithm | Key |
 |---------|-------------|
-| AES-GCM encryption | ENVSTACK_SYMMETRIC_KEY |
+| AES-GCM encryption | $ENVSTACK_SYMMETRIC_KEY |
 | Base64 | (no key required) |
-| Fernet encryption | ENVSTACK_FERNET_KEY |
+| Fernet encryption | $ENVSTACK_FERNET_KEY |
 
 If no encryption keys are found in the environment, envstack will default to
 using Base64 encryption:
