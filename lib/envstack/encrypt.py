@@ -89,6 +89,7 @@ class FernetEncryptor(object):
         key = env.get(self.KEY_VAR_NAME)
         if key:
             return Fernet(key)
+        # TODO: move this to a "create_key()" method
         else:
             key = Fernet.generate_key()
             # load_environ iterates over env, so we can't modify it in the loop:
@@ -165,6 +166,7 @@ class AESGCMEncryptor(object):
                 return b64decode(key)
             except binascii.Error as e:
                 raise ValueError("invalid base64 encoding: %s" % e)
+        # TODO: move this to a "create_key()" method
         else:
             key = secrets.token_bytes(32)  # 32 bytes = 256 bits
             # load_environ iterates over env, so we can't modify it in the loop:

@@ -352,8 +352,9 @@ class TestEncryptEnviron(unittest.TestCase):
             shutil.rmtree(self.root)
 
     def encrypt_environ(self, stack_name):
-        """Tests load_environ with encryption."""
+        """Tests load_environ with encryption (Base64 only)."""
         from envstack.env import load_environ, encrypt_environ
+        from envstack.node import EncryptedNode
 
         env = load_environ(stack_name)
         encrypted = encrypt_environ(env)
@@ -365,8 +366,11 @@ class TestEncryptEnviron(unittest.TestCase):
         for key, value in env.items():
             if key == "STACK":  # skip the stack name
                 continue
-            encrypted_value = encrypted[key].resolve(env=env)
-            self.assertEqual(encrypted_value, value)
+            encrypted_value = encrypted[key]
+            resolved_encrypted_value = encrypted_value.resolve(env=env)
+            self.assertTrue(isinstance(encrypted_value, EncryptedNode))
+            self.assertNotEqual(encrypted_value, value)
+            self.assertEqual(resolved_encrypted_value, value)
 
     def load_encrypted_environ(self, stack_name):
         """Tests load_environ with encryption."""
@@ -415,23 +419,64 @@ class TestEncryptEnviron(unittest.TestCase):
             # the 'encrypted' env may contain encryption keys
             self.assertEqual(encrypted_value.resolve(env=encrypted), value)
 
-    def test_encrypt_default(self):
+    def resolve_encrypted_environ(self, stack_name):
+        """Tests resolve_environ with encrypted environ."""
+        from envstack.env import encrypt_environ, load_environ, resolve_environ
+        from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
+
+        env = load_environ(stack_name)  # unresolved values
+        resolved = resolve_environ(env)  # resolved values
+        encrypted = encrypt_environ(env)  # encrypted values
+        encrypted_resolved = resolve_environ(encrypted)  # resolved encrypted values
+
+        # make sure environments are not empty
+        self.assertTrue(len(encrypted) > 0)
+        self.assertTrue(len(resolved) > 0)
+
+        # make sure keys are not accidentally left in resolved environments
+        for key_name in [AESGCMEncryptor.KEY_VAR_NAME, FernetEncryptor.KEY_VAR_NAME]:
+            for _env in (env, resolved, encrypted, encrypted_resolved):
+                self.assertTrue(key_name not in _env)
+
+        for key, value in env.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            encrypted_value = encrypted[key]  # encrypted value
+            resolved_value = resolved[key]  # resolved value
+            encrypted_resolved_value = encrypted_resolved[key]  # resolved encrypted value
+            self.assertNotEqual(encrypted_value, None)
+            self.assertNotEqual(resolved_value, None)
+            self.assertNotEqual(encrypted_resolved_value, None)
+            self.assertNotEqual(encrypted_value, value)
+            self.assertNotEqual(encrypted_value, resolved_value)
+            self.assertEqual(resolved_value, encrypted_resolved_value)
+
+    def run_tests(self, stack_name):
+        """Runs all tests for a given stack."""
+        self.encrypt_environ(stack_name)
+        self.load_encrypted_environ(stack_name)
+        self.bake_encrypted_environ(stack_name)
+        self.resolve_encrypted_environ(stack_name)
+
+        # add encryption key to environment and test again
+        if AESGCMEncryptor.KEY_VAR_NAME not in os.environ:
+            os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+
+        self.load_encrypted_environ(stack_name)
+        self.bake_encrypted_environ(stack_name)
+        self.resolve_encrypted_environ(stack_name)
+
+    def test_default(self):
         """Tests encrypting the default environment."""
-        self.bake_encrypted_environ("default")
-        self.load_encrypted_environ("default")
-        self.encrypt_environ("default")
+        self.run_tests("default")
 
-    def test_encrypt_dev(self):
+    def test_dev(self):
         """Tests encrypting the dev environment."""
-        self.bake_encrypted_environ("dev")
-        self.load_encrypted_environ("dev")
-        self.encrypt_environ("dev")
+        self.run_tests("dev")
 
-    def test_encrypt_thing(self):
+    def test_thing(self):
         """Tests encrypting the thing environment."""
-        self.bake_encrypted_environ("thing")
-        self.load_encrypted_environ("thing")
-        self.encrypt_environ("thing")
+        self.run_tests("thing")
 
 
 class TestIssues(unittest.TestCase):
