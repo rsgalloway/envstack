@@ -116,17 +116,15 @@ class TestEncryptedNode(unittest.TestCase):
 
     def test_resolve_fail(self):
         """test the EncryptedNode resolve method with different keys"""
-        os.environ[
-            AESGCMEncryptor.KEY_VAR_NAME
-        ] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        key1 = AESGCMEncryptor.generate_key()
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = key1
         value = "super_secret_password"
         encrypted = AESGCMEncryptor().encrypt(value)
         node = EncryptedNode.from_yaml(
             None, yaml.ScalarNode(EncryptedNode.yaml_tag, encrypted)
         )
-        os.environ[
-            AESGCMEncryptor.KEY_VAR_NAME
-        ] = "jBADsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        key2 = AESGCMEncryptor.generate_key()
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = key2
         resolved = node.resolve()
         self.assertEqual(resolved, "")
 
@@ -139,9 +137,8 @@ class TestEncryptedNode(unittest.TestCase):
 
     def test_resolve_success(self):
         """test the EncryptedNode resolve method with a valid key"""
-        os.environ[
-            AESGCMEncryptor.KEY_VAR_NAME
-        ] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        key = AESGCMEncryptor.generate_key()
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = key
         value = "super_secret_password"
         encrypted = AESGCMEncryptor().encrypt(value)
         node = EncryptedNode.from_yaml(

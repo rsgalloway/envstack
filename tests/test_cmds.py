@@ -183,7 +183,9 @@ ENV=prod
 ROOT=/mnt/pipe
 """
         command = "%s --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
-        output = subprocess.check_output(command, shell=True, env=os.environ, universal_newlines=True)
+        output = subprocess.check_output(
+            command, shell=True, env=os.environ, universal_newlines=True
+        )
         self.assertEqual(output, expected_output)
 
     def test_default_resolve(self):

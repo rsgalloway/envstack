@@ -62,12 +62,14 @@ class TestBase64Encryptor(unittest.TestCase):
 
 class TestAESGCMEncryptor(unittest.TestCase):
     def setUp(self):
-        self.encryptor = AESGCMEncryptor()
+        key = AESGCMEncryptor.generate_key()
+        self.encryptor = AESGCMEncryptor(key=key)
 
     def test_encrypt_data(self):
         """Test encrypt_data"""
         data = "my_secret"
         encrypted_data = self.encryptor.encrypt_data(data)
+        self.assertTrue(self.encryptor.key is not None)
         self.assertIsInstance(encrypted_data, dict)
         self.assertIn("nonce", encrypted_data)
         self.assertIn("ciphertext", encrypted_data)
@@ -76,6 +78,7 @@ class TestAESGCMEncryptor(unittest.TestCase):
     def test_decrypt_data(self):
         """Test encrypt_data and decrypt_data"""
         data = "my_secret"
+        self.assertTrue(self.encryptor.key is not None)
         encrypted_data = self.encryptor.encrypt_data(data)
         decrypted_data = self.encryptor.decrypt_data(encrypted_data)
         self.assertEqual(decrypted_data, b"my_secret")
@@ -83,6 +86,7 @@ class TestAESGCMEncryptor(unittest.TestCase):
     def test_encrypt_decrypt(self):
         """Test encrypting and decrypting data"""
         data = "my_secret"
+        self.assertTrue(self.encryptor.key is not None)
         encrypted_data = self.encryptor.encrypt(data)
         decrypted_data = self.encryptor.decrypt(encrypted_data)
         self.assertEqual(decrypted_data, data)
@@ -90,17 +94,20 @@ class TestAESGCMEncryptor(unittest.TestCase):
 
 class TestFernetEncryptor(unittest.TestCase):
     def setUp(self):
-        self.encryptor = FernetEncryptor()
+        key = FernetEncryptor.generate_key()
+        self.encryptor = FernetEncryptor(key=key)
 
     def test_encrypt(self):
         """Test encrypting data using FernetEncryptor"""
         data = "my_secret"
+        self.assertTrue(self.encryptor.key is not None)
         encrypted_data = self.encryptor.encrypt(data)
         self.assertIsInstance(encrypted_data, str)
 
     def test_decrypt(self):
         """Test encrypting and decrypting data"""
         data = "my_secret"
+        self.assertTrue(self.encryptor.key is not None)
         encrypted_data = self.encryptor.encrypt(data)
         decrypted_data = self.encryptor.decrypt(encrypted_data)
         self.assertEqual(decrypted_data, "my_secret")

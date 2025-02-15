@@ -443,7 +443,9 @@ class TestEncryptEnviron(unittest.TestCase):
                 continue
             encrypted_value = encrypted[key]  # encrypted value
             resolved_value = resolved[key]  # resolved value
-            encrypted_resolved_value = encrypted_resolved[key]  # resolved encrypted value
+            encrypted_resolved_value = encrypted_resolved[
+                key
+            ]  # resolved encrypted value
             self.assertNotEqual(encrypted_value, None)
             self.assertNotEqual(resolved_value, None)
             self.assertNotEqual(encrypted_resolved_value, None)
@@ -460,7 +462,8 @@ class TestEncryptEnviron(unittest.TestCase):
 
         # add encryption key to environment and test again
         if AESGCMEncryptor.KEY_VAR_NAME not in os.environ:
-            os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+            key = AESGCMEncryptor.generate_key()
+            os.environ[AESGCMEncryptor.KEY_VAR_NAME] = key
 
         self.load_encrypted_environ(stack_name)
         self.bake_encrypted_environ(stack_name)
