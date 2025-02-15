@@ -291,7 +291,7 @@ STACK=ZGVmYXVsdA==
 #### Generating Keys
 
 To use AES-GCM or Fernet encryption and serialize to an `encrypted.env` file,
-first generate and source keys, use the `--keygen` option:
+first generate and source keys in the shell using the `--keygen` option:
 
 ```bash
 $ source <(envstack --keygen --export)
@@ -319,20 +319,20 @@ HELLO=world
 
 #### Storing Keys
 
-Keys can be stored in other environment stacks, e.g. a `keys.env` stack. For
-example, generate keys and store in a `keys.env` env stack file:
+Keys can be stored in other environment stacks, e.g. a `keys.env` file. To
+generate keys and store them in a `keys.env` env stack file:
 
 ```bash
 $ envstack --keygen -o keys.env
 ```
 
-Then use the `keys` env stack to encrypt the default env stack:
+Then use the `keys.env` env stack to encrypt any other env stack:
 
 ```bash
 $ envstack keys -- envstack --encrypt -o encrypted.env
 ```
 
-Add the `keys` env to the stack to decrypt:
+To decrypt, add `keys` to the env stack:
 
 ```bash
 $ envstack keys encrypted -r HELLO
