@@ -287,11 +287,12 @@ ROOT=L21udC9waXBl
 STACK=ZGVmYXVsdA==
 ```
 
-To use AES-GCM encryption and serialize to an `encrypted.env` file:
+To use AES-GCM or Fernet encryption and serialize to an `encrypted.env` file,
+first generate and source keys:
 
 ```bash
-$ export ENVSTACK_SYMMETRIC_KEY=jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU=
-$ envstack --encrypt -o encrypted.env  # AES-GCM encrypted
+$ source <(envstack --keygen --export)
+$ envstack --encrypt -o encrypted.env
 ```
 
 Encrypted variables will resolve as long as the key is in the environment:
@@ -301,10 +302,38 @@ $ envstack encrypted -r HELLO
 HELLO=world
 ```
 
-Keys can be stored in other environment stacks, e.g. a `keys.env` stack:
+#### Storing Keys
+
+Keys can be stored in other environment stacks, e.g. a `keys.env` stack. For
+example, generate keys and store in a `keys.env` env stack file:
+
+```bash
+$ envstack --keygen -o keys.env
+```
+
+Then use the `keys` env stack to encrypt the default env stack:
+
+```bash
+$ envstack keys -- envstack --encrypt -o encrypted.env
+```
+
+Use the keys env stack again to decrypt:
 
 ```bash
 $ envstack keys encrypted -r HELLO
+HELLO=world
+```
+
+Or add the `keys` env stack to `include` to automatically decrypt:
+
+```yaml
+include: [keys]
+```
+
+Variables automatically resolve decrypted:
+
+```bash
+$ ./encrypted.env -r HELLO
 HELLO=world
 ```
 
