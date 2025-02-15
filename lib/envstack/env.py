@@ -490,23 +490,16 @@ def clear(
     return exp
 
 
-def export(
-    name: str = config.DEFAULT_NAMESPACE,
-    shell: str = config.SHELL,
-    scope: str = None,
-):
+def export_env_to_shell(env: Env, shell: str = config.SHELL):
     """Returns shell commands that can be sourced to set environment stack
     environment variables.
 
     Supported shells: bash, sh, tcsh, cmd, pwsh (see config.detect_shell()).
 
-    :param name: stack namespace.
+    :param env: environment dict.
     :param shell: name of shell (default: current shell).
-    :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
-    # resolve environment variables
-    resolved_env = resolve_environ(load_environ(name, scope=scope))
 
     # track the environment variables to export
     export_list = list()
@@ -514,7 +507,8 @@ def export(
     # get the name of the shell
     shell_name = os.path.basename(shell)
 
-    for key, val in resolved_env.items():
+    # iterate over the environment variables
+    for key, val in env.copy().items():
         old_key = f"_ES_OLD_{key}"
         old_val = os.environ.get(key)
         if key == "PATH" and not val:
@@ -543,6 +537,25 @@ def export(
     exp = "\n".join(export_list)
 
     return exp
+
+
+def export(
+    name: str = config.DEFAULT_NAMESPACE,
+    shell: str = config.SHELL,
+    scope: str = None,
+):
+    """Returns shell commands that can be sourced to set environment stack
+    environment variables.
+
+    Supported shells: bash, sh, tcsh, cmd, pwsh (see config.detect_shell()).
+
+    :param name: stack namespace.
+    :param shell: name of shell (default: current shell).
+    :param scope: environment scope (default: cwd).
+    :returns: shell commands as string.
+    """
+    resolved_env = resolve_environ(load_environ(name, scope=scope))
+    return export_env_to_shell(resolved_env, shell)
 
 
 def save():
