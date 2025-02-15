@@ -97,6 +97,11 @@ def parse_args():
         help="depth of environment stack to bake",
     )
     bake_group.add_argument(
+        "--keygen",
+        action="store_true",
+        help="generate encryption keys",
+    )
+    bake_group.add_argument(
         "--encrypt",
         action="store_true",
         help="encrypt the baked environment values",
@@ -150,8 +155,12 @@ def parse_args():
 
 
 def whichenv():
-    """Entry point for the whichenv command line tool"""
+    """Entry point for the whichenv command line tool. Finds {VAR}s."""
     from envstack.util import findenv
+
+    if len(sys.argv) != 2:
+        print("Usage: whichenv [VAR]")
+        return 2
 
     var_name = sys.argv[1]
     paths = findenv(var_name)
@@ -166,6 +175,24 @@ def main():
     try:
         if command:
             return run_command(command, args.namespace)
+
+        elif args.keygen:
+            from envstack.encrypt import generate_keys
+
+            keys = generate_keys()
+
+            if args.export:
+                from envstack.env import export_env_to_shell
+
+                print(export_env_to_shell(keys))
+            elif args.out:
+                from envstack.util import dump_yaml
+
+                dump_yaml(file_path=args.out, data=keys)
+            else:
+                for key, value in keys.items():
+                    print(f"{key}: {value}")
+
         elif args.out:
             bake_environ(
                 args.namespace,
@@ -173,6 +200,7 @@ def main():
                 depth=args.depth or 0,
                 encrypt=args.encrypt,
             )
+
         elif args.resolve is not None:
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
@@ -181,20 +209,25 @@ def main():
             for key in sorted(str(k) for k in keys):
                 val = resolved.get(key)
                 print(f"{key}={val}")
+
         elif args.trace is not None:
             if len(args.trace) == 0:
                 args.trace = load_environ(args.namespace).keys()
             for trace in args.trace:
                 path = trace_var(*args.namespace, var=trace)
                 print("{0}: {1}".format(trace, path))
+
         elif args.sources:
             env = load_environ(args.namespace, platform=args.platform)
             for source in env.sources:
                 print(source.path)
+
         elif args.clear:
             print(clear(args.namespace, config.SHELL))
+
         elif args.export:
             print(export(args.namespace, config.SHELL))
+
         else:
             env = load_environ(
                 args.namespace, platform=args.platform, encrypt=args.encrypt
