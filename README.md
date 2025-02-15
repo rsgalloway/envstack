@@ -287,11 +287,25 @@ ROOT=L21udC9waXBl
 STACK=ZGVmYXVsdA==
 ```
 
+#### Generating Keys
+
 To use AES-GCM or Fernet encryption and serialize to an `encrypted.env` file,
-first generate and source keys:
+first generate and source keys, use the `--keygen` option:
 
 ```bash
 $ source <(envstack --keygen --export)
+```
+
+In Windows CMD you have to output the commands to a .bat file to source them:
+
+```cmd
+> envstack --keygen > keys.bat
+> call keys.bat
+```
+
+Once the keys are in the environment, you can encrypt the env stack:
+
+```bash
 $ envstack --encrypt -o encrypted.env
 ```
 
@@ -317,7 +331,7 @@ Then use the `keys` env stack to encrypt the default env stack:
 $ envstack keys -- envstack --encrypt -o encrypted.env
 ```
 
-Use the keys env stack again to decrypt:
+Add the `keys` env to the stack to decrypt:
 
 ```bash
 $ envstack keys encrypted -r HELLO
@@ -330,7 +344,7 @@ Or add the `keys` env stack to `include` to automatically decrypt:
 include: [keys]
 ```
 
-Variables automatically resolve decrypted:
+Variables will automatically decrypt when resolved:
 
 ```bash
 $ ./encrypted.env -r HELLO
