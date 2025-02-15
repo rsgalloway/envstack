@@ -136,7 +136,8 @@ class MD5Node(BaseNode):
 
 
 class EncryptedNode(BaseNode):
-    """Default encryption node. Supports multiple encryption schemes."""
+    """Default encryption node. Supports multiple encryption schemes.
+    Favors AES-GCM, then Fernet, then base64."""
 
     yaml_tag = "!encrypt"
 
