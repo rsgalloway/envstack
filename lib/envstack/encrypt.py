@@ -77,27 +77,22 @@ class FernetEncryptor(object):
         else:
             self.key = self.get_key(env)
 
+    @classmethod
+    def generate_key(csl):
+        """Generate a new 256-bit encryption key."""
+        key = Fernet.generate_key()
+        return key.decode()
+
     def get_key(self, env: dict = os.environ):
-        """Load or generate the encryption key and store in ${ENVSTACK_FERNET_KEY}.
+        """Load the encryption key from the environment `env`.
 
-        By default, this function looks for base64 key in `env`. If not found,
-        it generates a new 256-bit key and stores it in os.environ.
-
-        :param env: The environment to look for a key.
+        :param env: The environment containing the key.
         :return: encryption key.
         """
         key = env.get(self.KEY_VAR_NAME)
         if key:
             return Fernet(key)
-        # TODO: move this to a "create_key()" method
-        else:
-            key = Fernet.generate_key()
-            # load_environ iterates over env, so we can't modify it in the loop:
-            # RuntimeError: dictionary changed size during iteration
-            # env[var_name] = b64encode(key).decode()
-            os.environ[self.KEY_VAR_NAME] = key.decode()
-            log.info(f"set {self.KEY_VAR_NAME}: {key.decode()}")
-            return Fernet(key)
+        return key
 
     def encrypt(self, data: str):
         """Encrypt a secret using Fernet.
@@ -147,18 +142,20 @@ class AESGCMEncryptor(object):
 
     def __init__(self, key: str = None, env: dict = os.environ):
         if key:
-            self.key = key
+            self.key = b64decode(key)
         else:
             self.key = self.get_key(env)
 
+    @classmethod
+    def generate_key(csl):
+        """Generate a new 256-bit encryption key."""
+        key = secrets.token_bytes(32)
+        return b64encode(key).decode()
+
     def get_key(self, env: dict = os.environ):
-        """Load or generate the encryption key and store in ${ENVSTACK_SYMMETRIC_KEY}.
+        """Load the encryption key from the environment `env`.
 
-        By default, this function looks for base64 key in `env`. If not found,
-        it generates a new 256-bit key and stores it in os.environ.
-
-        :param env: The environment to use.
-        :return: 256-bit encryption key.
+        :param env: The environment containing the key.
         """
         key = env.get(self.KEY_VAR_NAME)
         if key:
@@ -166,15 +163,7 @@ class AESGCMEncryptor(object):
                 return b64decode(key)
             except binascii.Error as e:
                 raise ValueError("invalid base64 encoding: %s" % e)
-        # TODO: move this to a "create_key()" method
-        else:
-            key = secrets.token_bytes(32)  # 32 bytes = 256 bits
-            # load_environ iterates over env, so we can't modify it in the loop:
-            # RuntimeError: dictionary changed size during iteration
-            # env[var_name] = b64encode(key).decode()
-            os.environ[self.KEY_VAR_NAME] = b64encode(key).decode()
-            log.info(f"set {self.KEY_VAR_NAME}: {b64encode(key).decode()}")
-            return key
+        return key
 
     def encrypt_data(self, secret: str):
         """Encrypt a secret using AES-GCM.
@@ -315,4 +304,18 @@ def compact_load(compact_data: str):
         "nonce": base64.b64encode(nonce).decode(),
         "ciphertext": base64.b64encode(ciphertext).decode(),
         "tag": base64.b64encode(tag).decode(),
+    }
+
+
+def generate_keys():
+    """Generate encryption keys for Fernet and AES-GCM.
+
+    :returns: Dictionary containing Fernet and AES-GCM keys.
+    """
+    symmetric_key = AESGCMEncryptor.generate_key()
+    fernet_key = FernetEncryptor.generate_key()
+
+    return {
+        AESGCMEncryptor.KEY_VAR_NAME: symmetric_key,
+        FernetEncryptor.KEY_VAR_NAME: fernet_key,
     }
