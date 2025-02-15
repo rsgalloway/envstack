@@ -263,13 +263,14 @@ and
 you to securely encrypt and decrypt sensitive environment variables.
 
 To use AES-GCM or Fernet, and encryption key must be found somewhere in the
-environment. No key is required for Base64 encryption (the default):
+environment. No key is required for Base64 encryption (the default). Encrypted
+nodes look for keys in the following order, favoring AES-GCM over Fernet:
 
 | Algorithm | Key |
 |---------|-------------|
-| AES-GCM encryption | $ENVSTACK_SYMMETRIC_KEY |
 | Base64 | (no key required) |
-| Fernet encryption | $ENVSTACK_FERNET_KEY |
+| AES-GCM | ${ENVSTACK_SYMMETRIC_KEY} |
+| Fernet | ${ENVSTACK_FERNET_KEY} |
 
 If no encryption keys are found in the environment, envstack will default to
 using Base64 encryption:
@@ -372,6 +373,12 @@ To trace where one or more environment vars is being set:
 $ envstack [STACK] -t [VAR [VAR ...]]
 ```
 
+To run commands in an environment stack:
+
+```bash
+$ envstack [STACK] -- [COMMAND]
+```
+
 To get the list of source files for a given stack:
 
 ```bash
@@ -425,7 +432,8 @@ Loading and resolving predefined environments from stack files:
 
 ```python
 >>> from envstack.env import load_environ, resolve_environ
->>> env = resolve_environ(load_environ(name))
+>>> env = load_environ(name)
+>>> resolved = resolve_environ(env)
 ```
 
 ## Running Commands
@@ -589,9 +597,10 @@ The following environment variables are used to help manage functionality:
 
 | Name | Description |
 |------|-------------|
+| DEFAULT_ENV_STACK | Name of the default environment stack (default) |
 | ENVPATH | Colon-separated paths to search for stack files |
 | IGNORE_MISSING | Ignore missing stack files when resolving environments |
-| STACK | Name of the current environment stack |
+| STACK | Stores the name of the current environment stack |
 
 # Tests
 
