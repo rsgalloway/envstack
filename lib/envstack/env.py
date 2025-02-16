@@ -771,7 +771,6 @@ def resolve_environ(env: dict):
 # TODO: make 'name' arg a list (*names) in next minor release
 def load_environ(
     name: str = config.DEFAULT_NAMESPACE,
-    sources: list = None,
     platform: str = config.PLATFORM,
     scope: str = None,
     ignore_missing: bool = config.IGNORE_MISSING,
@@ -790,7 +789,6 @@ def load_environ(
         >>> env = load_environ(name, scope="/path/to/scope")
 
     :param name: list of stack names to load (basename of env files).
-    :param sources: list of env files (optional).
     :param platform: name of platform (linux, darwin, windows).
     :param scope: environment scope (default: cwd).
     :param ignore_missing: ignore missing .env files.
