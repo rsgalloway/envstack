@@ -216,7 +216,8 @@ class TestCustomDumper(unittest.TestCase):
 
 
 class TestSecretsEnv(unittest.TestCase):
-    """test the secrets.env file"""
+    """Test the secrets.env file"""
+
     def setUp(self):
         """set up the test environment"""
         self.root = tempfile.mkdtemp()
