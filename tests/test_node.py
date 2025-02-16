@@ -216,15 +216,16 @@ class TestCustomDumper(unittest.TestCase):
 
 
 class TestSecretsEnv(unittest.TestCase):
+    """test the secrets.env file"""
     def setUp(self):
         """set up the test environment"""
         self.root = tempfile.mkdtemp()
-        os.environ[
-            AESGCMEncryptor.KEY_VAR_NAME
-        ] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
-        os.environ[
-            FernetEncryptor.KEY_VAR_NAME
-        ] = "v4-Ry7uKSOBEXMDv9x_crBBpi0eo2WCYNAIlSB1t4VE="
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = (
+            "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        )
+        os.environ[FernetEncryptor.KEY_VAR_NAME] = (
+            "v4-Ry7uKSOBEXMDv9x_crBBpi0eo2WCYNAIlSB1t4VE="
+        )
 
     def tearDown(self):
         """tear down the test environment"""

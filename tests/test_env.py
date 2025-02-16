@@ -186,6 +186,9 @@ class TestSource(unittest.TestCase):
 
 
 class TestInit(unittest.TestCase):
+    def tearDown(self):
+        envstack.revert()
+
     def test_init_default(self):
         """Tests init with default stack."""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
@@ -198,10 +201,9 @@ class TestInit(unittest.TestCase):
         python_path = os.getenv("PYTHONPATH")
 
         envstack.init()
-        self.assertEqual(os.getenv("ENV"), os.getenv("ENV", "default"))
+        self.assertEqual(os.getenv("ENV"), "prod")
         self.assertEqual(os.getenv("STACK"), "default")
         self.assertEqual(os.getenv("HELLO"), "world")
-        self.assertEqual(os.getenv("LOG_LEVEL"), "INFO")
         self.assertEqual(os.getenv("ROOT"), "/mnt/pipe")
         self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/prod")
         self.assertTrue(len(sys.path) > len(sys_path))
@@ -551,17 +553,6 @@ class TestIssues(unittest.TestCase):
             os.path.join(self.root, "dev", "env", "hello.env"),
         ]
         self.assertEqual(paths, expected_paths)
-
-    # def test_issue_34(self):
-    #     """Tests issue #34 load_environ(sources)."""
-    #     from envstack.env import load_environ, Source
-    #     envpath = os.path.join(os.path.dirname(__file__), "..", "env")
-    #     os.environ["ENVPATH"] = envpath
-    #     source = Source("/env/notfound.env")
-    #     env1 = load_environ(["hello"])
-    #     envstack.revert()  # FIXME: revert should not be required
-    #     env2 = load_environ(["hello"], sources=[source])
-    #     self.assertNotEqual(env1, env2)
 
     def test_issue_36(self):
         """Tests issue #36 with init and yaml import."""

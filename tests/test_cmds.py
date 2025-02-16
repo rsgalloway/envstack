@@ -175,9 +175,9 @@ STACK=ZGVmYXVsdA==
     def test_default_AESGCM(self):
         """Test that the AESGCM encryption works, and resolves vars since the
         encrypted values change every time."""
-        os.environ[
-            AESGCMEncryptor.KEY_VAR_NAME
-        ] = "jBADsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = (
+            "jBADsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        )
         expected_output = """DEPLOY_ROOT=/mnt/pipe/prod
 ENV=prod
 ROOT=/mnt/pipe
