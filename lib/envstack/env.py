@@ -359,7 +359,12 @@ def get_sources(
     def _load_file(file_basename):
         """Recursively load .env files and their includes."""
         seen_stacks.add(os.path.splitext(file_basename)[0])
-        file_paths = _find_files(file_basename)
+
+        # check if we're sourcing a file or a namespace
+        if file_basename.endswith(".env") and os.path.exists(file_basename):
+            file_paths = [file_basename]
+        else:
+            file_paths = _find_files(file_basename)
 
         # process each file independently
         for file_path in file_paths:
@@ -388,8 +393,6 @@ def get_sources(
 
     # process each stack in the list
     for name in names:
-        if not name.endswith(".env"):
-            name += ".env"
         _load_file(name)
 
     return sources
