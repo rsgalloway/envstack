@@ -126,7 +126,7 @@ class TestEncryptedNode(unittest.TestCase):
         key2 = AESGCMEncryptor.generate_key()
         os.environ[AESGCMEncryptor.KEY_VAR_NAME] = key2
         resolved = node.resolve()
-        self.assertEqual(resolved, "")
+        self.assertEqual(resolved, encrypted)
 
     def test_resolve_invalid_key(self):
         """test the EncryptedNode resolve method with an invalid key"""

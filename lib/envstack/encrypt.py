@@ -120,19 +120,15 @@ class FernetEncryptor(object):
         :param data: Base64-encoded binary blob.
         :return: The decrypted secret.
         """
-        results = ""
-        if not data:
-            return results
         try:
-            results = self.key.decrypt(str(data).encode()).decode()
+            return self.key.decrypt(str(data).encode()).decode()
         except InvalidToken:
-            log.error("invalid encryption key")
+            log.debug("invalid encryption key")
         except ValueError as e:
-            log.error("invalid value: %s", e)
+            log.debug("invalid value: %s", e)
         except Exception as e:
-            log.error("unhandled error: %s", e)
-        finally:
-            return results
+            log.debug("unhandled error: %s", e)
+        return data
 
 
 class AESGCMEncryptor(object):
@@ -227,23 +223,19 @@ class AESGCMEncryptor(object):
         :param data: Base64-encoded binary blob.
         :returns: The decrypted secret.
         """
-        results = ""
-        if not data:
-            return results
         try:
             encrypted_data = compact_load(data)
             decrypted = self.decrypt_data(encrypted_data)
-            results = decrypted.decode()
+            return decrypted.decode()
         except binascii.Error as e:
-            log.error("invalid base64 encoding: %s", e)
+            log.debug("invalid base64 encoding: %s", e)
         except cryptography.exceptions.InvalidTag as e:
-            log.error("invalid encryption key")
+            log.debug("invalid encryption key")
         except ValueError as e:
-            log.error("invalid value: %s", e)
+            log.debug("invalid value: %s", e)
         except Exception as e:
-            log.error("unhandled error: %s", e)
-        finally:
-            return results
+            log.debug("unhandled error: %s", e)
+        return data
 
 
 def pad_data(data: str):
