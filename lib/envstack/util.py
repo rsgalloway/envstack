@@ -162,6 +162,7 @@ def dedupe_paths(
 
     :param path_str: The input path string.
     :param joiner: The path separator to use.
+    :platform: The platform to use.
     :return: The deduplicated path string.
     """
 
