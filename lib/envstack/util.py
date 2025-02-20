@@ -48,10 +48,13 @@ from envstack.exceptions import CyclicalReference
 # value for unresolvable variables
 null = ""
 
-# regular expression pattern for Bash-like variable expansion
+# regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
     r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(\$\{[a-zA-Z_][a-zA-Z0-9_]*\}|[^}]*))?\}"
 )
+
+# regular expression pattern for matching windows drive letters
+drive_letter_pattern = re.compile(r"(?P<sep>[:;])(?P<drive>[a-zA-Z]:[/\\])")
 
 
 def clear_sys_path(var: str = "PYTHONPATH"):
@@ -100,6 +103,77 @@ def dedupe_list(lst: list):
     :return: The deduplicated list.
     """
     return list(OrderedDict.fromkeys(lst))
+
+
+def split_windows_paths(path_str: str):
+    """
+    Splits a Windows-style path string that may contain a mix of colon and
+    semicolon delimiters, while preserving drive letter patterns.
+
+    :param path_str: The input path string.
+    :return: The split path list.
+    """
+    result = []
+    tokens = path_str.split(";")
+    marker = "|"
+
+    for token in tokens:
+        token = token.strip()
+        if not token:
+            continue
+
+        # token is windows-style
+        if re.match(r"^[a-zA-Z]:[/\\]", token) or "\\" in token:
+            # find delimiters preceding a drive letter and replace with a marker
+            modified = drive_letter_pattern.sub(
+                lambda m: marker + m.group("drive"), token
+            )
+            parts = modified.split(marker)
+            result.extend([p for p in parts if p])
+        else:
+            parts = token.split(":")
+            result.extend([p for p in parts if p])
+
+    return result
+
+
+def dedupe_windows_paths(path_str: str):
+    """
+    Deduplicates Windows paths from a mixed-delimiter input string.
+
+    :param path_str: The input path string.
+    :return: The deduplicated path list.
+    """
+    paths = split_windows_paths(path_str)
+    seen = set()
+    deduped = []
+    for p in paths:
+        if p not in seen:
+            seen.add(p)
+            deduped.append(p)
+    return deduped
+
+
+def dedupe_paths(
+    path_str: str, joiner: str = os.pathsep, platform: str = config.PLATFORM
+):
+    """
+    Deduplicates paths from a colon-separated string.
+
+    :param path_str: The input path string.
+    :param joiner: The path separator to use.
+    :return: The deduplicated path string.
+    """
+
+    if platform == "windows":
+        deduped = dedupe_windows_paths(path_str)
+    else:
+        deduped = dedupe_list(path_str.split(":"))
+
+    # remove empty paths
+    # deduped = [p for p in deduped if p]
+
+    return joiner.join(deduped)
 
 
 def dict_diff(dict1: dict, dict2: dict):
@@ -238,7 +312,7 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
 
         # dedupe paths and convert to platform-specific path separators
         if ":" in result:
-            result = os.pathsep.join(dedupe_list(result.split(":")))
+            result = dedupe_paths(result)
 
     # detect recursion errors
     except RecursionError:
@@ -248,16 +322,20 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
     except TypeError:
         if isinstance(expression, list):
             result = [
-                variable_pattern.sub(substitute_variable, str(v))
-                if isinstance(v, str)
-                else v
+                (
+                    variable_pattern.sub(substitute_variable, str(v))
+                    if isinstance(v, str)
+                    else v
+                )
                 for v in expression
             ]
         elif isinstance(expression, dict):
             result = {
-                k: variable_pattern.sub(substitute_variable, str(v))
-                if isinstance(v, str)
-                else v
+                k: (
+                    variable_pattern.sub(substitute_variable, str(v))
+                    if isinstance(v, str)
+                    else v
+                )
                 for k, v in expression.items()
             }
         else:
