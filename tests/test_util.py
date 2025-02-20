@@ -136,6 +136,38 @@ class TestUtils(unittest.TestCase):
             get_stack_name(name)
 
 
+class TestDedupePaths(unittest.TestCase):
+    def test_dedupe_list(self):
+        """Test dedupe_list function."""
+        from envstack.util import dedupe_list
+
+        paths = [
+            "/usr/bin",
+            "/usr/bin",
+            "/usr/local/bin",
+            "/usr/local/bin",
+            "/usr/local/bin",
+            "/some/other/path",
+        ]
+        result = dedupe_list(paths)
+        self.assertEqual(result, ["/usr/bin", "/usr/local/bin", "/some/other/path"])
+
+    def test_dedupe_paths(self):
+        """Test dedupe_paths function."""
+        from envstack.util import dedupe_paths
+
+        paths = [
+            "/usr/bin",
+            "/usr/bin",
+            "/usr/local/bin",
+            "/usr/local/bin",
+            "/usr/local/bin",
+            "/some/other/path",
+        ]
+        result = dedupe_paths(":".join(paths))
+        self.assertEqual(result, "/usr/bin:/usr/local/bin:/some/other/path")
+
+
 class TestSafeEval(unittest.TestCase):
     def test_safe_eval_string(self):
         value = "hello"
