@@ -39,12 +39,17 @@ import os
 import secrets
 from base64 import b64decode, b64encode
 
-import cryptography.exceptions
-from cryptography.fernet import Fernet, InvalidToken
-from cryptography.hazmat.primitives import padding
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
-
 from envstack.logger import log
+
+# cryptography and _rust dependency may not be available everywhere
+# ImportError: DLL load failed while importing _rust: Module not found.
+try:
+    import cryptography.exceptions
+    from cryptography.fernet import Fernet, InvalidToken
+    from cryptography.hazmat.primitives import padding
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+except ImportError as err:
+    log.debug("cryptography module not available: %s", err)
 
 
 class Base64Encryptor(object):
