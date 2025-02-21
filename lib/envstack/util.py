@@ -109,42 +109,31 @@ def split_windows_paths(path_str: str):
     """
     Splits a windows-style path string that may contain a mix of colon and
     semicolon delimiters, while preserving drive letter patterns. Drive letters
-    must be uppercase and followed by a colon or semicolon.
+    must be uppercase.
 
-    A path liks this:
-    C:\Program Files\Python:D:/path2:E:/path3:/usr/local/bin
-
-    Will be split into:
-    ['C:\\Program Files\\Python','D:/path2', 'E:/path3', '/usr/local/bin']
+    Example:
+      Input:  "C:\\Program Files\\Python:D:/path2:E:/path3:/usr/local/bin"
+      Output: ['C:\\Program Files\\Python', 'D:/path2', 'E:/path3', '/usr/local/bin']
 
     :param path_str: The input path string.
     :returns: The split path list.
     """
     result = []
-    tokens = path_str.split(";")
-    marker = "|"
+    tokens = [token.strip() for token in path_str.split(";") if token.strip()]
 
     for token in tokens:
-        token = token.strip()
-        if not token:
-            continue
-
-        # token is windows-style
+        # token is windows-style, insert a marker before drive letters
         if re.match(r"^[A-Z]:[/\\]", token) or "\\" in token:
-            # find delimiters preceding a drive letter and replace with a marker
-            modified = drive_letter_pattern.sub(
-                lambda m: marker + m.group("drive"), token
-            )
-            parts = modified.split(marker)
-            paths = [re.split(r"(?<![A-Z]):", s) for s in parts]
-            for pathparts in paths:
-                if pathparts:
-                    for path in pathparts:
-                        if path:
-                            result.append(path)
+            modified = drive_letter_pattern.sub(lambda m: "|" + m.group("drive"), token)
+            # split on the marker, then on colons that are not in drive-letters
+            result += [
+                p
+                for part in modified.split("|")
+                for p in re.split(r"(?<![A-Z]):", part)
+                if p
+            ]
         else:
-            parts = token.split(":")
-            result.extend([p for p in parts if p])
+            result += [p for p in token.split(":") if p]
 
     return result
 
