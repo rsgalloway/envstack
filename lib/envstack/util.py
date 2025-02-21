@@ -100,18 +100,18 @@ def dedupe_list(lst: list):
     deduplicating paths.
 
     :param lst: The list to deduplicate.
-    :return: The deduplicated list.
+    :returns: The deduplicated list.
     """
     return list(OrderedDict.fromkeys(lst))
 
 
 def split_windows_paths(path_str: str):
     """
-    Splits a Windows-style path string that may contain a mix of colon and
+    Splits a windows-style path string that may contain a mix of colon and
     semicolon delimiters, while preserving drive letter patterns.
 
     :param path_str: The input path string.
-    :return: The split path list.
+    :returns: The split path list.
     """
     result = []
     tokens = path_str.split(";")
@@ -137,23 +137,6 @@ def split_windows_paths(path_str: str):
     return result
 
 
-def dedupe_windows_paths(path_str: str):
-    """
-    Deduplicates Windows paths from a mixed-delimiter input string.
-
-    :param path_str: The input path string.
-    :return: The deduplicated path list.
-    """
-    paths = split_windows_paths(path_str)
-    seen = set()
-    deduped = []
-    for p in paths:
-        if p not in seen:
-            seen.add(p)
-            deduped.append(p)
-    return deduped
-
-
 def dedupe_paths(
     path_str: str, joiner: str = os.pathsep, platform: str = config.PLATFORM
 ):
@@ -163,11 +146,11 @@ def dedupe_paths(
     :param path_str: The input path string.
     :param joiner: The path separator to use.
     :platform: The platform to use.
-    :return: The deduplicated path string.
+    :returns: The deduplicated path string.
     """
 
     if platform == "windows":
-        deduped = dedupe_windows_paths(path_str)
+        deduped = dedupe_list(split_windows_paths(path_str))
     else:
         deduped = dedupe_list(path_str.split(":"))
 
