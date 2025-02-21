@@ -179,13 +179,25 @@ class TestDedupePaths(unittest.TestCase):
         result = dedupe_paths(":".join(paths))
         self.assertEqual(result, "/usr/bin")
 
+        paths = ["/usr/bin", ""]
+        result = dedupe_paths(":".join(paths))
+        self.assertEqual(result, "/usr/bin:")
+
         paths = []
         result = dedupe_paths(":".join(paths))
         self.assertEqual(result, "")
 
     def test_dedupe_paths_windows(self):
-        """Test dedupe_paths function."""
+        """Test dedupe_paths function on windows."""
         from envstack.util import dedupe_paths
+
+        paths = [
+            "C:\\Program Files\\Python",
+            "D:/path2",
+            "E:/path3",
+        ]
+        result = dedupe_paths(":".join(paths), joiner=";", platform="windows")
+        self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3")
 
         paths = [
             "C:\\Program Files\\Python",
@@ -193,9 +205,21 @@ class TestDedupePaths(unittest.TestCase):
             "D:/path2",
             "E:/path3",
             "E:/path3",
+            "/usr/local/bin",
         ]
-        result = dedupe_paths(":".join(paths), joiner=";", platform="windows")
-        self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3")
+        path = ":".join(paths)
+        result = dedupe_paths(path, joiner=";", platform="windows")
+        self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin")
+
+        # mixed paths
+        path = "X:/pipe/prod/env;X:/pipe/prod/env:/home/user/envstack/env"
+        result = dedupe_paths(path, joiner=";", platform="windows")
+        self.assertEqual(result, "X:/pipe/prod/env;/home/user/envstack/env")
+
+        # mixed paths with duplicate
+        path = "C:\\Program Files\\Python;D:/path2;E:/path3:/usr/local/bin:/usr/local/bin"
+        result = dedupe_paths(path, joiner=";", platform="windows")
+        self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin")
 
 
 class TestSafeEval(unittest.TestCase):

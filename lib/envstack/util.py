@@ -54,7 +54,7 @@ variable_pattern = re.compile(
 )
 
 # regular expression pattern for matching windows drive letters
-drive_letter_pattern = re.compile(r"(?P<sep>[:;])(?P<drive>[a-zA-Z]:[/\\])")
+drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
 
 
 def clear_sys_path(var: str = "PYTHONPATH"):
@@ -108,7 +108,14 @@ def dedupe_list(lst: list):
 def split_windows_paths(path_str: str):
     """
     Splits a windows-style path string that may contain a mix of colon and
-    semicolon delimiters, while preserving drive letter patterns.
+    semicolon delimiters, while preserving drive letter patterns. Drive letters
+    must be uppercase and followed by a colon or semicolon.
+
+    A path liks this:
+    C:\Program Files\Python:D:/path2:E:/path3:/usr/local/bin
+
+    Will be split into:
+    ['C:\\Program Files\\Python','D:/path2', 'E:/path3', '/usr/local/bin']
 
     :param path_str: The input path string.
     :returns: The split path list.
@@ -123,13 +130,18 @@ def split_windows_paths(path_str: str):
             continue
 
         # token is windows-style
-        if re.match(r"^[a-zA-Z]:[/\\]", token) or "\\" in token:
+        if re.match(r"^[A-Z]:[/\\]", token) or "\\" in token:
             # find delimiters preceding a drive letter and replace with a marker
             modified = drive_letter_pattern.sub(
                 lambda m: marker + m.group("drive"), token
             )
             parts = modified.split(marker)
-            result.extend([p for p in parts if p])
+            paths = [re.split(r"(?<![A-Z]):", s) for s in parts]
+            for pathparts in paths:
+                if pathparts:
+                    for path in pathparts:
+                        if path:
+                            result.append(path)
         else:
             parts = token.split(":")
             result.extend([p for p in parts if p])
