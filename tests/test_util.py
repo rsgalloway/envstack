@@ -143,14 +143,22 @@ class TestDedupePaths(unittest.TestCase):
 
         paths = [
             "/usr/bin",
+            "/usr/local/bin",
+            "/usr/local/bin",
             "/usr/bin",
-            "/usr/local/bin",
-            "/usr/local/bin",
             "/usr/local/bin",
             "/some/other/path",
         ]
         result = dedupe_list(paths)
         self.assertEqual(result, ["/usr/bin", "/usr/local/bin", "/some/other/path"])
+
+        paths = ["/usr/bin"]
+        result = dedupe_list(paths)
+        self.assertEqual(result, ["/usr/bin"])
+
+        paths = []
+        result = dedupe_list(paths)
+        self.assertEqual(result, [])
 
     def test_dedupe_paths(self):
         """Test dedupe_paths function."""
@@ -158,14 +166,36 @@ class TestDedupePaths(unittest.TestCase):
 
         paths = [
             "/usr/bin",
-            "/usr/bin",
             "/usr/local/bin",
+            "/usr/bin",
             "/usr/local/bin",
             "/usr/local/bin",
             "/some/other/path",
         ]
         result = dedupe_paths(":".join(paths))
         self.assertEqual(result, "/usr/bin:/usr/local/bin:/some/other/path")
+
+        paths = ["/usr/bin"]
+        result = dedupe_paths(":".join(paths))
+        self.assertEqual(result, "/usr/bin")
+
+        paths = []
+        result = dedupe_paths(":".join(paths))
+        self.assertEqual(result, "")
+
+    def test_dedupe_paths_windows(self):
+        """Test dedupe_paths function."""
+        from envstack.util import dedupe_paths
+
+        paths = [
+            "C:\\Program Files\\Python",
+            "C:\\Program Files\\Python",
+            "D:/path2",
+            "E:/path3",
+            "E:/path3",
+        ]
+        result = dedupe_paths(":".join(paths), joiner=";", platform="windows")
+        self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3")
 
 
 class TestSafeEval(unittest.TestCase):
