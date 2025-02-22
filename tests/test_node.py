@@ -35,6 +35,7 @@ Contains unit tests for the node.py module.
 
 import os
 import shutil
+import sys
 import tempfile
 import unittest
 from base64 import b64encode
@@ -239,6 +240,11 @@ class TestSecretsEnv(unittest.TestCase):
         envfile = os.path.join(envpath, "secrets.env")
         testfile1 = os.path.join(self.root, "test1.env")
         testfile2 = os.path.join(self.root, "test2.env")
+        root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
 
         # load the stack file and verify the encrypted values
         s1 = Source(envfile)
@@ -273,13 +279,15 @@ class TestSecretsEnv(unittest.TestCase):
         s1.data["all"]["MD5"] = MD5Node(updated_value_md5)
         s1.data["all"]["SECRET"] = EncryptedNode(updated_value_secret)
         s1.data["all"]["PASSWORD"] = FernetNode(updated_value_password)
-        s1.data["linux"]["ROOT"] = "/var/tmp"
+        s1.data["darwin"]["ROOT"] = root
+        s1.data["linux"]["ROOT"] = root
+        s1.data["windows"]["ROOT"] = root
         s1.write(testfile2)
 
         # verify the values were updated
         s3 = Source(testfile2)
         d3 = s3.load()
-        self.assertEqual(d3["ROOT"], "/var/tmp")
+        self.assertEqual(d3["ROOT"], root)
         self.assertTrue(isinstance(d3["KEY"], Base64Node))
         self.assertTrue(isinstance(d3["MD5"], MD5Node))
         self.assertTrue(isinstance(d3["SECRET"], EncryptedNode))
