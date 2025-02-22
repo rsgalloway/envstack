@@ -3,10 +3,21 @@ envstack
 
 Environment variable management system.
 
+[Installation](#installation) |
+[Quickstart](#quickstart) |
+[Setting Values](#setting-values) |
+[Creating Stacks](#creating-stacks) |
+[Encryption](#encryption) |
+[Usage](#usage) |
+[Python API](#python-api) |
+[Running Commands](#running-commands)
+
+
 | Feature | Description |
 |---------|-------------|
 | Namespaced environments | Environments in envstack are namespaced, allowing you to organize and manage variables based on different contexts or projects. Each environment stack can have its own set of variables, providing a clean separation and avoiding conflicts between different environments. |
 | Environment stacks | Allows you to manage environment variables using .env files called environment stacks. These stacks provide a hierarchical and contextual approach to managing variables. |
+| Encryption support | Secure encryption, including AES-GCM, Fernet, and Base64. This allows you to securely encrypt and decrypt sensitive environment variables. |
 | Hierarchical structure | Stacks can be combined and have a defined order of priority. Variables defined in higher scope stacks flow from higher scope to lower scope, left to right. |
 | Variable expansion modifiers | Supports bash-like variable expansion modifiers, allowing you to set default values for variables and override them in the environment or by higher scope stacks. |
 | Platform-specific variables | Stacks can have platform-specific variables and values. This allows you to define different values for variables based on the platform. |
@@ -49,35 +60,45 @@ root folder defined by `${DEPLOY_ROOT}` (defined in `env/default.env`).
 
 ## Quickstart
 
-Envstack looks for .env files in directories specified by `${ENVPATH}` and i
-the current working directory. Start by getting the latest `default.env` 
-environment stack file:
+Start by getting the latest `default.env` environment stack file:
 
 ```bash
-$ wget -O default.env \
-https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
+$ curl -o default.env https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
 ```
 
-Set `$ENVPATH` to the directory containing your environment stack files:
+Alternatively, set `${ENVPATH}` to the directory containing your environment
+stack files:
 
+#### bash
 ```bash
-$ export ENVPATH=/path/to/env/stack/files
+$ export ENVPATH=/path/to/env/files
 ```
 
-Define as many paths as you want, and envstack will search for stack file in
+#### cmd
+```cmd
+> set ENVPATH=/path/to/env/files
+```
+
+Define as many paths as you want, and envstack will search for stack files in
 order from left to right, for example:
 
+#### bash
 ```bash
 $ export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
 ```
 
-In the case above, stack files in `/mnt/pipe/dev/env` will take precedence over those
-found in `/mnt/pipe/prod/env`.
+#### cmd
+```cmd
+> set ENVPATH=X:/pipe/dev/env;X:/pipe/prod/env
+```
+
+In the examples above, stack files in `dev` will take precedence over those
+found in `prod`.
 
 #### Basic Usage
 
-Running the `envstack` command will show you the default environment stack,
-defined in the `default.env` stack file:
+Running the `envstack` command will show you the default, unresolved environment
+stack, defined in `default.env` files in `${ENVPATH}`:
 
 ```bash
 $ envstack
@@ -92,54 +113,27 @@ ROOT=/mnt/pipe
 STACK=default
 ```
 
-If you are not seeing the above output, make sure the `default.env`
-stack file is in your `$ENVPATH` or current working directory.
+If you are not seeing the above output, make sure the `default.env` stack file
+is in `${ENVPATH}` or the current working directory.
 
-> NOTE: The name of the current stack will always be stored in `${STACK}`.
+> NOTE: The name of the current stack will always be stored in `${STACK}`
 
-To see stacks, pass the stack name as the first arg. Environment stacks can be
-combined, in order of priority (variables defined in stacks flow from higher
-scope to lower scope, left to right):
+Environments can be combined, or stacked, in order of priority (variables
+defined in stacks flow from higher scope to lower scope, left to right):
 
 ```bash
 $ envstack [STACK [STACK ...]]
 ```
 
-#### Executing Scripts
+#### Resolving Values
 
-Environment stack files are also executable scripts that can be run directly:
-
-
-```bash
-$ ./env/test.env
-DEPLOY_ROOT=${ROOT}/${STACK}
-ENV=${STACK}
-ENVPATH=${DEPLOY_ROOT}/env:${ROOT}/prod/env
-HELLO=${HELLO:=world}
-LOG_LEVEL=DEBUG
-PATH=${DEPLOY_ROOT}/bin:${ROOT}/prod/bin:${PATH}
-PYTHONPATH=${DEPLOY_ROOT}/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
-ROOT=/mnt/pipe
-STACK=test
-```
-
-Run commands inside a specific environment stack file:
+To resolve an environment stack or a variable use `--resolve/-r [VAR]`. 
 
 ```bash
-$ ./env/test.env -- <command>
-```
-
-For example:
-
-```bash
-$ ./env/hello.env -- echo {HELLO}
-world
-```
-
-Export a specific environment stack file:
-
-```bash
-$ ./env/hello.env --export
+$ envstack -r HELLO
+HELLO=world
+$ envstack -r DEPLOY_ROOT
+DEPLOY_ROOT=/mnt/pipe/prod
 ```
 
 ## Setting Values
@@ -159,7 +153,7 @@ Without the expansion modifier, values are set and do not change (but can be
 overridden by lower scope stacks, i.e. a lower scope stack file may override
 a higher one). 
 
-If we define `$HELLO` like this:
+If we define `${HELLO}` like this:
 
 ```yaml
 HELLO: world
@@ -195,54 +189,35 @@ goodbye
 Several example or starter stacks are available in the [env folder of the
 envstack repo](https://github.com/rsgalloway/envstack/tree/master/env).
 
-To create a blank environment stack, create a new envstack file and declare some
+To create a new environment stack, create an envstack file and declare some
 variables.
 
-Create a new stack file called "foobar.env" and make it executable (note: at
-least one VAR needs to be defined under all):
+```bash
+$ envstack foobar -o foobar.env
+```
 
-#### foobar.env
+Add the `${FOO}` and `${BAR}` env vars to the foobar.env environment stack file:
 
 ```yaml
 #!/usr/bin/env envstack
-
-all: &default
+all: &all
   FOO: bar
   BAR: ${FOO}
 darwin:
-  <<: *default
+  <<: *all
 linux:
-  <<: *default
+  <<: *all
 windows:
-  <<: *default
+  <<: *all
 ```
 
-Make it executable
-
-```bash
-$ chmod +x ./foobar.env
-```
-
-To see the resolved environment for the `foobar` stack, run:
-
-```bash
-$ envstack foobar
-FOO=bar
-BAR=$FOO
-```
-
-or execute it directly:
-
-```bash
-$ ./foobar.env
-```
-
-To see resolved values:
+Get the resolved environment for the `foobar` stack:
 
 ```bash
 $ ./foobar.env -r
-FOO=bar
 BAR=bar
+FOO=bar
+STACK=foobar
 ```
 
 #### More Details
@@ -251,20 +226,17 @@ Variables can be platform specific:
 
 ```yaml
 darwin:
-  <<: *default
   HELLO: olleh
 linux:
-  <<: *default
   HELLO: world
 windows:
-  <<: *default
   HELLO: goodbye
 ```
 
 Variables can reference other variables:
 
 ```yaml
-all: &default
+all: &all
   FOO: ${BAR}
   BAR: ${BAZ}
   BAZ: ${BIZ}
@@ -290,6 +262,105 @@ probably always include the `default` stack):
 include: [default, test]
 ```
 
+## Encryption
+
+Supported encryption algorithms include
+[AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode),
+[Fernet](https://github.com/fernet/spec/),
+and
+[Base64](https://en.wikipedia.org/wiki/Base64). This allows
+you to securely encrypt and decrypt sensitive environment variables.
+
+To use AES-GCM or Fernet, and encryption key must be found somewhere in the
+environment. No key is required for Base64 encryption (the default). Encrypted
+nodes look for keys in the following order, favoring AES-GCM over Fernet:
+
+| Algorithm | Key |
+|---------|-------------|
+| Base64 | (no key required) |
+| AES-GCM | ${ENVSTACK_SYMMETRIC_KEY} |
+| Fernet | ${ENVSTACK_FERNET_KEY} |
+
+If no encryption keys are found in the environment, envstack will default to
+using Base64 encryption:
+
+```bash
+$ envstack --encrypt
+DEPLOY_ROOT=JHtST09UfS8ke0VOVn0=
+ENV=cHJvZA==
+ENVPATH=JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
+HELLO=JHtIRUxMTzo9d29ybGR9
+LOG_LEVEL=JHtMT0dfTEVWRUw6PUlORk99
+PATH=JHtERVBMT1lfUk9PVH0vYmluOiR7UEFUSH0=
+PYTHONPATH=JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
+ROOT=L21udC9waXBl
+STACK=ZGVmYXVsdA==
+```
+
+#### Generating Keys
+
+To use AES-GCM or Fernet encryption and serialize to an `encrypted.env` file,
+first generate and source keys in the shell using the `--keygen` option:
+
+```bash
+$ source <(envstack --keygen --export)
+```
+
+In Windows CMD you have to output the commands to a .bat file to source them:
+
+```cmd
+> envstack --keygen > keys.bat
+> call keys.bat
+```
+
+Once the keys are in the environment, you can encrypt the env stack:
+
+```bash
+$ envstack --encrypt -o encrypted.env
+```
+
+Encrypted variables will resolve as long as the key is in the environment:
+
+```bash
+$ envstack encrypted -r HELLO
+HELLO=world
+```
+
+#### Storing Keys
+
+Keys can be stored in other environment stacks, e.g. a `keys.env` file. To
+generate keys and store them in a `keys.env` env stack file:
+
+```bash
+$ envstack --keygen -o keys.env
+```
+
+Then use the `keys.env` env stack to encrypt any other env stack:
+
+```bash
+$ envstack keys -- envstack --encrypt -o encrypted.env
+```
+
+To decrypt, add `keys` to the env stack:
+
+```bash
+$ envstack keys encrypted -r HELLO
+HELLO=world
+```
+
+Or add the `keys` env stack to `include` to automatically decrypt:
+
+```yaml
+include: [keys]
+```
+
+Variables will automatically decrypt when resolved:
+
+```bash
+$ ./encrypted.env -r HELLO
+HELLO=world
+```
+
 ## Usage
 
 To see the unresolved environment for one or more environment stacks (values are
@@ -309,6 +380,12 @@ To trace where one or more environment vars is being set:
 
 ```bash
 $ envstack [STACK] -t [VAR [VAR ...]]
+```
+
+To run commands in an environment stack:
+
+```bash
+$ envstack [STACK] -- [COMMAND]
 ```
 
 To get the list of source files for a given stack:
@@ -352,11 +429,20 @@ Creating and resolving environments:
 {'BAR': 'foo', 'FOO': 'foo'}
 ```
 
+Create an encrypted environment:
+
+```python
+>>> from envstack.env import Env, encrypt_environ
+>>> env = Env({"SECRET": "super_secret", "PASSWORD": "my_password"})
+>>> encrypted = encrypt_environ(env)
+```
+
 Loading and resolving predefined environments from stack files:
 
 ```python
 >>> from envstack.env import load_environ, resolve_environ
->>> env = resolve_environ(load_environ(name))
+>>> env = load_environ(name)
+>>> resolved = resolve_environ(env)
 ```
 
 ## Running Commands
@@ -416,7 +502,7 @@ environment stack that sets a value for `${PYEXE}`:
 
 #### hello.env
 ```yaml
-all: &default
+all: &all
   PYEXE: /usr/bin/python
 ```
 
@@ -443,6 +529,43 @@ Running the wrapper:
 ```bash
 $ hello HELLO
 world
+```
+
+#### Executing Scripts
+
+On linux, environment stack files are also executable scripts that can be called
+directly:
+
+```bash
+$ ./env/test.env
+DEPLOY_ROOT=${ROOT}/${STACK}
+ENV=${STACK}
+ENVPATH=${DEPLOY_ROOT}/env:${ROOT}/prod/env
+HELLO=${HELLO:=world}
+LOG_LEVEL=DEBUG
+PATH=${DEPLOY_ROOT}/bin:${ROOT}/prod/bin:${PATH}
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
+STACK=test
+```
+
+Run commands inside a specific environment stack file:
+
+```bash
+$ ./env/test.env -- <command>
+```
+
+For example:
+
+```bash
+$ ./env/hello.env -- echo {HELLO}
+world
+```
+
+Export a specific environment stack file:
+
+```bash
+$ ./env/hello.env --export
 ```
 
 ## Shells
@@ -484,13 +607,16 @@ The following environment variables are used to help manage functionality:
 
 | Name | Description |
 |------|-------------|
+| DEFAULT_ENV_STACK | Name of the default environment stack (default) |
 | ENVPATH | Colon-separated paths to search for stack files |
 | IGNORE_MISSING | Ignore missing stack files when resolving environments |
-| STACK | Name of the current environment stack |
+| STACK | Stores the name of the current environment stack |
 
 # Tests
 
-Unit tests can be run using pytest (currently only tested on linux):
+Unit tests can be run using pytest (note: some tests fail on win32 currently).
+Make sure you don't have any local .env files that may intefere with the unit
+tests.
 
 ```bash
 $ pytest tests -s

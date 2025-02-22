@@ -36,69 +36,88 @@ Contains unit tests for running commands.
 import os
 import shutil
 import subprocess
+import sys
 import unittest
+
+import envstack
+from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
 
 from test_env import create_test_root, update_env_file
 
 
 class TestUnresolved(unittest.TestCase):
-    """Tests unresolved environment variables."""
+    """Tests unresolved environment variables from the cli."""
 
     def setUp(self):
         self.envstack_bin = os.path.join(
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
         os.environ["INTERACTIVE"] = "0"
 
     def test_default(self):
-        expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
+        expected_output = (
+            """DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=prod
 ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${DEPLOY_ROOT}/bin:${PATH}
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
-ROOT=/mnt/pipe
+ROOT=%s
 STACK=default
 """
+            % self.root
+        )
         command = self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_dev(self):
-        expected_output = """DEPLOY_ROOT=${ROOT}/dev
+        expected_output = (
+            """DEPLOY_ROOT=${ROOT}/dev
 ENV=dev
 ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=DEBUG
 PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
 PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
-ROOT=/mnt/pipe
+ROOT=%s
 STACK=dev
 """
+            % self.root
+        )
         command = "%s dev" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_distman(self):
-        expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
+        expected_output = (
+            """DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=${ENV:=prod}
 ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=INFO
 PATH=${DEPLOY_ROOT}/bin:${PATH}
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
-ROOT=/mnt/pipe
+ROOT=%s
 STACK=distman
 """
+            % self.root
+        )
         command = "%s distman" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_hello(self):
-        expected_output = """DEPLOY_ROOT=${ROOT}/${ENV}
+        expected_output = (
+            """DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=prod
 ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
@@ -106,9 +125,11 @@ LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${DEPLOY_ROOT}/bin:${PATH}
 PYEXE=/usr/bin/python
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
-ROOT=/mnt/pipe
+ROOT=%s
 STACK=hello
 """
+            % self.root
+        )
         command = "%s hello" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
@@ -116,7 +137,7 @@ STACK=hello
     def test_thing(self):
         expected_output = """CHAR_LIST=['a', 'b', 'c', '${HELLO}']
 DEPLOY_ROOT=${ROOT}/${ENV}
-DICT={'a': 1, 'b': 2, 'c': 3}
+DICT={'a': 1, 'b': 2, 'c': '${INT}'}
 ENV=prod
 ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 FLOAT=1.0
@@ -134,6 +155,108 @@ STACK=thing
         self.assertEqual(output, expected_output)
 
 
+class TestEncrypt(unittest.TestCase):
+    """Tests encrypting environment variables from the cli."""
+
+    def setUp(self):
+        self.envstack_bin = os.path.join(
+            os.path.dirname(__file__), "..", "bin", "envstack"
+        )
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
+        os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
+        os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
+        # remove so we use base64 encoding by default
+        if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
+        if FernetEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[FernetEncryptor.KEY_VAR_NAME]
+
+    def tearDown(self):
+        envstack.revert()
+
+    def test_default(self):
+        expected_output = """DEPLOY_ROOT=JHtST09UfS8ke0VOVn0=
+ENV=cHJvZA==
+ENVPATH=JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
+HELLO=JHtIRUxMTzo9d29ybGR9
+LOG_LEVEL=JHtMT0dfTEVWRUw6PUlORk99
+PATH=JHtERVBMT1lfUk9PVH0vYmluOiR7UEFUSH0=
+PYTHONPATH=JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
+ROOT=L21udC9waXBl
+STACK=ZGVmYXVsdA==
+"""
+        command = "%s --encrypt" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_default_AESGCM(self):
+        """Test that the AESGCM encryption works, and resolves vars since the
+        encrypted values change every time."""
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = AESGCMEncryptor.generate_key()
+        expected_output = f"""DEPLOY_ROOT={self.root}/prod
+ENV=prod
+ROOT={self.root}
+"""
+        command = "%s --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
+        output = subprocess.check_output(
+            command, shell=True, env=os.environ, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_default_resolve(self):
+        expected_output = f"""DEPLOY_ROOT={self.root}/prod
+ENV=prod
+ROOT={self.root}
+"""
+        command = "%s --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_default_command_echo(self):
+        expected_output = f"""{self.root}/prod
+"""
+        command = "%s --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_dev(self):
+        expected_output = """DEPLOY_ROOT=JHtST09UfS9kZXY=
+ENV=ZGV2
+ENVPATH=JHtST09UfS9kZXYvZW52OiR7Uk9PVH0vcHJvZC9lbnY6JHtFTlZQQVRIfQ==
+HELLO=JHtIRUxMTzo9d29ybGR9
+LOG_LEVEL=REVCVUc=
+PATH=JHtST09UfS9kZXYvYmluOiR7Uk9PVH0vcHJvZC9iaW46JHtQQVRIfQ==
+PYTHONPATH=JHtST09UfS9kZXYvbGliL3B5dGhvbjoke1JPT1R9L3Byb2QvbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
+ROOT=L21udC9waXBl
+STACK=ZGV2
+"""
+        command = "%s dev --encrypt" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_dev_resolve(self):
+        expected_output = f"""DEPLOY_ROOT={self.root}/dev
+ENV=dev
+ROOT={self.root}
+"""
+        command = "%s dev --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_dev_command_echo(self):
+        expected_output = f"""{self.root}/dev
+"""
+        command = "%s dev --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+
 class TestResolved(unittest.TestCase):
     """Tests resolved environment variables."""
 
@@ -142,14 +265,19 @@ class TestResolved(unittest.TestCase):
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
         os.environ["INTERACTIVE"] = "0"
         os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
 
     def test_default(self):
-        expected_output = """DEPLOY_ROOT=/mnt/pipe/prod
+        expected_output = f"""DEPLOY_ROOT={self.root}/prod
 HELLO=world
-ROOT=/mnt/pipe
+ROOT={self.root}
 STACK=default
 """
         command = "%s -r DEPLOY_ROOT HELLO ROOT STACK" % self.envstack_bin
@@ -157,9 +285,9 @@ STACK=default
         self.assertEqual(output, expected_output)
 
     def test_dev(self):
-        expected_output = """DEPLOY_ROOT=/mnt/pipe/dev
+        expected_output = f"""DEPLOY_ROOT={self.root}/dev
 HELLO=world
-ROOT=/mnt/pipe
+ROOT={self.root}
 STACK=dev
 """
         command = "%s dev -r DEPLOY_ROOT HELLO ROOT STACK" % self.envstack_bin
@@ -167,8 +295,8 @@ STACK=dev
         self.assertEqual(output, expected_output)
 
     def test_distman(self):
-        expected_output = """DEPLOY_ROOT=/mnt/pipe/prod
-ROOT=/mnt/pipe
+        expected_output = f"""DEPLOY_ROOT={self.root}/prod
+ROOT={self.root}
 STACK=distman
 """
         command = "%s distman -r DEPLOY_ROOT ROOT STACK" % self.envstack_bin
@@ -176,8 +304,8 @@ STACK=distman
         self.assertEqual(output, expected_output)
 
     def test_dev_distman(self):
-        expected_output = """DEPLOY_ROOT=/mnt/pipe/dev
-ROOT=/mnt/pipe
+        expected_output = f"""DEPLOY_ROOT={self.root}/dev
+ROOT={self.root}
 STACK=distman
 """
         command = "%s dev distman -r DEPLOY_ROOT ROOT STACK" % self.envstack_bin
@@ -185,9 +313,9 @@ STACK=distman
         self.assertEqual(output, expected_output)
 
     def test_test(self):
-        expected_output = """DEPLOY_ROOT=/mnt/pipe/test
+        expected_output = f"""DEPLOY_ROOT={self.root}/test
 HELLO=world
-ROOT=/mnt/pipe
+ROOT={self.root}
 STACK=test
 """
         command = (
@@ -198,9 +326,9 @@ STACK=test
         self.assertEqual(output, expected_output)
 
     def test_foobar(self):
-        expected_output = """DEPLOY_ROOT=/mnt/pipe/foobar
+        expected_output = f"""DEPLOY_ROOT={self.root}/foobar
 HELLO=world
-ROOT=/mnt/pipe
+ROOT={self.root}
 STACK=foobar
 """
         command = (
@@ -230,6 +358,11 @@ class TestCommands(unittest.TestCase):
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
         os.environ["INTERACTIVE"] = "0"
 
@@ -261,7 +394,7 @@ class TestCommands(unittest.TestCase):
 
     def test_test_echo_deploy_root(self):
         command = "%s test -- echo {DEPLOY_ROOT}" % self.envstack_bin
-        expected_output = "/mnt/pipe/test\n"
+        expected_output = f"{self.root}/test\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )
@@ -269,7 +402,7 @@ class TestCommands(unittest.TestCase):
 
     def test_test_echo_deploy_root(self):
         command = "%s test foobar -- echo {DEPLOY_ROOT}" % self.envstack_bin
-        expected_output = "/mnt/pipe/foobar\n"
+        expected_output = f"{self.root}/foobar\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )
@@ -329,13 +462,18 @@ class TestDistman(unittest.TestCase):
         )
         self.python_cmd = """python -c \"import os,envstack;envstack.init('distman');print(os.getenv('DEPLOY_ROOT'))\""""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
         os.environ["INTERACTIVE"] = "0"
 
     def test_default_deploy_root(self):
         os.environ["ENV"] = "invalid"  # should not be able to override ENV
         command = "%s -- %s" % (self.envstack_bin, self.python_cmd)
-        expected_output = "/mnt/pipe/prod\n"
+        expected_output = f"{self.root}/prod\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )
@@ -344,7 +482,7 @@ class TestDistman(unittest.TestCase):
     def test_dev_deploy_root(self):
         os.environ["ENV"] = "invalid"  # should not be able to override ENV
         command = "%s dev -- %s" % (self.envstack_bin, self.python_cmd)
-        expected_output = "/mnt/pipe/dev\n"
+        expected_output = f"{self.root}/dev\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )
@@ -352,7 +490,7 @@ class TestDistman(unittest.TestCase):
 
     def test_test_deploy_root(self):
         command = "ENV=invalid %s test -- %s" % (self.envstack_bin, self.python_cmd)
-        expected_output = "/mnt/pipe/test\n"
+        expected_output = f"{self.root}/test\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )
@@ -363,7 +501,7 @@ class TestDistman(unittest.TestCase):
             self.envstack_bin,
             self.python_cmd,
         )
-        expected_output = "/mnt/pipe/foobar\n"
+        expected_output = f"{self.root}/foobar\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )

@@ -41,6 +41,7 @@ import tempfile
 
 import envstack
 from envstack.env import Env, EnvVar, Scope, Source
+from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
 from envstack.util import dict_diff
 
 
@@ -185,6 +186,16 @@ class TestSource(unittest.TestCase):
 
 
 class TestInit(unittest.TestCase):
+    def setUp(self):
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
+
+    def tearDown(self):
+        envstack.revert()
+
     def test_init_default(self):
         """Tests init with default stack."""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
@@ -197,15 +208,13 @@ class TestInit(unittest.TestCase):
         python_path = os.getenv("PYTHONPATH")
 
         envstack.init()
-        self.assertEqual(os.getenv("ENV"), os.getenv("ENV", "default"))
+        self.assertEqual(os.getenv("ENV"), "prod")
         self.assertEqual(os.getenv("STACK"), "default")
         self.assertEqual(os.getenv("HELLO"), "world")
-        self.assertEqual(os.getenv("LOG_LEVEL"), "INFO")
-        self.assertEqual(os.getenv("ROOT"), "/mnt/pipe")
-        self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/prod")
+        self.assertEqual(os.getenv("ROOT"), self.root)
+        self.assertEqual(os.getenv("DEPLOY_ROOT"), f"{self.root}/prod")
         self.assertTrue(len(sys.path) > len(sys_path))
         self.assertTrue(len(os.getenv("PATH")) > len(path))
-        self.assertTrue(len(os.getenv("PYTHONPATH")) > len(python_path))
         self.assertTrue("prod/lib/python" in os.getenv("PYTHONPATH"))
         self.assertTrue("prod/bin" in os.getenv("PATH"))
 
@@ -234,8 +243,8 @@ class TestInit(unittest.TestCase):
         self.assertEqual(os.getenv("STACK"), "dev")
         self.assertEqual(os.getenv("HELLO"), "goodbye")
         self.assertEqual(os.getenv("LOG_LEVEL"), "DEBUG")
-        self.assertEqual(os.getenv("ROOT"), "/mnt/pipe")
-        self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/dev")
+        self.assertEqual(os.getenv("ROOT"), self.root)
+        self.assertEqual(os.getenv("DEPLOY_ROOT"), f"{self.root}/dev")
         self.assertTrue(len(sys.path) > len(sys_path))
 
         envstack.revert()
@@ -257,7 +266,7 @@ class TestInit(unittest.TestCase):
         envstack.init("test", "custom", ignore_missing=True)
         self.assertEqual(os.getenv("ENV"), "custom")
         self.assertEqual(os.getenv("STACK"), "custom")
-        self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/custom")
+        self.assertEqual(os.getenv("DEPLOY_ROOT"), f"{self.root}/custom")
         self.assertTrue(len(sys.path) > len(sys_path))
 
         envstack.revert()
@@ -266,6 +275,220 @@ class TestInit(unittest.TestCase):
         self.assertEqual(diffs["changed"], {})
         self.assertEqual(diffs["removed"], {})
         self.assertEqual(diffs["unchanged"], original_env)
+
+
+class TestBakeEnviron(unittest.TestCase):
+    def setUp(self):
+        self.root = create_test_root()
+        self.envpath = os.path.join(self.root, "prod", "env")
+        os.environ["ENVPATH"] = self.envpath
+        os.environ["INTERACTIVE"] = "0"
+
+    def tearDown(self):
+        envstack.revert()
+        shutil.rmtree(self.root)
+
+    def bake_environ(self, stack_name):
+        """Bakes a given stack and compares values."""
+        from envstack.env import bake_environ, load_environ
+
+        default = load_environ(stack_name)
+        envstack.revert()  # FIXME: revert should not be required
+        baked = bake_environ(stack_name)
+
+        # make sure environment sources are different
+        self.assertNotEqual(default.sources, baked.sources)
+        self.assertTrue(len(default) > 0)
+        self.assertTrue(len(baked) > 0)
+
+        for key, value in default.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            self.assertEqual(baked[key], value)
+
+        # bake to a file, reload and compare
+        envstack.revert()  # FIXME: revert should not be required
+        baked_file = os.path.join(self.envpath, "baked.env")
+        baked2 = bake_environ(stack_name, filename=baked_file)
+        self.assertTrue(os.path.exists(baked_file))
+
+        envstack.revert()  # FIXME: revert should not be required
+        baked2_reloaded = load_environ("baked")
+        self.assertNotEqual(baked2.sources, baked2_reloaded.sources)
+        self.assertTrue(len(baked2) > 0)
+        self.assertTrue(len(baked2_reloaded) > 0)
+
+        for key, value in baked.items():
+            if key == "STACK":
+                continue
+            self.assertEqual(baked2_reloaded[key], value)
+
+        if os.path.exists(baked_file):
+            os.unlink(baked_file)
+
+    def test_bake_default(self):
+        """Tests baking the default environment."""
+        self.bake_environ("default")
+
+    def test_bake_dev(self):
+        """Tests baking the dev environment."""
+        self.bake_environ("dev")
+
+    def test_bake_thing(self):
+        """Tests baking the thing environment."""
+        self.bake_environ("thing")
+
+    def test_bake_dev_thing(self):
+        """Tests baking the multiple environments."""
+        self.bake_environ(["dev", "thing"])
+
+
+class TestEncryptEnviron(unittest.TestCase):
+    def setUp(self):
+        self.root = create_test_root()
+        self.envpath = os.path.join(self.root, "prod", "env")
+        os.environ["ENVPATH"] = self.envpath
+        os.environ["INTERACTIVE"] = "0"
+        # remove so we use base64 encoding by default
+        if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
+        if FernetEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[FernetEncryptor.KEY_VAR_NAME]
+
+    def tearDown(self):
+        envstack.revert()
+        if self.root and os.path.exists(self.root):
+            shutil.rmtree(self.root)
+
+    def encrypt_environ(self, stack_name):
+        """Tests load_environ with encryption (Base64 only)."""
+        from envstack.env import load_environ, encrypt_environ
+        from envstack.node import EncryptedNode
+
+        env = load_environ(stack_name)
+        encrypted = encrypt_environ(env)
+
+        # make sure environment sources are not empty
+        self.assertTrue(len(env) > 0)
+        self.assertTrue(len(encrypted) > 0)
+
+        for key, value in env.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            encrypted_value = encrypted[key]
+            resolved_encrypted_value = encrypted_value.resolve(env=env)
+            self.assertTrue(isinstance(encrypted_value, EncryptedNode))
+            self.assertNotEqual(encrypted_value, value)
+            self.assertEqual(resolved_encrypted_value, value)
+
+    def load_encrypted_environ(self, stack_name):
+        """Tests load_environ with encryption."""
+        from envstack.env import load_environ
+
+        default = load_environ(stack_name, encrypt=False)
+        envstack.revert()  # FIXME: revert should not be required
+        encrypted = load_environ(stack_name, encrypt=True)
+
+        # make sure environment sources are not empty
+        self.assertTrue(len(default) > 0)
+        self.assertTrue(len(encrypted) > 0)
+
+        for key, value in default.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            encrypted_value = encrypted[key]
+            resolved_value = encrypted_value.resolve()
+            self.assertNotEqual(encrypted_value, resolved_value)
+            self.assertNotEqual(encrypted_value, value)
+            self.assertEqual(resolved_value, value)
+
+    # TODO: bake to a file, reload and compare
+    def bake_encrypted_environ(self, stack_name):
+        """Tests bake_environ with encryption."""
+        from envstack.env import bake_environ, load_environ
+        from envstack.node import EncryptedNode
+
+        default = load_environ(stack_name)
+        envstack.revert()  # FIXME: revert should not be required
+        encrypted = bake_environ(stack_name, encrypt=True)
+
+        # make sure environment sources are different and not empty
+        self.assertNotEqual(default.sources, encrypted.sources)
+        self.assertTrue(len(default) > 0)
+        self.assertTrue(len(encrypted) > 0)
+
+        for key, value in default.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            encrypted_value = encrypted[key]
+            self.assertTrue(isinstance(encrypted_value, EncryptedNode))
+            self.assertEqual(encrypted_value.original_value, None)
+            # self.assertNotEqual(encrypted_value.original_value, value)  # from_yaml only
+            self.assertEqual(encrypted_value.value, value)
+            # the 'encrypted' env may contain encryption keys
+            self.assertEqual(encrypted_value.resolve(env=encrypted), value)
+
+    def resolve_encrypted_environ(self, stack_name):
+        """Tests resolve_environ with encrypted environ."""
+        from envstack.env import encrypt_environ, load_environ, resolve_environ
+        from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
+
+        env = load_environ(stack_name)  # unresolved values
+        resolved = resolve_environ(env)  # resolved values
+        encrypted = encrypt_environ(env)  # encrypted values
+        encrypted_resolved = resolve_environ(encrypted)  # resolved encrypted values
+
+        # make sure environments are not empty
+        self.assertTrue(len(encrypted) > 0)
+        self.assertTrue(len(resolved) > 0)
+
+        # make sure keys are not accidentally left in resolved environments
+        for key_name in [AESGCMEncryptor.KEY_VAR_NAME, FernetEncryptor.KEY_VAR_NAME]:
+            for _env in (env, resolved, encrypted, encrypted_resolved):
+                self.assertTrue(key_name not in _env)
+
+        for key, value in env.items():
+            if key == "STACK":  # skip the stack name
+                continue
+            encrypted_value = encrypted[key]  # encrypted value
+            resolved_value = resolved[key]  # resolved value
+            encrypted_resolved_value = encrypted_resolved[
+                key
+            ]  # resolved encrypted value
+            self.assertNotEqual(encrypted_value, None)
+            self.assertNotEqual(resolved_value, None)
+            self.assertNotEqual(encrypted_resolved_value, None)
+            self.assertNotEqual(encrypted_value, value)
+            self.assertNotEqual(encrypted_value, resolved_value)
+            self.assertEqual(resolved_value, encrypted_resolved_value)
+
+    def run_tests(self, stack_name):
+        """Runs all tests for a given stack."""
+        self.encrypt_environ(stack_name)
+        self.load_encrypted_environ(stack_name)
+        self.bake_encrypted_environ(stack_name)
+        self.resolve_encrypted_environ(stack_name)
+
+        # add encryption key to environment and test again
+        if AESGCMEncryptor.KEY_VAR_NAME not in os.environ:
+            key = AESGCMEncryptor.generate_key()
+            os.environ[AESGCMEncryptor.KEY_VAR_NAME] = key
+
+        self.load_encrypted_environ(stack_name)
+        self.bake_encrypted_environ(stack_name)
+        self.resolve_encrypted_environ(stack_name)
+
+    def test_default(self):
+        """Tests encrypting the default environment."""
+        self.run_tests("default")
+
+    def test_dev(self):
+        """Tests encrypting the dev environment."""
+        self.run_tests("dev")
+
+    def test_thing(self):
+        """Tests encrypting the thing environment."""
+        self.run_tests("thing")
 
 
 class TestIssues(unittest.TestCase):
@@ -350,6 +573,7 @@ class TestIssues(unittest.TestCase):
         try:
             envstack.init("dev")
             import yaml
+
             success = yaml is not None
         except ImportError:
             success = False

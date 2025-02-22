@@ -44,6 +44,7 @@ import yaml
 
 from envstack import config
 from envstack.exceptions import CyclicalReference
+from envstack.node import AESGCMNode, Base64Node, EncryptedNode, FernetNode
 
 # value for unresolvable variables
 null = ""
@@ -105,6 +106,16 @@ def dedupe_list(lst: list):
     return list(OrderedDict.fromkeys(lst))
 
 
+def split_posix_paths(path_str: str):
+    """
+    Splits a path string using the posix path separator.
+
+    :param path_str: The input path string.
+    :returns: The split path list.
+    """
+    return [p.strip() for p in path_str.split(":") if p.strip()]
+
+
 def split_windows_paths(path_str: str):
     """
     Splits a windows-style path string that may contain a mix of colon and
@@ -119,7 +130,7 @@ def split_windows_paths(path_str: str):
     :returns: The split path list.
     """
     result = []
-    tokens = [token.strip() for token in path_str.split(";") if token.strip()]
+    tokens = [p.strip() for p in path_str.split(";") if p.strip()]
 
     for token in tokens:
         # token is windows-style, insert a marker before drive letters
@@ -133,31 +144,35 @@ def split_windows_paths(path_str: str):
                 if p
             ]
         else:
-            result += [p for p in token.split(":") if p]
+            result += split_posix_paths(token)
 
     return result
 
 
-def dedupe_paths(
-    path_str: str, joiner: str = os.pathsep, platform: str = config.PLATFORM
-):
+def split_paths(path_str: str, platform: str = config.PLATFORM):
+    """
+    Splits a path string using the platform-specific path separator.
+
+    :param path_str: The input path string.
+    :param platform: The platform to use.
+    :returns: The split path list.
+    """
+    if platform == "windows":
+        return split_windows_paths(path_str)
+    else:
+        return split_posix_paths(path_str)
+
+
+def dedupe_paths(path_str: str, platform: str = config.PLATFORM):
     """
     Deduplicates paths from a colon-separated string.
 
     :param path_str: The input path string.
-    :param joiner: The path separator to use.
     :platform: The platform to use.
     :returns: The deduplicated path string.
     """
-
-    if platform == "windows":
-        deduped = dedupe_list(split_windows_paths(path_str))
-    else:
-        deduped = dedupe_list(path_str.split(":"))
-
-    # remove empty paths
-    # deduped = [p for p in deduped if p]
-
+    deduped = dedupe_list(split_paths(path_str, platform))
+    joiner = ";" if platform == "windows" else ":"
     return joiner.join(deduped)
 
 
@@ -192,7 +207,7 @@ def encode(env: dict):
     :param resolved: fully resolve values (default=True).
     :returns: dict with bytestring key/values.
     """
-    c = lambda v: str(v)
+    c = lambda v: str(v)  # noqa: E731
     return dict((c(k), c(v)) for k, v in env.items())
 
 
@@ -238,9 +253,10 @@ def get_stack_name(name: str = config.DEFAULT_NAMESPACE):
 
 def evaluate_modifiers(expression: str, environ: dict = os.environ):
     """
-    Evaluates Bash-like variable expansion modifiers.
+    Evaluates Bash-like variable expansion modifiers in a string, resolves
+    custom node types, and evaluates lists and dictionaries.
 
-    Supports:
+    Supported modifiers:
     - values like "world" (no substitution)
     - ${VAR} for direct substitution (empty string if unset)
     - ${VAR:=default} to set and use a default value if unset
@@ -260,7 +276,7 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         operator = match.group(2)
         argument = match.group(3)
         override = os.getenv(var_name, null)
-        value = environ.get(var_name, override)
+        value = str(environ.get(var_name, override))
         varstr = "${%s}" % var_name
 
         # check for self-referential values
@@ -295,17 +311,26 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         # substitute all matches in the expression
         result = variable_pattern.sub(substitute_variable, expression)
 
-        # dedupe paths and convert to platform-specific path separators
-        if ":" in result:
+        # dedupe path-like values and resolve separators
+        if ":" in result and ("/" in result or "\\" in result):
             result = dedupe_paths(result)
 
     # detect recursion errors
     except RecursionError:
         raise CyclicalReference(f"Cyclical reference detected in {expression}")
 
-    # evaluate list elements
+    # evaluate other data types
+    # TODO: find a better way to evaluate other data types
     except TypeError:
-        if isinstance(expression, list):
+        if isinstance(expression, AESGCMNode):
+            result = expression.resolve(env=environ)
+        elif isinstance(expression, Base64Node):
+            result = expression.resolve(env=environ)
+        elif isinstance(expression, EncryptedNode):
+            result = expression.resolve(env=environ)
+        elif isinstance(expression, FernetNode):
+            result = expression.resolve(env=environ)
+        elif isinstance(expression, list):
             result = [
                 (
                     variable_pattern.sub(substitute_variable, str(v))
@@ -359,7 +384,7 @@ def safe_eval(value: str):
         # warning: security issue
         eval_func = eval
 
-    if type(value) == str:
+    if type(value) is str:
         try:
             return eval_func(value)
         except Exception:
@@ -442,20 +467,19 @@ def validate_yaml(file_path: str):
     try:
         with open(file_path, "r") as stream:
             data = yaml.safe_load(stream.read())
-
+            # data = yaml.load(stream.read(), Loader=CustomLoader)
         if not isinstance(data, dict):
             raise yaml.YAMLError("invalid data structure")
-
         missing_keys = required_keys - data.keys()
         if missing_keys:
             raise yaml.YAMLError(f"missing keys: {', '.join(sorted(missing_keys))}")
-
         return data
-
+    except OSError as e:
+        print(e)
     except yaml.YAMLError as e:
         if hasattr(e, "problem_mark") and e.problem_mark:
             mark = e.problem_mark
-            print(f'  File "{file_path}" line {mark.line}, column {mark.column}:')
+            print(f'  File "{file_path}" line {mark.line + 1}, column {mark.column}:')
         print_error(file_path, e)
         if hasattr(e, "problem") and e.problem:
             print(f"SyntaxError: {e.problem}")
@@ -464,3 +488,134 @@ def validate_yaml(file_path: str):
             print(f"SyntaxError: {e}")
 
     return {}
+
+
+def unquote_strings(file_path: str):
+    """
+    Unquotes all the single quote strings in a given file.
+
+    :param file_path: Path to the file.
+    """
+    with open(file_path, "r") as file:
+        content = file.read()
+
+    updated_content = re.sub(r"'([^']*)'", r"\1", content)
+
+    with open(file_path, "w") as file:
+        file.write(updated_content)
+
+
+def dump_yaml(file_path: str, data: dict, unquote: bool = True):
+    """
+    Dumps a dictionary to a YAML file with custom formatting:
+
+    - unquotes single quoted strings
+    - partitions platform data
+    - adds a shebang line to make the file executable
+    - adds an include line if it exists in the data
+
+    :param file_path: Path to the output YAML file.
+    :param data: The dictionary to dump.
+    :param unquote: Unquote single quoted strings.
+    """
+    from envstack.node import CustomDumper, yaml
+
+    partitioned_data = partition_platform_data(data)
+
+    # write the platform partidioned data to the env file,
+    # add shebang to make it executable
+    with open(file_path, "w") as file:
+        file.write("#!/usr/bin/env envstack\n")
+        if data.get("include"):
+            file.write(f"include: {data['include']}\n")
+        else:
+            file.write("include: []\n")
+        if "include" in partitioned_data:
+            del partitioned_data["include"]
+        yaml.dump(
+            partitioned_data,
+            file,
+            Dumper=CustomDumper,
+            sort_keys=True,
+            default_flow_style=False,
+        )
+
+    if os.path.exists(file_path):
+        # unquote the merge keys because yaml doesn't like them quoted
+        if unquote:
+            unquote_strings(file_path)
+
+        # make the env stack file executable
+        try:
+            os.chmod(file_path, 0o755)
+        except Exception:
+            pass
+
+
+def partition_platform_data(data):
+    """
+    Given a data dictionary with keys 'all', 'darwin', 'linux', 'windows',
+    this function finds which key-value pairs are common across all platforms,
+    and which are unique to each platform. Platform-specific values go in their
+    respective dicts.
+
+    :param data: dictionary to partition.
+    :returns: platform partitioned dictionary.
+    """
+
+    # move data under the "all" key if it's not already there
+    if "all" not in data:
+        data["all"] = data.copy()
+
+    # platforms of interest (darwin, linux, windows)
+    # platforms = [k for k in data.keys() if k not in ("all", "include")]
+    platforms = ["darwin", "linux", "windows"]
+
+    # get the union of keys from all platforms
+    all_platform_keys = set()
+    for p in platforms:
+        all_platform_keys |= data.get(p, {}).keys()
+
+    # determine which keys are common to all platforms
+    common_keys = []
+    for key in all_platform_keys:
+        if all(key in data[p] for p in platforms):
+            # get first value for comparison later
+            # first_value = data[platforms[0]][key].value
+            first_value = data[platforms[0]][key]
+            # call it common if all platforms have the same value
+            # if all(data[p][key].value == first_value for p in platforms):
+            if all(data[p][key] == first_value for p in platforms):
+                common_keys.append(key)
+
+    # build a new all dict for common items
+    new_all = {"<<": "*all"}  # avoids syntax errors when no vars are present
+    for k in common_keys:
+        if k in data["all"]:
+            new_all[k] = data["all"][k]
+        else:
+            new_all[k] = data[platforms[0]][k]
+
+    # keep in all anything that is platform-agnostic
+    for k, v in data["all"].items():
+        if k not in all_platform_keys:
+            new_all[k] = v
+
+    # build dicts for each platform with only platform‑specific keys
+    new_platform_dicts = {}
+    for p in platforms:
+        new_platform_dicts[p] = {"<<": "*all"}
+        for k, v in data.get(p, {}).items():
+            if k not in common_keys:
+                new_platform_dicts[p][k] = v
+
+    # combine with platform-specific dicts
+    new_data = {"all": new_all}
+    for p in platforms:
+        new_data[p] = new_platform_dicts[p]
+
+    # add include if it exists
+    if data.get("include"):
+        new_data["include"] = data["include"]
+
+    return new_data

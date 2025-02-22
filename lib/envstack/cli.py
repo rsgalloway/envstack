@@ -38,8 +38,18 @@ import sys
 import traceback
 
 from envstack import __version__, config
-from envstack.env import clear, export, load_environ, resolve_environ, trace_var
+from envstack.env import (
+    bake_environ,
+    clear,
+    export,
+    load_environ,
+    resolve_environ,
+    trace_var,
+)
+from envstack.logger import setup_stream_handler
 from envstack.wrapper import run_command
+
+setup_stream_handler()
 
 
 def parse_args():
@@ -51,7 +61,7 @@ def parse_args():
 
     if "--" in sys.argv:
         dash_index = sys.argv.index("--")
-        args_after_dash = sys.argv[dash_index + 1 :]
+        args_after_dash = sys.argv[dash_index + 1 :]  # noqa: E203
         args_before_dash = sys.argv[1:dash_index]
     else:
         args_after_dash = []
@@ -73,6 +83,30 @@ def parse_args():
         default=[config.DEFAULT_NAMESPACE],
         help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
+    bake_group = parser.add_argument_group("bake options")
+    bake_group.add_argument(
+        "-o",
+        "--out",
+        metavar="FILENAME",
+        help="write the env stack to a new stack file",
+    )
+    bake_group.add_argument(
+        "--depth",
+        type=int,
+        default=0,
+        help="depth of environment stack to bake",
+    )
+    bake_group.add_argument(
+        "--keygen",
+        action="store_true",
+        help="generate encryption keys",
+    )
+    bake_group.add_argument(
+        "--encrypt",
+        action="store_true",
+        help="encrypt the baked environment values",
+    )
+    parser.add_argument_group(bake_group)
     parser.add_argument(
         "--clear",
         action="store_true",
@@ -121,8 +155,12 @@ def parse_args():
 
 
 def whichenv():
-    """Entry point for the whichenv command line tool"""
+    """Entry point for the whichenv command line tool. Finds {VAR}s."""
     from envstack.util import findenv
+
+    if len(sys.argv) != 2:
+        print("Usage: whichenv [VAR]")
+        return 2
 
     var_name = sys.argv[1]
     paths = findenv(var_name)
@@ -137,30 +175,63 @@ def main():
     try:
         if command:
             return run_command(command, args.namespace)
+
+        elif args.keygen:
+            from envstack.encrypt import generate_keys
+
+            keys = generate_keys()
+
+            if args.export:
+                from envstack.env import export_env_to_shell
+
+                print(export_env_to_shell(keys))
+            elif args.out:
+                from envstack.util import dump_yaml
+
+                dump_yaml(file_path=args.out, data=keys)
+            else:
+                for key, value in keys.items():
+                    print(f"{key}: {value}")
+
+        elif args.out:
+            bake_environ(
+                args.namespace,
+                filename=args.out,
+                depth=args.depth or 0,
+                encrypt=args.encrypt,
+            )
+
         elif args.resolve is not None:
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
             )
             keys = args.resolve or resolved.keys()
-            for key in sorted(keys):
+            for key in sorted(str(k) for k in keys):
                 val = resolved.get(key)
                 print(f"{key}={val}")
+
         elif args.trace is not None:
             if len(args.trace) == 0:
                 args.trace = load_environ(args.namespace).keys()
             for trace in args.trace:
                 path = trace_var(*args.namespace, var=trace)
                 print("{0}: {1}".format(trace, path))
+
         elif args.sources:
             env = load_environ(args.namespace, platform=args.platform)
             for source in env.sources:
                 print(source.path)
+
         elif args.clear:
             print(clear(args.namespace, config.SHELL))
+
         elif args.export:
             print(export(args.namespace, config.SHELL))
+
         else:
-            env = load_environ(args.namespace, platform=args.platform)
+            env = load_environ(
+                args.namespace, platform=args.platform, encrypt=args.encrypt
+            )
             for k, v in sorted(env.items(), key=lambda x: str(x[0])):
                 print(f"{k}={v}")
 

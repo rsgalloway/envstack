@@ -41,7 +41,8 @@ from pathlib import Path
 import yaml  # noqa
 
 from envstack import config, logger, path, util
-from envstack.exceptions import *
+from envstack.node import custom_node_types, get_keys_from_env, BaseNode, EncryptedNode
+from envstack.exceptions import *  # noqa
 
 # value delimiter pattern (splits values by os.pathsep)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
@@ -69,12 +70,12 @@ class Scope(path.Path):
 class Source(object):
     """envstack .env source file."""
 
-    def __init__(self, path):
+    def __init__(self, path: str = None):
         """
         :param path: path to .env file.
         """
         self.path = path
-        self.__data = {}
+        self.data = {}
 
     def __eq__(self, other):
         if not isinstance(other, Source):
@@ -91,7 +92,7 @@ class Source(object):
         return f'<Source "{self.path}">'
 
     def __str__(self):
-        return self.path
+        return str(self.path)
 
     def exists(self):
         """Returns True if the .env file exists"""
@@ -103,9 +104,9 @@ class Source(object):
 
             include: [name1, name2, ... nameN]
         """
-        if not self.__data:
+        if not self.data:
             self.load()
-        return self.__data.get("include", [])
+        return self.data.get("include", [])
 
     def length(self):
         """Returns the char length of the path"""
@@ -113,9 +114,17 @@ class Source(object):
 
     def load(self, platform=config.PLATFORM):
         """Reads .env from .path, and returns an Env class object"""
-        if self.path and not self.__data:
-            self.__data = load_file(self.path)
-        return self.__data.get(platform, self.__data.get("all", {}))
+        if self.path and not self.data:
+            self.data = load_file(self.path)
+        return self.data.get(platform, self.data.get("all", {}))
+
+    def namespace(self):
+        """Returns the namespace of the source file."""
+        return os.path.basename(self.path).split(".")[0]
+
+    def write(self, filepath: str = None):
+        """Writes the source data to the .env file."""
+        util.dump_yaml(filepath or self.path, self.data)
 
 
 class EnvVar(string.Template, str):
@@ -174,9 +183,9 @@ class EnvVar(string.Template, str):
             val = EnvVar(self.safe_substitute(env))
         except RuntimeError as err:
             if "maximum recursion" in str(err):
-                raise CyclicalReference(self.template)
+                raise CyclicalReference(self.template)  # noqa
             else:
-                raise InvalidSyntax(err)
+                raise InvalidSyntax(err)  # noqa
         except Exception:
             val = EnvVar(self.template)
 
@@ -329,7 +338,7 @@ def get_sources(
         return [str(p) for p in paths]
 
     # construct search paths from ${ENVPATH} and scope
-    envpath_dirs = [Path(p).resolve() for p in envpath.split(":") if p.strip()]
+    envpath_dirs = util.split_paths(envpath)
     scope_dirs = _walk_to_scope(scope)
     envpath_dirs.reverse()
     search_paths = envpath_dirs + scope_dirs
@@ -344,13 +353,20 @@ def get_sources(
             if potential_file.exists() and potential_file not in found_files:
                 found_files.append(potential_file)
         if not found_files and not ignore_missing:
-            raise TemplateNotFound(f"{file_basename} not found in ENVPATH or scope.")
+            raise TemplateNotFound(  # noqa
+                f"{file_basename} not found in ENVPATH or scope."
+            )
         return found_files
 
     def _load_file(file_basename):
         """Recursively load .env files and their includes."""
         seen_stacks.add(os.path.splitext(file_basename)[0])
-        file_paths = _find_files(file_basename)
+
+        # check if we're sourcing a file or a namespace
+        if file_basename.endswith(".env") and os.path.exists(file_basename):
+            file_paths = [file_basename]
+        else:
+            file_paths = _find_files(file_basename)
 
         # process each file independently
         for file_path in file_paths:
@@ -379,8 +395,6 @@ def get_sources(
 
     # process each stack in the list
     for name in names:
-        if not name.endswith(".env"):
-            name += ".env"
         _load_file(name)
 
     return sources
@@ -423,6 +437,7 @@ def clear(
     :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
+    # load the envrinment for the given stack and get list of sources
     env = load_environ(name, scope=scope)
 
     # track the environment variables to export
@@ -430,12 +445,13 @@ def clear(
 
     # restricted environment variables
     restricted = [
+        "ENVPATH",
+        "LD_LIBRARY_PATH",
         "PATH",
         "PYTHONPATH",
-        "ENVPATH",
+        "PROMPT",
         "PS1",
         "PWD",
-        "PROMPT",
     ]
 
     # get the name of the shell
@@ -479,24 +495,16 @@ def clear(
     return exp
 
 
-def export(
-    name: str = config.DEFAULT_NAMESPACE,
-    shell: str = config.SHELL,
-    scope: str = None,
-):
-    """Returns shell set env commands that can be sourced to set env stack
+def export_env_to_shell(env: Env, shell: str = config.SHELL):
+    """Returns shell commands that can be sourced to set environment stack
     environment variables.
 
-    List of shell names: bash, sh, tcsh, cmd, pwsh
-    (see output of config.detect_shell()).
+    Supported shells: bash, sh, tcsh, cmd, pwsh (see config.detect_shell()).
 
-    :param name: stack namespace.
+    :param env: environment dict.
     :param shell: name of shell (default: current shell).
-    :param scope: environment scope (default: cwd).
     :returns: shell commands as string.
     """
-    # resolve environment variables
-    resolved_env = resolve_environ(load_environ(name, scope=scope))
 
     # track the environment variables to export
     export_list = list()
@@ -504,7 +512,8 @@ def export(
     # get the name of the shell
     shell_name = os.path.basename(shell)
 
-    for key, val in resolved_env.items():
+    # iterate over the environment variables
+    for key, val in env.copy().items():
         old_key = f"_ES_OLD_{key}"
         old_val = os.environ.get(key)
         if key == "PATH" and not val:
@@ -535,8 +544,27 @@ def export(
     return exp
 
 
+def export(
+    name: str = config.DEFAULT_NAMESPACE,
+    shell: str = config.SHELL,
+    scope: str = None,
+):
+    """Returns shell commands that can be sourced to set environment stack
+    environment variables.
+
+    Supported shells: bash, sh, tcsh, cmd, pwsh (see config.detect_shell()).
+
+    :param name: stack namespace.
+    :param shell: name of shell (default: current shell).
+    :param scope: environment scope (default: cwd).
+    :returns: shell commands as string.
+    """
+    resolved_env = resolve_environ(load_environ(name, scope=scope))
+    return export_env_to_shell(resolved_env, shell)
+
+
 def save():
-    """Saves the current environment for later restoration."""
+    """Caches the current environment for later restoration."""
     global saved_environ
 
     if not saved_environ:
@@ -545,8 +573,8 @@ def save():
 
 
 def revert():
-    """Reverts the environment to the saved environment. Updates sys.path using
-    paths found in PYTHONPATH.
+    """Reverts the environment to the last cached version. Updates sys.path
+    using paths found in PYTHONPATH.
 
     Initialize the default environment stack:
 
@@ -618,6 +646,104 @@ def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
     util.load_sys_path()
 
 
+def bake_environ(
+    name: str = config.DEFAULT_NAMESPACE,
+    scope: str = None,
+    depth: int = 0,
+    filename: str = None,
+    encrypt: bool = False,
+):
+    """Bakes one or more environment stacks into a single source .env file.
+
+        $ envstack [STACK] -o <filename>
+
+    :param name: stack namespace.
+    :param scope: environment scope (default: cwd).
+    :param depth: depth of source files to incldue (default: all).
+    :param filename: path to save the baked environment.
+    :param encrypt: encrypt the values.
+    :returns: baked environment.
+    """
+    # load the envrinment for the given stack and get list of sources
+    env = load_environ(name, scope=scope)
+    sources = env.sources
+
+    # resolve internal environment so that encryption keys are found
+    # (encryptors looks in os.environ by default)
+    os.environ.update(util.encode(resolve_environ(env)))
+
+    # create a baked source
+    baked = Source(filename)
+
+    def get_node_class(value):
+        """Returns the node class to use for a given value."""
+        if encrypt:
+            if type(value) in custom_node_types:
+                return value.__class__
+            else:
+                return EncryptedNode
+        return value.__class__
+
+    # merge the sources into the outfile
+    for source in sources[-depth:]:
+        for key, value in source.data.items():
+            if isinstance(value, dict):
+                for k, v in value.items():
+                    node_class = get_node_class(v)
+                    baked.data.setdefault(key, {})[k] = node_class(v)
+            else:
+                node_class = get_node_class(value)
+                baked.data[key] = node_class(value)
+
+    # clear includes if environment stack is fully baked
+    if depth <= 0:
+        baked.data["include"] = []
+
+    # write the baked environment to the file
+    if filename:
+        baked.write()
+
+    # create the baked environment
+    baked_env = Env()
+    baked_env.update(baked.load())
+
+    return baked_env
+
+
+def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
+    """Encrypts all values in a given environment, returning a new environment.
+    Looks for encryption keys in the environment.
+
+        $ envstack [STACK] --encrypt
+
+    :param env: environment to encrypt.
+    :param node_class: node class to use for encryption.
+        Defaults to EncryptedNode, which looks for encryption keys in the
+        environment to determine the encryption method.
+    :returns: encrypted environment.
+    """
+    # stores the encrypted environment
+    encrypted_env = Env()
+
+    # copy the environment to avoid modifying the original
+    env_copy = env.copy()
+
+    # resolve internal environment and look for keys in os.environ
+    resolved_env = resolve_environ(env_copy)
+    resolved_env.update(get_keys_from_env(os.environ))
+
+    for k, v in env_copy.items():
+        if type(v) not in custom_node_types:
+            # TODO: use to_yaml() method to serialize instead?
+            node = node_class(v)
+            node.value = node.encryptor(env=resolved_env).encrypt(str(v))
+            encrypted_env[k] = node
+        else:
+            encrypted_env[k] = v
+
+    return encrypted_env
+
+
 def resolve_environ(env: dict):
     """Resolves all variables in a given unresolved environment, returning a
     new environment dict.
@@ -625,11 +751,24 @@ def resolve_environ(env: dict):
     :param env: unresolved environment.
     :returns: resolved environment.
     """
+    # stores the resolved environment
     resolved = Env()
 
-    for key, value in env.items():
-        evaluated_value = util.evaluate_modifiers(value, env)
-        resolved[key] = evaluated_value
+    # copy env to avoid modifying the original
+    env_copy = env.copy()
+
+    # make a copy that contains the encryption keys
+    env_keys = env.copy()
+    env_keys.update(get_keys_from_env(os.environ))
+
+    # decrypt custom node types
+    for key, value in env_copy.items():
+        if type(value) in custom_node_types:
+            env_copy[key] = value.resolve(env=env_keys)
+
+    # resolve variables after decrypting custom node types
+    for key, value in env_copy.items():
+        resolved[key] = util.evaluate_modifiers(value, environ=env_copy)
 
     return resolved
 
@@ -637,10 +776,10 @@ def resolve_environ(env: dict):
 # TODO: make 'name' arg a list (*names) in next minor release
 def load_environ(
     name: str = config.DEFAULT_NAMESPACE,
-    sources: list = None,
     platform: str = config.PLATFORM,
     scope: str = None,
     ignore_missing: bool = config.IGNORE_MISSING,
+    encrypt: bool = False,
 ):
     """Loads env stack data for a given name. Adds "STACK" key to environment,
     and sets the value to `name`.
@@ -655,19 +794,16 @@ def load_environ(
         >>> env = load_environ(name, scope="/path/to/scope")
 
     :param name: list of stack names to load (basename of env files).
-    :param sources: list of env files (optional).
     :param platform: name of platform (linux, darwin, windows).
     :param scope: environment scope (default: cwd).
     :param ignore_missing: ignore missing .env files.
+    :encrypt: encrypt the values using available encryption methods.
     :returns: dict of environment variables.
     """
-    if type(name) == str:
+    if type(name) is str:
         name = [name]
     if not name:
         name = [config.DEFAULT_NAMESPACE]
-
-    # TODO: do we need to add a revert here?
-    # revert()
 
     # create the environment to be returned
     env = Env()
@@ -696,13 +832,17 @@ def load_environ(
             env.load_source(source, platform=platform)
             seen_paths.append(source.path)
 
-        # resolve ${ENVPATH}
+        # resolve ${ENVPATH} (don't let it be None)
         # TODO: use expandvars() instead of resolve_environ()
-        envpath = resolve_environ(env).get("ENVPATH", envpath)
+        envpath = resolve_environ(env).get("ENVPATH", envpath) or envpath
 
     # add the stack name to the environment
     if not env.get("STACK"):
         env["STACK"] = util.get_stack_name(name)
+
+    # encrypt the values in the environment last
+    if encrypt:
+        return encrypt_environ(env)
 
     return env
 

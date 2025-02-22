@@ -14,3 +14,5 @@ tmp/
 *.spec
 venv*/
 .vscode/
+keys.env
+encrypted.env
