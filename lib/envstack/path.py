@@ -37,7 +37,7 @@ import os
 import re
 
 from envstack import config, logger
-from envstack.exceptions import *
+from envstack.exceptions import *  # noqa
 
 # template path field regex: extracts bracketed {keys}
 keyword_re = re.compile(r"{(\w*)(?::\d*d)?(?::\d*\.\d*f)?}")
@@ -186,7 +186,7 @@ class Template(object):
             return Path(self.path_format.format(**formatted))
 
         except KeyError as err:
-            raise MissingFieldError(err)
+            raise MissingFieldError(err)  # noqa F405
 
     def get_keywords(self):
         """Returns a list of required keywords."""
@@ -220,7 +220,7 @@ class Template(object):
         tokens = keyword_re.split(path_format)
         keywords = tokens[1::2]
 
-        tokens[1::2] = map("(?P<{}>[^,;\/]*)".format, keywords)
+        tokens[1::2] = map(r"(?P<{}>[^,;\/]*)".format, keywords)
         tokens[0::2] = map(re.escape, tokens[0::2])
 
         # look for back references
@@ -231,7 +231,7 @@ class Template(object):
                 back_ref = "(?P={name})".format(name=name)
                 try:
                     while True:
-                        index = tokens[i + 1 :].index(tokens[i])
+                        index = tokens[i + 1:].index(tokens[i])
                         tokens[i + 1 + index] = back_ref
                 except ValueError:
                     pass
@@ -245,7 +245,7 @@ class Template(object):
         # filepath: /projects/bunny/tst001/bigbuck_cam.ext
         #                     ^^^^^        ^^^^^^^
         if not matches:
-            raise InvalidPath(path)
+            raise InvalidPath(path)  # noqa F405
 
         # reclass values based on field format in template
         formats = self.get_formats()
@@ -274,7 +274,7 @@ def extract_fields(filepath, template):
         return template.get_fields(filepath)
 
     # path does not match template format
-    except InvalidPath:
+    except InvalidPath:  # noqa F405
         logger.log.debug(
             "path does not match template: {0} {1}".format(template, filepath)
         )
@@ -328,7 +328,7 @@ def get_template(name, platform=config.PLATFORM, scope=None):
     env = get_template_environ(platform, scope=scope)
     template = env.get(name)
     if not template:
-        raise TemplateNotFound(name)
+        raise TemplateNotFound(name)  # noqa F405
     return Template(template)
 
 
@@ -344,7 +344,7 @@ def match_template(path, platform=config.PLATFORM, scope=None):
     env = get_template_environ(platform, scope=scope)
 
     # returns number of folders in a path
-    numdirs = lambda p: str(p).replace("\\", "/").count("/")
+    numdirs = lambda p: str(p).replace("\\", "/").count("/")  # noqa E731
 
     # sort templates by number of folders
     ordered = sorted(env, key=lambda k: numdirs(env[k]), reverse=True)
@@ -365,7 +365,7 @@ def match_template(path, platform=config.PLATFORM, scope=None):
                 elif numdirs(path_format) == numdirs(template.path_format):
                     raise ValueError("path matches more than one template")
 
-        except InvalidPath:
+        except InvalidPath:  # noqa F405
             continue
 
     return template

@@ -61,7 +61,7 @@ def parse_args():
 
     if "--" in sys.argv:
         dash_index = sys.argv.index("--")
-        args_after_dash = sys.argv[dash_index + 1 :]
+        args_after_dash = sys.argv[dash_index + 1:]
         args_before_dash = sys.argv[1:dash_index]
     else:
         args_after_dash = []

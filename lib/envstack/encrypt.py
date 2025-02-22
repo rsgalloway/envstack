@@ -217,7 +217,7 @@ class AESGCMEncryptor(object):
             results = compact_store(encrypted_data)
         except binascii.Error as e:
             log.error("invalid base64 encoding: %s", e)
-        except cryptography.exceptions.InvalidTag as e:
+        except cryptography.exceptions.InvalidTag:
             log.error("invalid encryption key")
         except ValueError as e:
             log.error("invalid value: %s", e)
@@ -238,7 +238,7 @@ class AESGCMEncryptor(object):
             return decrypted.decode()
         except binascii.Error as e:
             log.debug("invalid base64 encoding: %s", e)
-        except cryptography.exceptions.InvalidTag as e:
+        except cryptography.exceptions.InvalidTag:
             log.debug("invalid encryption key")
         except ValueError as e:
             log.debug("invalid value: %s", e)

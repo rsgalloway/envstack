@@ -207,7 +207,7 @@ def encode(env: dict):
     :param resolved: fully resolve values (default=True).
     :returns: dict with bytestring key/values.
     """
-    c = lambda v: str(v)
+    c = lambda v: str(v)  # noqa: E731
     return dict((c(k), c(v)) for k, v in env.items())
 
 
@@ -384,7 +384,7 @@ def safe_eval(value: str):
         # warning: security issue
         eval_func = eval
 
-    if type(value) == str:
+    if type(value) is str:
         try:
             return eval_func(value)
         except Exception:
@@ -529,7 +529,7 @@ def dump_yaml(file_path: str, data: dict, unquote: bool = True):
         if data.get("include"):
             file.write(f"include: {data['include']}\n")
         else:
-            file.write(f"include: []\n")
+            file.write("include: []\n")
         if "include" in partitioned_data:
             del partitioned_data["include"]
         yaml.dump(

@@ -41,7 +41,6 @@ import string
 import yaml
 
 from envstack import util
-from envstack.logger import log
 from envstack.encrypt import AESGCMEncryptor, Base64Encryptor, FernetEncryptor
 
 
@@ -181,7 +180,7 @@ class EncryptedNode(BaseNode):
         """
         try:
             value = self.encryptor(env=env).decrypt(self.value)
-        except Exception as err:
+        except Exception:
             value = self.value
         return util.safe_eval(value)
 

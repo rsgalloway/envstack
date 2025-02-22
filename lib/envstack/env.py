@@ -42,7 +42,7 @@ import yaml  # noqa
 
 from envstack import config, logger, path, util
 from envstack.node import custom_node_types, get_keys_from_env, BaseNode, EncryptedNode
-from envstack.exceptions import *
+from envstack.exceptions import *  # noqa
 
 # value delimiter pattern (splits values by os.pathsep)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
@@ -183,9 +183,9 @@ class EnvVar(string.Template, str):
             val = EnvVar(self.safe_substitute(env))
         except RuntimeError as err:
             if "maximum recursion" in str(err):
-                raise CyclicalReference(self.template)
+                raise CyclicalReference(self.template)  # noqa
             else:
-                raise InvalidSyntax(err)
+                raise InvalidSyntax(err)  # noqa
         except Exception:
             val = EnvVar(self.template)
 
@@ -353,7 +353,7 @@ def get_sources(
             if potential_file.exists() and potential_file not in found_files:
                 found_files.append(potential_file)
         if not found_files and not ignore_missing:
-            raise TemplateNotFound(f"{file_basename} not found in ENVPATH or scope.")
+            raise TemplateNotFound(f"{file_basename} not found in ENVPATH or scope.")  # noqa
         return found_files
 
     def _load_file(file_basename):
@@ -798,7 +798,7 @@ def load_environ(
     :encrypt: encrypt the values using available encryption methods.
     :returns: dict of environment variables.
     """
-    if type(name) == str:
+    if type(name) is str:
         name = [name]
     if not name:
         name = [config.DEFAULT_NAMESPACE]
