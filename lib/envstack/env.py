@@ -353,7 +353,9 @@ def get_sources(
             if potential_file.exists() and potential_file not in found_files:
                 found_files.append(potential_file)
         if not found_files and not ignore_missing:
-            raise TemplateNotFound(f"{file_basename} not found in ENVPATH or scope.")  # noqa
+            raise TemplateNotFound(  # noqa
+                f"{file_basename} not found in ENVPATH or scope."
+            )
         return found_files
 
     def _load_file(file_basename):

@@ -231,7 +231,7 @@ class Template(object):
                 back_ref = "(?P={name})".format(name=name)
                 try:
                     while True:
-                        index = tokens[i + 1:].index(tokens[i])
+                        index = tokens[i + 1 :].index(tokens[i])  # noqa F405
                         tokens[i + 1 + index] = back_ref
                 except ValueError:
                     pass
