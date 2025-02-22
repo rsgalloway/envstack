@@ -210,7 +210,9 @@ class TestDedupePaths(unittest.TestCase):
             "/some/other/path",
         ]
         result = dedupe_paths(":".join(paths))
-        expected_result = os.pathsep.join(["/usr/bin", "/usr/local/bin", "/some/other/path"])
+        expected_result = os.pathsep.join(
+            ["/usr/bin", "/usr/local/bin", "/some/other/path"]
+        )
         self.assertEqual(result, expected_result)
 
         paths = ["/usr/bin"]
@@ -247,7 +249,9 @@ class TestDedupePaths(unittest.TestCase):
         ]
         path = ":".join(paths)
         result = dedupe_paths(path, platform="windows")
-        self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin")
+        self.assertEqual(
+            result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin"
+        )
 
         # mixed paths
         path = "X:/pipe/prod/env;X:/pipe/prod/env:/home/user/envstack/env"
@@ -255,9 +259,13 @@ class TestDedupePaths(unittest.TestCase):
         self.assertEqual(result, "X:/pipe/prod/env;/home/user/envstack/env")
 
         # mixed paths with duplicate
-        path = "C:\\Program Files\\Python;D:/path2;E:/path3:/usr/local/bin:/usr/local/bin"
+        path = (
+            "C:\\Program Files\\Python;D:/path2;E:/path3:/usr/local/bin:/usr/local/bin"
+        )
         result = dedupe_paths(path, platform="windows")
-        self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin")
+        self.assertEqual(
+            result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin"
+        )
 
 
 class TestSafeEval(unittest.TestCase):
