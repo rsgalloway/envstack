@@ -50,6 +50,7 @@ try:
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 except ImportError as err:
     log.debug("cryptography module not available: %s", err)
+    Fernet = None
 
 
 class Base64Encryptor(object):
@@ -85,8 +86,11 @@ class FernetEncryptor(object):
     @classmethod
     def generate_key(csl):
         """Generate a new 256-bit encryption key."""
-        key = Fernet.generate_key()
-        return key.decode()
+        if Fernet:
+            key = Fernet.generate_key()
+            return key.decode()
+        else:
+            log.error("Fernet encryption not available")
 
     def get_key(self, env: dict = os.environ):
         """Load the encryption key from the environment `env`.

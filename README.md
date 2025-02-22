@@ -614,7 +614,9 @@ The following environment variables are used to help manage functionality:
 
 # Tests
 
-Unit tests can be run using pytest (note: some tests fail on win32 currently)
+Unit tests can be run using pytest (note: some tests fail on win32 currently).
+Make sure you don't have any local .env files that may intefere with the unit
+tests.
 
 ```bash
 $ pytest tests -s
