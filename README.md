@@ -60,30 +60,40 @@ root folder defined by `${DEPLOY_ROOT}` (defined in `env/default.env`).
 
 ## Quickstart
 
-Envstack looks for .env files in directories specified by `${ENVPATH}` and in
-the current working directory. Start by getting the latest `default.env` 
-environment stack file:
+Start by getting the latest `default.env` environment stack file:
 
 ```bash
-$ wget -O default.env \
-https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
+$ curl -o default.env https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
 ```
 
-Set `${ENVPATH}` to the directory containing your environment stack files:
+Alternatively, set `${ENVPATH}` to the directory containing your environment
+stack files:
 
+#### bash
 ```bash
-$ export ENVPATH=/path/to/folder
+$ export ENVPATH=/path/to/env/files
+```
+
+#### cmd
+```cmd
+> set ENVPATH=/path/to/env/files
 ```
 
 Define as many paths as you want, and envstack will search for stack files in
 order from left to right, for example:
 
+#### bash
 ```bash
 $ export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
 ```
 
-In the example above, stack files in `/mnt/pipe/dev/env` will take precedence
-over those found in `/mnt/pipe/prod/env`.
+#### cmd
+```cmd
+> set ENVPATH=X:/pipe/dev/env;X:/pipe/prod/env
+```
+
+In the examples above, stack files in `dev` will take precedence over those
+found in `prod`.
 
 #### Basic Usage
 
@@ -103,14 +113,13 @@ ROOT=/mnt/pipe
 STACK=default
 ```
 
-If you are not seeing the above output, make sure the `default.env`
-stack file is in `${ENVPATH}` or the current working directory.
+If you are not seeing the above output, make sure the `default.env` stack file
+is in `${ENVPATH}` or the current working directory.
 
-> NOTE: The name of the current stack will always be stored in `${STACK}`.
+> NOTE: The name of the current stack will always be stored in `${STACK}`
 
-To see stacks, pass the stack name as the first arg. Environment stacks can be
-combined, in order of priority (variables defined in stacks flow from higher
-scope to lower scope, left to right):
+Environments can be combined, or stacked, in order of priority (variables
+defined in stacks flow from higher scope to lower scope, left to right):
 
 ```bash
 $ envstack [STACK [STACK ...]]
@@ -144,7 +153,7 @@ Without the expansion modifier, values are set and do not change (but can be
 overridden by lower scope stacks, i.e. a lower scope stack file may override
 a higher one). 
 
-If we define `$HELLO` like this:
+If we define `${HELLO}` like this:
 
 ```yaml
 HELLO: world
@@ -180,7 +189,7 @@ goodbye
 Several example or starter stacks are available in the [env folder of the
 envstack repo](https://github.com/rsgalloway/envstack/tree/master/env).
 
-To create a blank environment stack, create a new envstack file and declare some
+To create a new environment stack, create an envstack file and declare some
 variables.
 
 ```bash
@@ -524,7 +533,8 @@ world
 
 #### Executing Scripts
 
-Environment stack files are also executable scripts that can be run directly:
+On linux, environment stack files are also executable scripts that can be called
+directly:
 
 ```bash
 $ ./env/test.env
@@ -604,7 +614,7 @@ The following environment variables are used to help manage functionality:
 
 # Tests
 
-Unit tests can be run using pytest (currently only tested on linux):
+Unit tests can be run using pytest (note: some tests fail on win32 currently)
 
 ```bash
 $ pytest tests -s
