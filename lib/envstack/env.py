@@ -338,7 +338,7 @@ def get_sources(
         return [str(p) for p in paths]
 
     # construct search paths from ${ENVPATH} and scope
-    envpath_dirs = [Path(p).resolve() for p in str(envpath).split(":") if p.strip()]
+    envpath_dirs = util.split_paths(envpath)
     scope_dirs = _walk_to_scope(scope)
     envpath_dirs.reverse()
     search_paths = envpath_dirs + scope_dirs

@@ -106,6 +106,16 @@ def dedupe_list(lst: list):
     return list(OrderedDict.fromkeys(lst))
 
 
+def split_posix_paths(path_str: str):
+    """
+    Splits a path string using the posix path separator.
+
+    :param path_str: The input path string.
+    :returns: The split path list.
+    """
+    return [p.strip() for p in path_str.split(":") if p.strip()]
+
+
 def split_windows_paths(path_str: str):
     """
     Splits a windows-style path string that may contain a mix of colon and
@@ -120,7 +130,7 @@ def split_windows_paths(path_str: str):
     :returns: The split path list.
     """
     result = []
-    tokens = [token.strip() for token in path_str.split(";") if token.strip()]
+    tokens = [p.strip() for p in path_str.split(";") if p.strip()]
 
     for token in tokens:
         # token is windows-style, insert a marker before drive letters
@@ -134,31 +144,35 @@ def split_windows_paths(path_str: str):
                 if p
             ]
         else:
-            result += [p for p in token.split(":") if p]
+            result += split_posix_paths(token)
 
     return result
 
 
-def dedupe_paths(
-    path_str: str, joiner: str = os.pathsep, platform: str = config.PLATFORM
-):
+def split_paths(path_str: str, platform: str = config.PLATFORM):
+    """
+    Splits a path string using the platform-specific path separator.
+
+    :param path_str: The input path string.
+    :param platform: The platform to use.
+    :returns: The split path list.
+    """
+    if platform == "windows":
+        return split_windows_paths(path_str)
+    else:
+        return split_posix_paths(path_str)
+
+
+def dedupe_paths(path_str: str, platform: str = config.PLATFORM):
     """
     Deduplicates paths from a colon-separated string.
 
     :param path_str: The input path string.
-    :param joiner: The path separator to use.
     :platform: The platform to use.
     :returns: The deduplicated path string.
     """
-
-    if platform == "windows":
-        deduped = dedupe_list(split_windows_paths(path_str))
-    else:
-        deduped = dedupe_list(path_str.split(":"))
-
-    # remove empty paths
-    # deduped = [p for p in deduped if p]
-
+    deduped = dedupe_list(split_paths(path_str, platform))
+    joiner = ";" if platform == "windows" else ":"
     return joiner.join(deduped)
 
 
@@ -297,8 +311,8 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         # substitute all matches in the expression
         result = variable_pattern.sub(substitute_variable, expression)
 
-        # dedupe paths and convert to platform-specific path separators
-        if ":" in result:
+        # dedupe path-like values and resolve separators
+        if ":" in result and ("/" in result or "\\" in result):
             result = dedupe_paths(result)
 
     # detect recursion errors

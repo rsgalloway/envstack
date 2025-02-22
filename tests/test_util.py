@@ -205,19 +205,21 @@ class TestDedupePaths(unittest.TestCase):
             "/usr/local/bin",
             "/usr/bin",
             "/usr/local/bin",
+            "",
             "/usr/local/bin",
             "/some/other/path",
         ]
         result = dedupe_paths(":".join(paths))
-        self.assertEqual(result, "/usr/bin:/usr/local/bin:/some/other/path")
+        expected_result = os.pathsep.join(["/usr/bin", "/usr/local/bin", "/some/other/path"])
+        self.assertEqual(result, expected_result)
 
         paths = ["/usr/bin"]
         result = dedupe_paths(":".join(paths))
         self.assertEqual(result, "/usr/bin")
 
         paths = ["/usr/bin", ""]
-        result = dedupe_paths(":".join(paths))
-        self.assertEqual(result, "/usr/bin:")
+        result = dedupe_paths(os.pathsep.join(paths))
+        self.assertEqual(result, "/usr/bin")
 
         paths = []
         result = dedupe_paths(":".join(paths))
@@ -232,7 +234,7 @@ class TestDedupePaths(unittest.TestCase):
             "D:/path2",
             "E:/path3",
         ]
-        result = dedupe_paths(":".join(paths), joiner=";", platform="windows")
+        result = dedupe_paths(":".join(paths), platform="windows")
         self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3")
 
         paths = [
@@ -244,17 +246,17 @@ class TestDedupePaths(unittest.TestCase):
             "/usr/local/bin",
         ]
         path = ":".join(paths)
-        result = dedupe_paths(path, joiner=";", platform="windows")
+        result = dedupe_paths(path, platform="windows")
         self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin")
 
         # mixed paths
         path = "X:/pipe/prod/env;X:/pipe/prod/env:/home/user/envstack/env"
-        result = dedupe_paths(path, joiner=";", platform="windows")
+        result = dedupe_paths(path, platform="windows")
         self.assertEqual(result, "X:/pipe/prod/env;/home/user/envstack/env")
 
         # mixed paths with duplicate
         path = "C:\\Program Files\\Python;D:/path2;E:/path3:/usr/local/bin:/usr/local/bin"
-        result = dedupe_paths(path, joiner=";", platform="windows")
+        result = dedupe_paths(path, platform="windows")
         self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin")
 
 
