@@ -186,6 +186,13 @@ class TestSource(unittest.TestCase):
 
 
 class TestInit(unittest.TestCase):
+    def setUp(self):
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
+
     def tearDown(self):
         envstack.revert()
 
@@ -204,8 +211,8 @@ class TestInit(unittest.TestCase):
         self.assertEqual(os.getenv("ENV"), "prod")
         self.assertEqual(os.getenv("STACK"), "default")
         self.assertEqual(os.getenv("HELLO"), "world")
-        self.assertEqual(os.getenv("ROOT"), "/mnt/pipe")
-        self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/prod")
+        self.assertEqual(os.getenv("ROOT"), self.root)
+        self.assertEqual(os.getenv("DEPLOY_ROOT"), f"{self.root}/prod")
         self.assertTrue(len(sys.path) > len(sys_path))
         self.assertTrue(len(os.getenv("PATH")) > len(path))
         self.assertTrue("prod/lib/python" in os.getenv("PYTHONPATH"))
@@ -236,8 +243,8 @@ class TestInit(unittest.TestCase):
         self.assertEqual(os.getenv("STACK"), "dev")
         self.assertEqual(os.getenv("HELLO"), "goodbye")
         self.assertEqual(os.getenv("LOG_LEVEL"), "DEBUG")
-        self.assertEqual(os.getenv("ROOT"), "/mnt/pipe")
-        self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/dev")
+        self.assertEqual(os.getenv("ROOT"), self.root)
+        self.assertEqual(os.getenv("DEPLOY_ROOT"), f"{self.root}/dev")
         self.assertTrue(len(sys.path) > len(sys_path))
 
         envstack.revert()
@@ -259,7 +266,7 @@ class TestInit(unittest.TestCase):
         envstack.init("test", "custom", ignore_missing=True)
         self.assertEqual(os.getenv("ENV"), "custom")
         self.assertEqual(os.getenv("STACK"), "custom")
-        self.assertEqual(os.getenv("DEPLOY_ROOT"), "/mnt/pipe/custom")
+        self.assertEqual(os.getenv("DEPLOY_ROOT"), f"{self.root}/custom")
         self.assertTrue(len(sys.path) > len(sys_path))
 
         envstack.revert()
