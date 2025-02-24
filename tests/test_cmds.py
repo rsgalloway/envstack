@@ -350,6 +350,185 @@ HELLO=goodbye
         self.assertEqual(output, expected_output)
 
 
+class TestBake(unittest.TestCase):
+    """Tests bake command."""
+
+    def setUp(self):
+        self.filename = "baketest.env"
+        self.envstack_bin = os.path.join(
+            os.path.dirname(__file__), "..", "bin", "envstack"
+        )
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
+        os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
+        # remove so we use base64 encoding by default
+        if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
+        if FernetEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[FernetEncryptor.KEY_VAR_NAME]
+
+    def tearDown(self):
+        shutil.rmtree(self.filename, ignore_errors=True)
+
+    def test_default(self):
+        """Tests baking the default stack."""
+        command = f"%s -o {self.filename}; cat {self.filename}" % self.envstack_bin
+        expected_output = """#!/usr/bin/env envstack
+include: []
+all: &all
+  <<: *all
+  DEPLOY_ROOT: ${ROOT}/${ENV}
+  ENV: prod
+  ENVPATH: ${DEPLOY_ROOT}/env:${ENVPATH}
+  HELLO: ${HELLO:=world}
+  LOG_LEVEL: ${LOG_LEVEL:=INFO}
+  PATH: ${DEPLOY_ROOT}/bin:${PATH}
+  PYTHONPATH: ${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+darwin:
+  <<: *all
+  ROOT: /Volumes/pipe
+linux:
+  <<: *all
+  ROOT: /mnt/pipe
+windows:
+  <<: *all
+  ROOT: X:/pipe
+"""
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_dev(self):
+        """Tests baking the dev stack."""
+        command = f"%s dev -o {self.filename}; cat {self.filename}" % self.envstack_bin
+        expected_output = """#!/usr/bin/env envstack
+include: []
+all: &all
+  <<: *all
+  DEPLOY_ROOT: ${ROOT}/dev
+  ENV: dev
+  ENVPATH: ${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
+  HELLO: ${HELLO:=world}
+  LOG_LEVEL: DEBUG
+  PATH: ${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
+  PYTHONPATH: ${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
+darwin:
+  <<: *all
+  ROOT: /Volumes/pipe
+linux:
+  <<: *all
+  ROOT: /mnt/pipe
+windows:
+  <<: *all
+  ROOT: X:/pipe
+"""
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_thing(self):
+        """Tests baking the thing stack with depth of 1."""
+        command = (
+            f"%s thing -o {self.filename} --depth 1; cat {self.filename}"
+            % self.envstack_bin
+        )
+        expected_output = """#!/usr/bin/env envstack
+include: [default]
+all: &all
+  <<: *all
+  CHAR_LIST: [a, b, c, "${HELLO}"]
+  DICT: {a: 1, b: 2, c: "${INT}"}
+  FLOAT: 1.0
+  HELLO: goodbye
+  INT: 5
+  LOG_LEVEL: ${LOG_LEVEL:=INFO}
+  NUMBER_LIST: [1, 2, 3]
+darwin:
+  <<: *all
+  ROOT: ${HOME}/Library/Application Support/pipe
+linux:
+  <<: *all
+  ROOT: ${HOME}/.local/pipe
+windows:
+  <<: *all
+  ROOT: C:/ProgramData/pipe
+"""
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_default_encrypted(self):
+        """Tests baking the default stack encrypted with base64."""
+        command = (
+            f"%s --encrypt -o {self.filename}; cat {self.filename}" % self.envstack_bin
+        )
+        expected_output = """#!/usr/bin/env envstack
+include: []
+all: &all
+  <<: *all
+  DEPLOY_ROOT: !encrypt JHtST09UfS8ke0VOVn0=
+  ENV: !encrypt cHJvZA==
+  ENVPATH: !encrypt JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
+  HELLO: !encrypt JHtIRUxMTzo9d29ybGR9
+  LOG_LEVEL: !encrypt JHtMT0dfTEVWRUw6PUlORk99
+  PATH: !encrypt JHtERVBMT1lfUk9PVH0vYmluOiR7UEFUSH0=
+  PYTHONPATH: !encrypt JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
+darwin:
+  <<: *all
+  ROOT: !encrypt L1ZvbHVtZXMvcGlwZQ==
+linux:
+  <<: *all
+  ROOT: !encrypt L21udC9waXBl
+windows:
+  <<: *all
+  ROOT: !encrypt WDovcGlwZQ==
+"""
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_blank(self):
+        """Tests baking a blank stack."""
+        command = (
+            f"%s doesnotexist -o {self.filename}; cat {self.filename}"
+            % self.envstack_bin
+        )
+        expected_output = """#!/usr/bin/env envstack
+include: []
+all: &all
+  <<: *all
+darwin:
+  <<: *all
+linux:
+  <<: *all
+windows:
+  <<: *all
+"""
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+
 class TestCommands(unittest.TestCase):
     """Tests various envstack commands."""
 
