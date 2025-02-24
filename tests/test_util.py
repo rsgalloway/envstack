@@ -48,6 +48,8 @@ from envstack.util import (
 
 
 class TestEvaluateModifiers(unittest.TestCase):
+    """Tests for evaluate_modifiers function."""
+
     def test_no_substitution(self):
         expression = "world"
         result = evaluate_modifiers(expression)
@@ -102,6 +104,8 @@ class TestEvaluateModifiers(unittest.TestCase):
 
 
 class TestUtils(unittest.TestCase):
+    """Tests for util.py module."""
+
     def test_encode(self):
         env = {
             "VAR1": "value1",
@@ -173,6 +177,8 @@ darwin:
 
 
 class TestDedupePaths(unittest.TestCase):
+    """Tests for dedupe_paths function."""
+
     def test_dedupe_list(self):
         """Test dedupe_list function."""
         from envstack.util import dedupe_list
@@ -269,6 +275,8 @@ class TestDedupePaths(unittest.TestCase):
 
 
 class TestSafeEval(unittest.TestCase):
+    """Tests for safe_eval function."""
+
     def test_safe_eval_string(self):
         value = "hello"
         result = safe_eval(value)
@@ -301,8 +309,54 @@ class TestSafeEval(unittest.TestCase):
 
 
 class TestPartitionPlatformData(unittest.TestCase):
+    """Tests for partition_platform_data function."""
+
+    def test_partition_platform_data_empty(self):
+        """Test partition_platform_data with empty data."""
+        data = {}
+        result = partition_platform_data(data)
+        expected_result = {
+            "include": [],
+            "all": {
+                "<<": "*all",
+            },
+            "darwin": {
+                "<<": "*all",
+            },
+            "linux": {
+                "<<": "*all",
+            },
+            "windows": {
+                "<<": "*all",
+            },
+        }
+        self.assertEqual(result, expected_result)
+
+    def test_partition_platform_data_empty_includes(self):
+        """Test partition_platform_data with empty includes."""
+        data = {"include": []}
+        result = partition_platform_data(data)
+        expected_result = {
+            "include": [],
+            "all": {
+                "<<": "*all",
+            },
+            "darwin": {
+                "<<": "*all",
+            },
+            "linux": {
+                "<<": "*all",
+            },
+            "windows": {
+                "<<": "*all",
+            },
+        }
+        self.assertEqual(result, expected_result)
+
     def test_partition_platform_data(self):
+        """Test partition_platform_data with data."""
         data = {
+            "include": [],
             "all": {
                 "key1": "value1",
                 "key2": "value2",
@@ -329,6 +383,7 @@ class TestPartitionPlatformData(unittest.TestCase):
         }
 
         expected_result = {
+            "include": [],
             "all": {
                 "<<": "*all",
                 "key1": "value1",
@@ -357,6 +412,8 @@ class TestPartitionPlatformData(unittest.TestCase):
 
 
 class TestIssue18(unittest.TestCase):
+    """Tests for issue #18."""
+
     def test_non_cyclical_reference_error_1(self):
         expression = "${FOO}"
         environ = {"FOO": "${FOO}"}
