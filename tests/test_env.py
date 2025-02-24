@@ -292,16 +292,29 @@ class TestBakeEnviron(unittest.TestCase):
         """Bakes a given stack and compares values."""
         from envstack.env import bake_environ, load_environ
 
-        default = load_environ(stack_name)
+        env = load_environ(stack_name)
         envstack.revert()  # FIXME: revert should not be required
         baked = bake_environ(stack_name)
 
         # make sure environment sources are different
-        self.assertNotEqual(default.sources, baked.sources)
-        self.assertTrue(len(default) > 0)
-        self.assertTrue(len(baked) > 0)
+        if stack_name == "doesnotexist":
+            self.assertEqual(env.sources, [])
+            self.assertEqual(baked.sources, [])
+        elif stack_name == "default":
+            self.assertTrue(len(env.sources[0].includes()) == 0)
+        else:
+            self.assertNotEqual(env.sources, baked.sources)
+            self.assertTrue(len(env.sources) > 0)
+            self.assertEqual(baked.sources, [])
+            self.assertTrue(len(env) > 0)
+            self.assertTrue(len(baked) > 0)
 
-        for key, value in default.items():
+        # "include" key should not be present
+        self.assertTrue("include" not in env)
+        self.assertTrue("include" not in baked)
+
+        # compare the values
+        for key, value in env.items():
             if key == "STACK":  # skip the stack name
                 continue
             self.assertEqual(baked[key], value)
@@ -314,11 +327,22 @@ class TestBakeEnviron(unittest.TestCase):
 
         envstack.revert()  # FIXME: revert should not be required
         baked2_reloaded = load_environ("baked")
-        self.assertNotEqual(baked2.sources, baked2_reloaded.sources)
-        self.assertTrue(len(baked2) > 0)
-        self.assertTrue(len(baked2_reloaded) > 0)
 
-        for key, value in baked.items():
+        # make sure environment sources are different
+        if stack_name == "doesnotexist":
+            self.assertEqual(env.sources, [])
+            self.assertEqual(baked2.sources, [])
+        else:
+            self.assertNotEqual(baked2.sources, baked2_reloaded.sources)
+            self.assertTrue(len(baked2) > 0)
+            self.assertTrue(len(baked2_reloaded) > 0)
+
+        # "include" key should not be present
+        self.assertTrue("include" not in env)
+        self.assertTrue("include" not in baked2)
+
+        # compare the values
+        for key, value in env.items():
             if key == "STACK":
                 continue
             self.assertEqual(baked2_reloaded[key], value)
@@ -329,6 +353,10 @@ class TestBakeEnviron(unittest.TestCase):
     def test_bake_default(self):
         """Tests baking the default environment."""
         self.bake_environ("default")
+
+    def test_bake_empty(self):
+        """Tests baking new environment."""
+        self.bake_environ("doesnotexist")
 
     def test_bake_dev(self):
         """Tests baking the dev environment."""
@@ -371,6 +399,10 @@ class TestEncryptEnviron(unittest.TestCase):
         # make sure environment sources are not empty
         self.assertTrue(len(env) > 0)
         self.assertTrue(len(encrypted) > 0)
+
+        # "include" key should not be present
+        self.assertTrue("include" not in env)
+        self.assertTrue("include" not in encrypted)
 
         for key, value in env.items():
             if key == "STACK":  # skip the stack name
@@ -416,6 +448,10 @@ class TestEncryptEnviron(unittest.TestCase):
         self.assertNotEqual(default.sources, encrypted.sources)
         self.assertTrue(len(default) > 0)
         self.assertTrue(len(encrypted) > 0)
+
+        # "include" key should not be present
+        self.assertTrue("include" not in default)
+        self.assertTrue("include" not in encrypted)
 
         for key, value in default.items():
             if key == "STACK":  # skip the stack name
