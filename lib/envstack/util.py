@@ -413,7 +413,7 @@ def get_stacks():
     return sorted(list(stacks))
 
 
-def findenv(var_name):
+def findenv(var_name: str):
     """
     Returns a list of paths where the given environment var is set.
 
@@ -552,7 +552,7 @@ def dump_yaml(file_path: str, data: dict, unquote: bool = True):
             pass
 
 
-def partition_platform_data(data):
+def partition_platform_data(data: dict):
     """
     Given a data dictionary with keys 'all', 'darwin', 'linux', 'windows',
     this function finds which key-value pairs are common across all platforms,
@@ -562,13 +562,11 @@ def partition_platform_data(data):
     :param data: dictionary to partition.
     :returns: platform partitioned dictionary.
     """
-
-    # move data under the "all" key if it's not already there
+    # ensure all is present
     if "all" not in data:
-        data["all"] = data.copy()
+        data["all"] = {}  # data.copy()
 
     # platforms of interest (darwin, linux, windows)
-    # platforms = [k for k in data.keys() if k not in ("all", "include")]
     platforms = ["darwin", "linux", "windows"]
 
     # get the union of keys from all platforms
@@ -581,10 +579,8 @@ def partition_platform_data(data):
     for key in all_platform_keys:
         if all(key in data[p] for p in platforms):
             # get first value for comparison later
-            # first_value = data[platforms[0]][key].value
             first_value = data[platforms[0]][key]
             # call it common if all platforms have the same value
-            # if all(data[p][key].value == first_value for p in platforms):
             if all(data[p][key] == first_value for p in platforms):
                 common_keys.append(key)
 
@@ -614,8 +610,10 @@ def partition_platform_data(data):
     for p in platforms:
         new_data[p] = new_platform_dicts[p]
 
-    # add include if it exists
+    # ensure include is present
     if data.get("include"):
         new_data["include"] = data["include"]
+    else:
+        new_data["include"] = []
 
     return new_data
