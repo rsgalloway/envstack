@@ -355,6 +355,8 @@ class TestBake(unittest.TestCase):
 
     def setUp(self):
         self.filename = "baketest.env"
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
         self.envstack_bin = os.path.join(
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
@@ -373,7 +375,8 @@ class TestBake(unittest.TestCase):
             del os.environ[FernetEncryptor.KEY_VAR_NAME]
 
     def tearDown(self):
-        shutil.rmtree(self.filename, ignore_errors=True)
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
 
     def test_default(self):
         """Tests baking the default stack."""
@@ -496,6 +499,40 @@ linux:
 windows:
   <<: *all
   ROOT: !encrypt WDovcGlwZQ==
+"""
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_thing_encrypted(self):
+        """Tests baking the thing stack with depth of 1 excrypted."""
+        command = (
+            f"%s thing --encrypt -o {self.filename} --depth 1; cat {self.filename}"
+            % self.envstack_bin
+        )
+        expected_output = """#!/usr/bin/env envstack
+include: [default]
+all: &all
+  <<: *all
+  CHAR_LIST: !encrypt WydhJywgJ2InLCAnYycsICcke0hFTExPfSdd
+  DICT: !encrypt eydhJzogMSwgJ2InOiAyLCAnYyc6ICcke0lOVH0nfQ==
+  FLOAT: !encrypt MS4w
+  HELLO: !encrypt Z29vZGJ5ZQ==
+  INT: !encrypt NQ==
+  LOG_LEVEL: !encrypt JHtMT0dfTEVWRUw6PUlORk99
+  NUMBER_LIST: !encrypt WzEsIDIsIDNd
+darwin:
+  <<: *all
+  ROOT: !encrypt JHtIT01FfS9MaWJyYXJ5L0FwcGxpY2F0aW9uIFN1cHBvcnQvcGlwZQ==
+linux:
+  <<: *all
+  ROOT: !encrypt JHtIT01FfS8ubG9jYWwvcGlwZQ==
+windows:
+  <<: *all
+  ROOT: !encrypt QzovUHJvZ3JhbURhdGEvcGlwZQ==
 """
         output = subprocess.check_output(
             command,
