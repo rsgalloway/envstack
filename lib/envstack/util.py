@@ -311,8 +311,13 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         # substitute all matches in the expression
         result = variable_pattern.sub(substitute_variable, expression)
 
+        # evaluate any remaining modifiers, eg. ${VAR:=${FOO:=bar}}
+        if variable_pattern.search(result):
+            result = evaluate_modifiers(result, environ)
+
         # dedupe path-like values and resolve separators
-        if ":" in result and ("/" in result or "\\" in result):
+        # TODO: replace with regex pattern to detect path-like strings
+        elif ":" in result and ("/" in result or "\\" in result):
             result = dedupe_paths(result)
 
     # detect recursion errors
