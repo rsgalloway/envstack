@@ -51,56 +51,114 @@ class TestEvaluateModifiers(unittest.TestCase):
     """Tests for evaluate_modifiers function."""
 
     def test_no_substitution(self):
+        """Test no substitution."""
         expression = "world"
         result = evaluate_modifiers(expression)
         self.assertEqual(result, "world")
 
     def test_direct_substitution(self):
+        """Test direct substitution."""
         expression = "${VAR}"
         environ = {"VAR": "hello"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "hello")
 
     def test_default_value(self):
+        """Test default value."""
         expression = "${VAR:=default}"
         environ = {"VAR": "hello"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "hello")
 
     def test_default_value_empty_env(self):
+        """Test default value with empty environment."""
         expression = "${VAR:=default}"
         environ = {}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "default")
 
+    def test_pathlike_value(self):
+        """Test path-like value with two vars."""
+        expression = "${ROOT}/${ENV}"
+        environ = {"ROOT": "/usr/local", "ENV": "env"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/usr/local/env")
+
+    def test_pathlike_value_colon_separated(self):
+        """Test colon-separated path-like value with two vars."""
+        expression = "${DEPLOY_ROOT}/env:${ENVPATH}"
+        environ = {"DEPLOY_ROOT": "/usr/local/lib", "ENVPATH": "/mnt/env"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/usr/local/lib/env:/mnt/env")
+
     def test_default_value_with_default_args(self):
+        """Test default value with default args."""
         expression = "${HELLO:=world}"
         result = evaluate_modifiers(expression)
         self.assertEqual(result, os.getenv("HELLO", "world"))
 
     def test_error_message(self):
+        """Test error message."""
         expression = "${VAR:?error message}"
         environ = {"VAR": "hello"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "hello")
 
     def test_error_message_raise(self):
+        """Test error message raise."""
         expression = "${VAR:?error message}"
         environ = {}
         with self.assertRaises(ValueError):
             evaluate_modifiers(expression, environ)
 
     def test_cyclical_reference_error(self):
+        """Test cyclical reference error."""
         expression = "${VAR}"
         environ = {"VAR": "${FOO}", "FOO": "${BAR}", "BAR": "${VAR}"}
         with self.assertRaises(CyclicalReference):
             evaluate_modifiers(expression, environ)
 
     def test_multiple_substitutions(self):
+        """Test multiple substitutions."""
         expression = "${VAR}/${FOO:=foobar}/${BAR:?error message}"
         environ = {"VAR": "hello", "BAR": "world"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "hello/foobar/world")
+
+    def test_embedded_substitution(self):
+        """Test embedded substitution with default."""
+        expression = "${VAR:=${FOO:=bar}}"
+        environ = {"FOO": "foo"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "foo")
+
+    def test_embedded_substitution_default(self):
+        """Test embedded substitution with default."""
+        expression = "${VAR:=${FOO:=bar}}"
+        environ = {}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "bar")
+
+    def test_embedded_substitution_value(self):
+        """Test embedded substitution with value."""
+        expression = "${VAR:=${FOO}}"
+        environ = {"VAR": "foobar"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "foobar")
+
+    def test_embedded_substitution_prefix(self):
+        """Test embedded substitution with prefix."""
+        expression = "${VAR:=default}/path"
+        environ = {"VAR": "value"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "value/path")
+
+    def test_embedded_substitution_special_char(self):
+        """Test embedded substitution with special chars."""
+        expression = "${VAR:=${FOO}/var}}"
+        environ = {"FOO": "foo"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "foo/bar")
 
 
 class TestUtils(unittest.TestCase):
