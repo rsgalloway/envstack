@@ -146,6 +146,20 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foobar")
 
+    def test_embedded_substitution_multiple(self):
+        """Test multiple embedded substitution with value."""
+        expression = "${VAR:=${FOO:=${BAR}}}"
+        environ = {"BAR": "/foo/bar"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/foo/bar")
+
+    def test_embedded_substitution_multiple_default(self):
+        """Test multiple embedded substitution with default value."""
+        expression = "${VAR:=${FOO:=${BAR:=/foo/bar/baz}}}"
+        environ = {}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/foo/bar/baz")
+
     def test_embedded_substitution_prefix(self):
         """Test embedded substitution with prefix."""
         expression = "${VAR:=default}/path"
@@ -153,12 +167,19 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "value/path")
 
-    def test_embedded_substitution_special_char(self):
-        """Test embedded substitution with special chars."""
+    def test_embedded_substitution_with_slash(self):
+        """Test embedded substitution with special char /."""
         expression = "${VAR:=${FOO}/var}}"
         environ = {"FOO": "foo"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foo/bar")
+
+    def test_embedded_substitution_with_hyphen(self):
+        """Test embedded substitution with special char -."""
+        expression = "${VAR:=${FOO}-var}}"
+        environ = {"FOO": "foo"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "foo-bar")
 
 
 class TestUtils(unittest.TestCase):
