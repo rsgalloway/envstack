@@ -39,6 +39,7 @@ import unittest
 from envstack import config
 from envstack.exceptions import CyclicalReference
 from envstack.util import (
+    null,
     encode,
     evaluate_modifiers,
     get_stack_name,
@@ -62,6 +63,13 @@ class TestEvaluateModifiers(unittest.TestCase):
         environ = {"VAR": "hello"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "hello")
+
+    def test_default_null_value(self):
+        """Test var null value."""
+        expression = "${VAR}"
+        environ = {}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, null)
 
     def test_default_value(self):
         """Test default value."""
@@ -139,12 +147,33 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "bar")
 
-    def test_embedded_substitution_value(self):
-        """Test embedded substitution with value."""
+    def test_embedded_substitution_value_var(self):
+        """Test embedded substitution with value for VAR."""
         expression = "${VAR:=${FOO}}"
         environ = {"VAR": "foobar"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foobar")
+
+    def test_embedded_substitution_value_foo(self):
+        """Test embedded substitution with value for FOO."""
+        expression = "${VAR:=${FOO}}"
+        environ = {"FOO": "barfoo"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "barfoo")
+
+    def test_embedded_substitution_value_var_slashes(self):
+        """Test embedded substitution with value with special chars."""
+        expression = "${VAR:=${FOO}}"
+        environ = {"VAR": "/foo/bar"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/foo/bar")
+
+    def test_embedded_substitution_value_bar_slashes(self):
+        """Test embedded substitution with value with special chars."""
+        expression = "${VAR:=${FOO}}"
+        environ = {"FOO": "/bar/foo"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/bar/foo")
 
     def test_embedded_substitution_multiple_one(self):
         """Test multiple embedded substitution."""
