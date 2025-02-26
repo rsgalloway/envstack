@@ -626,30 +626,3 @@ def partition_platform_data(data: dict):
         new_data["include"] = []
 
     return new_data
-
-
-if __name__ == "__main__":
-    expression = "${VAR:=${FOO}}"
-    environ = {"VAR": "/test/1/2/3"}
-    result = evaluate_modifiers(expression, environ)
-    print("RESULTS", result)
-    print("*" * 80)
-
-    expression = "${VAR:=${FOO:=${BAR}}}"
-    environ = {"VAR": "/test/x/y/z"}
-    result = evaluate_modifiers(expression, environ)
-    print("RESULTS", result)
-    print("*" * 80)
-
-    # expression = "${VAR:=/test/a/b/c}"
-    expression = "${VAR:=${FOO:=${BAR}}}"
-    environ = {"FOO": "/test/a/b/c"}
-    result = evaluate_modifiers(expression, environ)
-    print("RESULTS", result)
-    print("*" * 80)
-
-    expression = "${VAR:=/test/a/b/c}"
-    environ = {}
-    result = evaluate_modifiers(expression, environ)
-    print("RESULTS", result)
-    print("*" * 80)
