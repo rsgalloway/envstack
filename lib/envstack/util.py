@@ -51,7 +51,7 @@ null = ""
 
 # regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
-    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(\$\{[a-zA-Z_][a-zA-Z0-9_]*\}|[^}]*))?\}"
+    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(\$\{[^}]*\}[\-\w/]*|[^}]*))?\}"
 )
 
 # regular expression pattern for matching windows drive letters
@@ -310,6 +310,10 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
     try:
         # substitute all matches in the expression
         result = variable_pattern.sub(substitute_variable, expression)
+
+        # HACK: remove trailing curly braces if they exist
+        if result.endswith("}") and not result.startswith("${"):
+            result = result.rstrip("}")
 
         # evaluate any remaining modifiers, eg. ${VAR:=${FOO:=bar}}
         if variable_pattern.search(result):
@@ -622,3 +626,30 @@ def partition_platform_data(data: dict):
         new_data["include"] = []
 
     return new_data
+
+
+if __name__ == "__main__":
+    expression = "${VAR:=${FOO}}"
+    environ = {"VAR": "/test/1/2/3"}
+    result = evaluate_modifiers(expression, environ)
+    print("RESULTS", result)
+    print("*" * 80)
+
+    expression = "${VAR:=${FOO:=${BAR}}}"
+    environ = {"VAR": "/test/x/y/z"}
+    result = evaluate_modifiers(expression, environ)
+    print("RESULTS", result)
+    print("*" * 80)
+
+    # expression = "${VAR:=/test/a/b/c}"
+    expression = "${VAR:=${FOO:=${BAR}}}"
+    environ = {"FOO": "/test/a/b/c"}
+    result = evaluate_modifiers(expression, environ)
+    print("RESULTS", result)
+    print("*" * 80)
+
+    expression = "${VAR:=/test/a/b/c}"
+    environ = {}
+    result = evaluate_modifiers(expression, environ)
+    print("RESULTS", result)
+    print("*" * 80)

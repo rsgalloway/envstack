@@ -146,12 +146,26 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foobar")
 
-    def test_embedded_substitution_multiple(self):
-        """Test multiple embedded substitution with value."""
+    def test_embedded_substitution_multiple_one(self):
+        """Test multiple embedded substitution."""
         expression = "${VAR:=${FOO:=${BAR}}}"
         environ = {"BAR": "/foo/bar"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "/foo/bar")
+
+    def test_embedded_substitution_multiple_two(self):
+        """Test multiple embedded substitution with value."""
+        expression = "${VAR:=${FOO:=${BAR}}}"
+        environ = {"FOO": "/test/a/b/c"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/test/a/b/c")
+
+    def test_embedded_substitution_multiple_three(self):
+        """Test multiple embedded substitution with value."""
+        expression = "${VAR:=${FOO:=${BAR}}}"
+        environ = {"VAR": "/test/x/y/z"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/test/x/y/z")
 
     def test_embedded_substitution_multiple_default(self):
         """Test multiple embedded substitution with default value."""
@@ -169,14 +183,14 @@ class TestEvaluateModifiers(unittest.TestCase):
 
     def test_embedded_substitution_with_slash(self):
         """Test embedded substitution with special char /."""
-        expression = "${VAR:=${FOO}/var}}"
+        expression = "${VAR:=${FOO}/bar}}"
         environ = {"FOO": "foo"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foo/bar")
 
     def test_embedded_substitution_with_hyphen(self):
         """Test embedded substitution with special char -."""
-        expression = "${VAR:=${FOO}-var}}"
+        expression = "${VAR:=${FOO}-bar}}"
         environ = {"FOO": "foo"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foo-bar")
