@@ -799,6 +799,7 @@ class TestIssues(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    # TODO: make tests_cmds.py cross-platform
     if sys.platform == "linux":
         unittest.main()
     else:
