@@ -154,6 +154,13 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foobar")
 
+    def test_embedded_substitution_value_var_foo(self):
+        """Test embedded substitution with values for VAR and FOO."""
+        expression = "${VAR:=${FOO}}"
+        environ = {"VAR": "foobar", "FOO": "barfoo"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "foobar")
+
     def test_embedded_substitution_value_foo(self):
         """Test embedded substitution with value for FOO."""
         expression = "${VAR:=${FOO}}"
@@ -209,6 +216,13 @@ class TestEvaluateModifiers(unittest.TestCase):
         environ = {"VAR": "value"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "value/path")
+
+    def test_embedded_substitution_prefix_default(self):
+        """Test embedded substitution with prefix with default."""
+        expression = "${VAR:=default}/path"
+        environ = {}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "default/path")
 
     def test_embedded_substitution_with_slash(self):
         """Test embedded substitution with special char /."""
