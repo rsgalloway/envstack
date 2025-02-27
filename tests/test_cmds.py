@@ -799,4 +799,7 @@ class TestIssues(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    if sys.platform == "linux":
+        unittest.main()
+    else:
+        print(f"platform not supported: {sys.platform}")

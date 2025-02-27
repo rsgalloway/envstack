@@ -97,7 +97,7 @@ class TestEvaluateModifiers(unittest.TestCase):
         expression = "${DEPLOY_ROOT}/env:${ENVPATH}"
         environ = {"DEPLOY_ROOT": "/usr/local/lib", "ENVPATH": "/mnt/env"}
         result = evaluate_modifiers(expression, environ)
-        self.assertEqual(result, "/usr/local/lib/env:/mnt/env")
+        self.assertEqual(result, f"/usr/local/lib/env{os.pathsep}/mnt/env")
 
     def test_default_value_with_default_args(self):
         """Test default value with default args."""
