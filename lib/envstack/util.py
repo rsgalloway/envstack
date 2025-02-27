@@ -51,7 +51,7 @@ null = ""
 
 # regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
-    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(\$\{[a-zA-Z_][a-zA-Z0-9_]*\}|[^}]*))?\}"
+    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(\$\{[^}]*\}[\-\w/]*|[^}]*))?\}"
 )
 
 # regular expression pattern for matching windows drive letters
@@ -311,8 +311,17 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         # substitute all matches in the expression
         result = variable_pattern.sub(substitute_variable, expression)
 
+        # HACK: remove trailing curly braces if they exist
+        if result.endswith("}") and not result.startswith("${"):
+            result = result.rstrip("}")
+
+        # evaluate any remaining modifiers, eg. ${VAR:=${FOO:=bar}}
+        if variable_pattern.search(result):
+            result = evaluate_modifiers(result, environ)
+
         # dedupe path-like values and resolve separators
-        if ":" in result and ("/" in result or "\\" in result):
+        # TODO: replace with regex pattern to detect path-like strings
+        elif ":" in result and ("/" in result or "\\" in result):
             result = dedupe_paths(result)
 
     # detect recursion errors
