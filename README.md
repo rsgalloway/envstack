@@ -253,6 +253,19 @@ BIZ=foo
 FOO=foo
 ```
 
+Here is an example using nested variable expansion:
+
+```yaml
+FOO: ${BIZ:=${BAR:=${BAZ:=baz}}}
+```
+
+Resolves to:
+
+```bash
+$ envstack -r
+FOO=baz
+```
+
 #### Includes
 
 Environment stack files can include other namespaced environments (you should
