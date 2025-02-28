@@ -348,9 +348,100 @@ class TestResolveEnviron(unittest.TestCase):
         """Tests expansion modifier with special chars."""
         from envstack.env import resolve_environ
 
+        # remove ENV and ROOT from the environment
+        if "FOO" in os.environ:
+            del os.environ["FOO"]
+        if "VAR" in os.environ:
+            del os.environ["VAR"]
         env = {"VAR": "${VAR:=${FOO:=/foo/bar}}"}
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/foo/bar")
+
+    def test_deploy_root_two(self):
+        """Tests $DEPLOY_ROOT with two vars."""
+        from envstack.env import resolve_environ
+
+        # set ENV and ROOT in the environment
+        os.environ["ROOT"] = "/mnt/pipe"
+        os.environ["ENV"] = "dev"
+        env = {
+            "DEPLOY_ROOT": "${ROOT}/${ENV}}",
+            "ENV": "${ENV:=prod}",
+            "ROOT": "${ROOT:=/var/tmp}",
+        }
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["DEPLOY_ROOT"], "/mnt/pipe/dev")
+
+    def test_deploy_root_three(self):
+        """Tests $DEPLOY_ROOT with three vars."""
+        from envstack.env import resolve_environ
+
+        env_value = os.getenv("ENV", "prod")
+        env = {
+            "DEPLOY_ROOT": "${MOUNT}/${DRIVE}/${ENV}}",
+            "ENV": "${ENV:=prod}",
+            "MOUNT": "/mnt",
+            "DRIVE": "${DRIVE:=pipe}",
+        }
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["DEPLOY_ROOT"], f"/mnt/pipe/{env_value}")
+
+    def test_deploy_root_default_one(self):
+        """Tests $DEPLOY_ROOT with default value and one var."""
+        from envstack.env import resolve_environ
+
+        # remove DEPLOY_ROOT, ENV and ROOT from the environment
+        if "DEPLOY_ROOT" in os.environ:
+            del os.environ["DEPLOY_ROOT"]
+        if "ENV" in os.environ:
+            del os.environ["ENV"]
+        if "ROOT" in os.environ:
+            del os.environ["ROOT"]
+        env = {
+            "DEPLOY_ROOT": "${DEPLOY_ROOT:=${TMP}}",
+            "ENV": "${ENV:=prod}",
+            "ROOT": "${ROOT:=/var/tmp}",
+            "TMP": "${ROOT}/${ENV}",
+        }
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["DEPLOY_ROOT"], "/var/tmp/prod")
+
+    def test_deploy_root_default_two(self):
+        """Tests $DEPLOY_ROOT with default value and two vars."""
+        from envstack.env import resolve_environ
+
+        # remove DEPLOY_ROOT, ENV and ROOT from the environment
+        if "DEPLOY_ROOT" in os.environ:
+            del os.environ["DEPLOY_ROOT"]
+        if "ENV" in os.environ:
+            del os.environ["ENV"]
+        if "ROOT" in os.environ:
+            del os.environ["ROOT"]
+        env = {
+            "DEPLOY_ROOT": "${DEPLOY_ROOT:=${ROOT}/${ENV}}",
+            "ENV": "${ENV:=prod}",
+            "ROOT": "${ROOT:=/var/lib}",
+        }
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["DEPLOY_ROOT"], "/var/lib/prod")
+
+    def test_deploy_root_default_two_from_env(self):
+        """Tests $DEPLOY_ROOT with default value from env."""
+        from envstack.env import resolve_environ
+
+        # remove DEPLOY_ROOT, ENV and ROOT from the environment
+        if "ENV" in os.environ:
+            del os.environ["ENV"]
+        if "ROOT" in os.environ:
+            del os.environ["ROOT"]
+        os.environ["DEPLOY_ROOT"] = "/some/path/here"
+        env = {
+            "DEPLOY_ROOT": "${DEPLOY_ROOT:=${ROOT}/${ENV}}",
+            "ENV": "${ENV:=prod}",
+            "ROOT": "${ROOT:=/var/lib}",
+        }
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["DEPLOY_ROOT"], "/some/path/here")
 
     def test_expansion_modifier_deferred(self):
         """Tests expansion modifier with deferred value."""

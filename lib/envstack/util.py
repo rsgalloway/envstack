@@ -49,14 +49,13 @@ from envstack.node import AESGCMNode, Base64Node, EncryptedNode, FernetNode
 # value for unresolvable variables
 null = ""
 
+# regular expression pattern for matching windows drive letters
+drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
+
 # regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
     r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(\$\{[^}]*\}[\-\w/]*|[^}]*))?\}"
 )
-
-# regular expression pattern for matching windows drive letters
-drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
-
 
 def clear_sys_path(var: str = "PYTHONPATH"):
     """
@@ -72,9 +71,9 @@ def clear_sys_path(var: str = "PYTHONPATH"):
 def decode_value(value: str):
     """Returns a decoded value that's been encoded by a wrapper.
 
-    Decoding encoded environments can be tricky. For example, it must account for path
-    templates that include curly braces, e.g. path templates string like this must be
-    preserved:
+    Decoding encoded environments can be tricky. For example, it must account
+    for path templates that include curly braces, e.g. path templates string
+    like this must be preserved:
 
         '/path/with/{variable}'
 

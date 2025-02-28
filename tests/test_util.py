@@ -224,19 +224,33 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "default/path")
 
-    def test_embedded_substitution_with_slash(self):
-        """Test embedded substitution with special char /."""
+    def test_embedded_substitution_default_one_var_dash(self):
+        """Test embedded substitution with one var default dash"""
+        expression = "${VAR:=${FOO}-bar}}"
+        environ = {"FOO": "foo"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "foo-bar")
+
+    def test_embedded_substitution_default_one_var_slash(self):
+        """Test embedded substitution with one var default slash"""
         expression = "${VAR:=${FOO}/bar}}"
         environ = {"FOO": "foo"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foo/bar")
 
-    def test_embedded_substitution_with_hyphen(self):
-        """Test embedded substitution with special char -."""
-        expression = "${VAR:=${FOO}-bar}}"
-        environ = {"FOO": "foo"}
+    def test_embedded_substitution_default_two_vars(self):
+        """Test embedded substitution with two var default."""
+        expression = "${VAR:=${FOO}/${BAR}}"
+        environ = {"FOO": "foo", "BAR": "bar"}
         result = evaluate_modifiers(expression, environ)
-        self.assertEqual(result, "foo-bar")
+        self.assertEqual(result, "foo/bar")
+
+    def test_embedded_substitution_default_two_vars_from_env(self):
+        """Test embedded substitution with default, value from environ."""
+        expression = "${VAR:=${FOO}/${BAR}}"
+        environ = {"VAR": "default", "FOO": "foo", "BAR": "bar"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "default")
 
 
 class TestUtils(unittest.TestCase):
