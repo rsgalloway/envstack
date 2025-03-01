@@ -325,11 +325,6 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         if variable_pattern.search(result):
             result = evaluate_modifiers(result, environ)
 
-        # dedupe path-like values and resolve separators
-        # TODO: replace with regex pattern to detect path-like strings
-        # elif ":" in result and ("/" in result or "\\" in result):
-        #     result = dedupe_paths(result)
-
     # detect recursion errors
     except RecursionError:
         raise CyclicalReference(f"Cyclical reference detected in {expression}")
