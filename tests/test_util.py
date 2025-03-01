@@ -210,6 +210,13 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "/foo/bar/baz")
 
+    def test_embedded_substitution_multiple_env(self):
+        """Test multiple embedded substitution with value from env."""
+        expression = "${VAR:=${FOO:=${BAR:=/foo/bar/baz}}}"
+        environ = {"FOO": "/a/b/c"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/a/b/c")
+
     def test_embedded_substitution_prefix(self):
         """Test embedded substitution with prefix."""
         expression = "${VAR:=default}/path"
