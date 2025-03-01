@@ -346,22 +346,10 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         elif isinstance(expression, FernetNode):
             result = expression.resolve(env=environ)
         elif isinstance(expression, list):
-            result = [
-                (
-                    variable_pattern.sub(substitute_variable, str(v))
-                    if isinstance(v, str)
-                    else v
-                )
-                for v in expression
-            ]
+            result = [(evaluate_modifiers(v, environ)) for v in expression]
         elif isinstance(expression, dict):
             result = {
-                k: (
-                    variable_pattern.sub(substitute_variable, str(v))
-                    if isinstance(v, str)
-                    else v
-                )
-                for k, v in expression.items()
+                k: (evaluate_modifiers(v, environ)) for k, v in expression.items()
             }
         else:
             result = expression
