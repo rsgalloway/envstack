@@ -210,6 +210,13 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "/foo/bar/baz")
 
+    def test_embedded_substitution_multiple_env(self):
+        """Test multiple embedded substitution with value from env."""
+        expression = "${VAR:=${FOO:=${BAR:=/foo/bar/baz}}}"
+        environ = {"FOO": "/a/b/c"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/a/b/c")
+
     def test_embedded_substitution_prefix(self):
         """Test embedded substitution with prefix."""
         expression = "${VAR:=default}/path"
@@ -226,14 +233,14 @@ class TestEvaluateModifiers(unittest.TestCase):
 
     def test_embedded_substitution_default_one_var_dash(self):
         """Test embedded substitution with one var default dash"""
-        expression = "${VAR:=${FOO}-bar}}"
+        expression = "${VAR:=${FOO}-bar}"
         environ = {"FOO": "foo"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foo-bar")
 
     def test_embedded_substitution_default_one_var_slash(self):
         """Test embedded substitution with one var default slash"""
-        expression = "${VAR:=${FOO}/bar}}"
+        expression = "${VAR:=${FOO}/bar}"
         environ = {"FOO": "foo"}
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foo/bar")
@@ -245,12 +252,54 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, "foo/bar")
 
+    def test_embedded_substitution_default_two_vars_alt_1(self):
+        """Test embedded substitution with two var default, alt 1."""
+        expression = "${VAR:=/${FOO}/${BAR:=bar}}"
+        environ = {"FOO": "foo", "BAR": "baz"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/foo/baz")
+
+    def test_embedded_substitution_default_two_vars_alt_2(self):
+        """Test embedded substitution with two var default, alt 2."""
+        expression = "${VAR:=/${FOO}/${FOO}}"
+        environ = {"FOO": "foo", "BAR": "bar"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/foo/foo")
+
+    def test_embedded_substitution_default_two_vars_alt_3(self):
+        """Test embedded substitution with two var default, alt 3."""
+        expression = "${VAR:=/${FOO}}/${FOO}"
+        environ = {"FOO": "foo", "BAR": "bar"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/foo/foo")
+
+    def test_embedded_substitution_default_two_vars_alt_4(self):
+        """Test embedded substitution with two var default, alt 4."""
+        expression = "${VAR:=/${FOO}}/${BAR:=bar}"
+        environ = {"FOO": "foo", "BAR": "baz"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/foo/baz")
+
+    def test_embedded_substitution_default_three_vars(self):
+        """Test embedded substitution with three vars."""
+        expression = "${VAR:=/${FOO}/${BAR}/${BAZ:=baz}}"
+        environ = {"FOO": "foo", "BAR": "bar"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/foo/bar/baz")
+
+    def test_embedded_substitution_default_three_vars_alt_1(self):
+        """Test embedded substitution with three vars, atl 1."""
+        expression = "${VAR:=/${FOO}}/${BAR}/${BAZ:=baz}"
+        environ = {"FOO": "foo", "BAR": "bar"}
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(result, "/foo/bar/baz")
+
     def test_embedded_substitution_default_two_vars_from_env(self):
         """Test embedded substitution with default, value from environ."""
         expression = "${VAR:=${FOO}/${BAR}}"
-        environ = {"VAR": "default", "FOO": "foo", "BAR": "bar"}
+        environ = {"VAR": "/env/value", "FOO": "foo", "BAR": "bar"}
         result = evaluate_modifiers(expression, environ)
-        self.assertEqual(result, "default")
+        self.assertEqual(result, "/env/value")
 
 
 class TestUtils(unittest.TestCase):

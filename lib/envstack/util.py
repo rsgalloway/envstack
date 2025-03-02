@@ -54,8 +54,9 @@ drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
 
 # regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
-    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])(\$\{[^}]*\}[\-\w/]*|[^}]*))?\}"
+    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])((?:\$\{[^}]+\}|[^}])*))?\}"
 )
+
 
 def clear_sys_path(var: str = "PYTHONPATH"):
     """
@@ -269,6 +270,16 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         error message.
     """
 
+    def sanitize_value(value):
+        """Sanitize the value before returning it."""
+        # HACK: remove trailing curly braces if they exist
+        if type(value) is str and value.endswith("}") and not value.startswith("${"):
+            return value.rstrip("}")
+        # sanitize path-like values
+        elif type(value) is str and ":" in value and ("/" in value or "\\" in value):
+            return dedupe_paths(value)
+        return value
+
     def substitute_variable(match):
         """Substitute a variable match with its value."""
         var_name = match.group(1)
@@ -310,18 +321,9 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         # substitute all matches in the expression
         result = variable_pattern.sub(substitute_variable, expression)
 
-        # HACK: remove trailing curly braces if they exist
-        if result.endswith("}") and not result.startswith("${"):
-            result = result.rstrip("}")
-
         # evaluate any remaining modifiers, eg. ${VAR:=${FOO:=bar}}
         if variable_pattern.search(result):
             result = evaluate_modifiers(result, environ)
-
-        # dedupe path-like values and resolve separators
-        # TODO: replace with regex pattern to detect path-like strings
-        elif ":" in result and ("/" in result or "\\" in result):
-            result = dedupe_paths(result)
 
     # detect recursion errors
     except RecursionError:
@@ -339,27 +341,15 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         elif isinstance(expression, FernetNode):
             result = expression.resolve(env=environ)
         elif isinstance(expression, list):
-            result = [
-                (
-                    variable_pattern.sub(substitute_variable, str(v))
-                    if isinstance(v, str)
-                    else v
-                )
-                for v in expression
-            ]
+            result = [(evaluate_modifiers(v, environ)) for v in expression]
         elif isinstance(expression, dict):
             result = {
-                k: (
-                    variable_pattern.sub(substitute_variable, str(v))
-                    if isinstance(v, str)
-                    else v
-                )
-                for k, v in expression.items()
+                k: (evaluate_modifiers(v, environ)) for k, v in expression.items()
             }
         else:
             result = expression
 
-    return result
+    return sanitize_value(result)
 
 
 def load_sys_path(

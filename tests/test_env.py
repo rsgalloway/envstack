@@ -478,30 +478,29 @@ class TestResolveEnviron(unittest.TestCase):
         self.assertEqual(resolved["BAZ"], "")
         self.assertRaises(KeyError, lambda: resolved["QUX"])
 
-    # FIXME: these tests are not passing
-    # def test_recursive_list_dict(self):
-    #     """Tests resolving a recursive list dict environment."""
-    #     from envstack.env import resolve_environ
+    def test_recursive_list_dict(self):
+        """Tests resolving a recursive list dict environment."""
+        from envstack.env import resolve_environ
 
-    #     env = {"FOO": "foo", "BAR": "${FOO}", "BAZ": [{"qux": "${BAR}"}]}
-    #     resolved = resolve_environ(env)
-    #     self.assertEqual(resolved["BAZ"], [{"qux": "foo"}])
+        env = {"FOO": "foo", "BAR": "${FOO}", "BAZ": [{"qux": "${BAR}"}]}
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["BAZ"], [{"qux": "foo"}])
 
-    # def test_recursive_dict_list(self):
-    #     """Tests resolving a recursive dict list environment."""
-    #     from envstack.env import resolve_environ
+    def test_recursive_dict_list(self):
+        """Tests resolving a recursive dict list environment."""
+        from envstack.env import resolve_environ
 
-    #     env = {"FOO": "foo", "BAR": "${FOO}", "BAZ": {"qux": ["${BAR}"]}}
-    #     resolved = resolve_environ(env)
-    #     self.assertEqual(resolved["BAZ"], {"qux": ["foo"]})
+        env = {"FOO": "foo", "BAR": "${FOO}", "BAZ": {"qux": ["${BAR}"]}}
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["BAZ"], {"qux": ["foo"]})
 
-    # def test_recursive_list_list(self):
-    #     """Tests resolving a recursive list list environment."""
-    #     from envstack.env import resolve_environ
+    def test_recursive_list_list(self):
+        """Tests resolving a recursive list list environment."""
+        from envstack.env import resolve_environ
 
-    #     env = {"FOO": "foo", "BAR": "${FOO}", "BAZ": [["${BAR}"]]}
-    #     resolved = resolve_environ(env)
-    #     self.assertEqual(resolved["BAZ"], [["foo"]])
+        env = {"FOO": "foo", "BAR": "${FOO}", "BAZ": [["${BAR}"]]}
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["BAZ"], [["foo"]])
 
 
 class TestBakeEnviron(unittest.TestCase):
