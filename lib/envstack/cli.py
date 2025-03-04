@@ -125,6 +125,12 @@ def parse_args():
         help="platform to resolve variables for (linux, darwin, windows)",
     )
     parser.add_argument(
+        "--set",
+        nargs="*",
+        metavar="VAR:VALUE",
+        help="set a key:value pair in the environment",
+    )
+    parser.add_argument(
         "--scope",
         metavar="SCOPE",
         help="search scope for environment stack files",
@@ -188,9 +194,20 @@ def main():
             elif args.out:
                 from envstack.util import dump_yaml
 
-                dump_yaml(file_path=args.out, data=keys)
+                dump_yaml(file_path=args.out, data={"all": keys})
             else:
                 for key, value in keys.items():
+                    print(f"{key}: {value}")
+
+        elif args.set:
+            data = dict(kv.split(":", 1) for kv in args.set)
+
+            if args.out:
+                from envstack.util import dump_yaml
+
+                dump_yaml(file_path=args.out, data={"all": data})
+            else:
+                for key, value in data.items():
                     print(f"{key}: {value}")
 
         elif args.out:
