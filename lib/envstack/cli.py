@@ -41,9 +41,12 @@ from envstack import __version__, config
 from envstack.env import (
     bake_environ,
     clear,
+    encrypt_environ,
+    export_env_to_shell,
     export,
     load_environ,
     resolve_environ,
+    Source,
     trace_var,
 )
 from envstack.logger import setup_stream_handler
@@ -185,27 +188,30 @@ def main():
         elif args.keygen:
             from envstack.encrypt import generate_keys
 
-            keys = generate_keys()
+            data = generate_keys()
 
             if args.export:
-                from envstack.env import export_env_to_shell
-
-                print(export_env_to_shell(keys))
+                print(export_env_to_shell(data))
             elif args.out:
-                from envstack.util import dump_yaml
-
-                dump_yaml(file_path=args.out, data={"all": keys})
+                source = Source(args.out)
+                source.data = {"all": data}
+                source.write()
             else:
-                for key, value in keys.items():
+                for key, value in data.items():
                     print(f"{key}: {value}")
 
         elif args.set:
             data = dict(kv.split(":", 1) for kv in args.set)
 
-            if args.out:
-                from envstack.util import dump_yaml
+            if args.encrypt:
+                data = encrypt_environ(data)
 
-                dump_yaml(file_path=args.out, data={"all": data})
+            if args.export:
+                print(export_env_to_shell(data))
+            elif args.out:
+                source = Source(args.out)
+                source.data = {"all": data}
+                source.write()
             else:
                 for key, value in data.items():
                     print(f"{key}: {value}")
