@@ -204,7 +204,7 @@ def main():
             data = dict(kv.split(":", 1) for kv in args.set)
 
             if args.encrypt:
-                data = encrypt_environ(data)
+                data = encrypt_environ(data, encrypt=(not args.out))
             if args.export:
                 print(export_env_to_shell(data))
             elif args.out:

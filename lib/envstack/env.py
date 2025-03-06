@@ -710,9 +710,18 @@ def bake_environ(
     return baked_env
 
 
-def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
+def encrypt_environ(
+    env: dict, node_class: BaseNode = EncryptedNode, encrypt: bool = True
+):
     """Encrypts all values in a given environment, returning a new environment.
     Looks for encryption keys in the environment.
+
+    Python:
+
+        >>> env = {"FOO": "bar"}
+        >>> env = envstack.encrypt_environ(env)
+
+    Command line:
 
         $ envstack [STACK] --encrypt
 
@@ -720,6 +729,7 @@ def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
     :param node_class: node class to use for encryption.
         Defaults to EncryptedNode, which looks for encryption keys in the
         environment to determine the encryption method.
+    :param encrypt: pre-encrypt the values.
     :returns: encrypted environment.
     """
     # stores the encrypted environment
@@ -736,7 +746,8 @@ def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
         if type(v) not in custom_node_types:
             # TODO: use to_yaml() method to serialize instead?
             node = node_class(v)
-            node.value = node.encryptor(env=resolved_env).encrypt(str(v))
+            if encrypt:
+                node.value = node.encryptor(env=resolved_env).encrypt(str(v))
             encrypted_env[k] = node
         else:
             encrypted_env[k] = v

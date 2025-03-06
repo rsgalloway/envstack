@@ -634,6 +634,7 @@ class TestSet(unittest.TestCase):
     """Tests various envstack set commands."""
 
     def setUp(self):
+        self.filename = "settest.env"
         self.envstack_bin = os.path.join(
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
@@ -645,6 +646,10 @@ class TestSet(unittest.TestCase):
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
         os.environ["INTERACTIVE"] = "0"
+
+    def tearDown(self):
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
 
     def test_hello_world(self):
         """Tests setting HELLO to world."""
@@ -683,6 +688,60 @@ class TestSet(unittest.TestCase):
         """Tests setting FOO and BAR encrypted."""
         command = r"%s --set FOO:foo BAR:\${FOO} --encrypt" % self.envstack_bin
         expected_output = "FOO=Zm9v\nBAR=JHtGT099\n"
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_foo_bar_bake(self):
+        """Tests setting FOO and BAR and bake it out to a file."""
+        command = r"%s --set FOO:foo BAR:\${FOO} -o %s; cat %s" % (
+            self.envstack_bin,
+            self.filename,
+            self.filename,
+        )
+        expected_output = """#!/usr/bin/env envstack
+include: []
+all: &all
+  <<: *all
+  BAR: ${FOO}
+  FOO: foo
+darwin:
+  <<: *all
+linux:
+  <<: *all
+windows:
+  <<: *all
+"""
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_foo_bar_bake_encrypted(self):
+        """Tests setting FOO and BAR and bake it out to a file with encrypted values."""
+        command = r"%s --set FOO:foo BAR:\${FOO} --encrypt -o %s; cat %s" % (
+            self.envstack_bin,
+            self.filename,
+            self.filename,
+        )
+        expected_output = """#!/usr/bin/env envstack
+include: []
+all: &all
+  <<: *all
+  BAR: !encrypt JHtGT099
+  FOO: !encrypt Zm9v
+darwin:
+  <<: *all
+linux:
+  <<: *all
+windows:
+  <<: *all
+"""
         output = subprocess.check_output(
             command,
             shell=True,
