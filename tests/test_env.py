@@ -752,6 +752,36 @@ class TestEncryptEnviron(unittest.TestCase):
         """Tests encrypting the thing environment."""
         self.run_tests("thing")
 
+    def test_encrypt_environ_as_env(self):
+        """Tests encrypting an environment as Env."""
+        from envstack.env import encrypt_environ
+        from envstack.node import EncryptedNode
+
+        env = Env({"HELLO": "world", "FOO": "foo", "BAR": "${FOO}"})
+        encrypted = encrypt_environ(env)
+        self.assertNotEqual(encrypted["HELLO"], "d29ybGQ=")
+        self.assertTrue(isinstance(encrypted["HELLO"], EncryptedNode))
+        self.assertEqual(encrypted["HELLO"].resolve(env=env), "world")
+        self.assertNotEqual(encrypted["FOO"], env["FOO"])
+        self.assertEqual(encrypted["FOO"].resolve(env=env), env["FOO"])
+        self.assertNotEqual(encrypted["BAR"], env["BAR"])
+        self.assertEqual(encrypted["BAR"].resolve(env=env), env["BAR"])
+
+    def test_encrypt_environ_as_dict(self):
+        """Tests encrypting an environment as dict."""
+        from envstack.env import encrypt_environ
+        from envstack.node import EncryptedNode
+
+        env = {"HELLO": "world", "FOO": "foo", "BAR": "${FOO}"}
+        encrypted = encrypt_environ(env)
+        self.assertNotEqual(encrypted["HELLO"], "d29ybGQ=")
+        self.assertTrue(isinstance(encrypted["HELLO"], EncryptedNode))
+        self.assertEqual(encrypted["HELLO"].resolve(env=env), "world")
+        self.assertNotEqual(encrypted["FOO"], env["FOO"])
+        self.assertEqual(encrypted["FOO"].resolve(env=env), env["FOO"])
+        self.assertNotEqual(encrypted["BAR"], env["BAR"])
+        self.assertEqual(encrypted["BAR"].resolve(env=env), env["BAR"])
+
 
 class TestIssues(unittest.TestCase):
     def setUp(self):

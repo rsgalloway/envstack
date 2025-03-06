@@ -198,14 +198,13 @@ def main():
                 source.write()
             else:
                 for key, value in data.items():
-                    print(f"{key}: {value}")
+                    print(f"{key}={value}")
 
         elif args.set:
             data = dict(kv.split(":", 1) for kv in args.set)
 
             if args.encrypt:
                 data = encrypt_environ(data)
-
             if args.export:
                 print(export_env_to_shell(data))
             elif args.out:
@@ -214,7 +213,7 @@ def main():
                 source.write()
             else:
                 for key, value in data.items():
-                    print(f"{key}: {value}")
+                    print(f"{key}={value}")
 
         elif args.out:
             bake_environ(

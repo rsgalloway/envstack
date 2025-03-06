@@ -583,6 +583,7 @@ class TestCommands(unittest.TestCase):
         os.environ["INTERACTIVE"] = "0"
 
     def test_default_echo(self):
+        """Tests the default stack with an echo command."""
         command = "%s -- echo {HELLO}" % self.envstack_bin
         expected_output = "world\n"
         output = subprocess.check_output(
@@ -593,6 +594,7 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_default_ls(self):
+        """Tests the default stack with an ls command."""
         command = "%s -- ls" % self.envstack_bin
         expected_output = subprocess.check_output(
             "ls", start_new_session=True, shell=True, universal_newlines=True
@@ -601,6 +603,7 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_thing_echo(self):
+        """Tests the thing stack with an echo command."""
         command = "%s thing -- echo {HELLO}" % self.envstack_bin
         expected_output = "goodbye\n"
         output = subprocess.check_output(
@@ -609,6 +612,7 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_test_echo_deploy_root(self):
+        """Tests the test stack with an echo command."""
         command = "%s test -- echo {DEPLOY_ROOT}" % self.envstack_bin
         expected_output = f"{self.root}/test\n"
         output = subprocess.check_output(
@@ -617,10 +621,72 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_test_echo_deploy_root(self):
+        """Tests the test stack with an echo command."""
         command = "%s test foobar -- echo {DEPLOY_ROOT}" % self.envstack_bin
         expected_output = f"{self.root}/foobar\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+
+class TestSet(unittest.TestCase):
+    """Tests various envstack set commands."""
+
+    def setUp(self):
+        self.envstack_bin = os.path.join(
+            os.path.dirname(__file__), "..", "bin", "envstack"
+        )
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
+        os.environ["ENVPATH"] = envpath
+        os.environ["INTERACTIVE"] = "0"
+
+    def test_hello_world(self):
+        """Tests setting HELLO to world."""
+        command = "%s --set HELLO:world" % self.envstack_bin
+        expected_output = "HELLO=world\n"
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_hello_world_encrypted(self):
+        """Tests setting HELLO to world encrypted."""
+        command = "%s --set HELLO:world --encrypt" % self.envstack_bin
+        expected_output = "HELLO=d29ybGQ=\n"
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_foo_bar(self):
+        """Tests setting FOO and BAR."""
+        command = r"%s --set FOO:foo BAR:\${FOO}" % self.envstack_bin
+        expected_output = "FOO=foo\nBAR=${FOO}\n"
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
+    def test_foo_bar_encrypted(self):
+        """Tests setting FOO and BAR encrypted."""
+        command = r"%s --set FOO:foo BAR:\${FOO} --encrypt" % self.envstack_bin
+        expected_output = "FOO=Zm9v\nBAR=JHtGT099\n"
+        output = subprocess.check_output(
+            command,
+            shell=True,
+            universal_newlines=True,
         )
         self.assertEqual(output, expected_output)
 

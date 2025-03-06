@@ -184,6 +184,37 @@ $ HELLO=goodbye envstack -- echo {HELLO}
 goodbye
 ```
 
+#### Using the command-line
+
+Here we can set values using the `envstack` command:
+
+```bash
+$ envstack --set HELLO:world
+HELLO: world
+```
+
+We can also encrypt the values automatically (base64 by default):
+
+```bash
+$ envstack --set HELLO:world --encrypt
+HELLO: d29ybGQ=
+```
+
+Add more variables (note that `$` needs to be escaped in bash or else it will
+be evaluated immediately):
+
+```bash
+$ envstack --set HELLO:world VAR:\${HELLO}
+HELLO: world
+VAR: ${HELLO}
+```
+
+To write out to a file use the `-o` option:
+
+```bash
+$ envstack --set HELLO:world -o hello.env
+```
+
 ## Creating Stacks
 
 Several example or starter stacks are available in the [env folder of the
