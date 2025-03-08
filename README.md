@@ -196,7 +196,7 @@ HELLO: world
 We can also encrypt the values automatically (base64 by default):
 
 ```bash
-$ envstack --set HELLO:world --encrypt
+$ envstack -s HELLO:world -e
 HELLO: d29ybGQ=
 ```
 
@@ -204,7 +204,7 @@ Add more variables (note that `$` needs to be escaped in bash or else it will
 be evaluated immediately):
 
 ```bash
-$ envstack --set HELLO:world VAR:\${HELLO}
+$ envstack -s HELLO:world VAR:\${HELLO}
 HELLO: world
 VAR: ${HELLO}
 ```
@@ -212,7 +212,7 @@ VAR: ${HELLO}
 To write out to a file use the `-o` option:
 
 ```bash
-$ envstack --set HELLO:world -o hello.env
+$ envstack -s HELLO:world -o hello.env
 ```
 
 ## Creating Stacks
@@ -240,6 +240,13 @@ linux:
   <<: *all
 windows:
   <<: *all
+```
+
+Or using Python:
+
+```python
+>>> env = Env({"FOO": "bar", "BAR": "${FOO}"})
+>>> env.write("foobar.env")
 ```
 
 Get the resolved environment for the `foobar` stack:
