@@ -105,6 +105,7 @@ def parse_args():
         help="generate encryption keys",
     )
     bake_group.add_argument(
+        "-e",
         "--encrypt",
         action="store_true",
         help="encrypt the baked environment values",
@@ -128,6 +129,7 @@ def parse_args():
         help="platform to resolve variables for (linux, darwin, windows)",
     )
     parser.add_argument(
+        "-s",
         "--set",
         nargs="*",
         metavar="VAR:VALUE",
