@@ -675,7 +675,7 @@ class TestSet(unittest.TestCase):
 
     def test_foo_bar(self):
         """Tests setting FOO and BAR."""
-        command = r"%s --set FOO:foo BAR:\${FOO}" % self.envstack_bin
+        command = r"%s -s FOO:foo BAR:\${FOO}" % self.envstack_bin
         expected_output = "FOO=foo\nBAR=${FOO}\n"
         output = subprocess.check_output(
             command,
@@ -686,7 +686,7 @@ class TestSet(unittest.TestCase):
 
     def test_foo_bar_encrypted(self):
         """Tests setting FOO and BAR encrypted."""
-        command = r"%s --set FOO:foo BAR:\${FOO} --encrypt" % self.envstack_bin
+        command = r"%s -s FOO:foo BAR:\${FOO} --encrypt" % self.envstack_bin
         expected_output = "FOO=Zm9v\nBAR=JHtGT099\n"
         output = subprocess.check_output(
             command,
@@ -724,7 +724,7 @@ windows:
 
     def test_foo_bar_bake_encrypted(self):
         """Tests setting FOO and BAR and bake it out to a file with encrypted values."""
-        command = r"%s --set FOO:foo BAR:\${FOO} --encrypt -o %s; cat %s" % (
+        command = r"%s --set FOO:foo BAR:\${FOO} -eo %s; cat %s" % (
             self.envstack_bin,
             self.filename,
             self.filename,

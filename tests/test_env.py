@@ -120,30 +120,51 @@ class TestEnvVar(unittest.TestCase):
 
 
 class TestEnv(unittest.TestCase):
+    def setUp(self):
+        self.filename = "testenv.env"
+
+    def tearDown(self):
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
+
     def test_getitem(self):
+        """Tests getting an item from the environment."""
         env = Env({"FOO": "foo", "BAR": "$FOO"})
         self.assertEqual(env["BAR"], "$FOO")
 
     def test_get(self):
+        """Tests getting a value from the environment."""
         env = Env({"FOO": "foo", "BAR": "$FOO"})
         self.assertEqual(env.get("BAR"), "$FOO")
         self.assertEqual(env.get("BAZ"), None)
         self.assertEqual(env.get("BAZ", "default"), "default")
 
     def test_copy(self):
+        """Tests copying an environment."""
         env = Env({"FOO": "foo", "BAR": "$FOO"})
         copied = env.copy()
         self.assertEqual(copied, {"FOO": "foo", "BAR": "$FOO"})
 
     def test_set_namespace(self):
+        """Tests setting the namespace of the environment."""
         env = Env()
         env.set_namespace("test")
         self.assertEqual(env.namespace, "test")
 
     def test_set_scope(self):
+        """Tests setting the scope of the environment."""
         env = Env()
         env.set_scope("/path/to/scope")
         self.assertEqual(env.scope, "/path/to/scope")
+
+    def test_write(self):
+        """Tests writing an environment to a file."""
+        from envstack.env import load_environ
+        env1 = Env({"FOO": "foo", "BAR": "${FOO}"})
+        env1.write(self.filename)
+        env2 = load_environ(self.filename)
+        self.assertEqual(env1["FOO"], env2["FOO"])
+        self.assertEqual(env1["BAR"], env2["BAR"])
 
 
 class TestScope(unittest.TestCase):
