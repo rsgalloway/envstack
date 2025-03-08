@@ -560,9 +560,9 @@ def partition_platform_data(data: dict):
     :param data: dictionary to partition.
     :returns: platform partitioned dictionary.
     """
-    # ensure all is present
+    # ensure "all" key is present
     if "all" not in data:
-        data["all"] = {}  # data.copy()
+        data["all"] = dict((k, v) for k, v in data.items() if k != "include")
 
     # platforms of interest (darwin, linux, windows)
     platforms = ["darwin", "linux", "windows"]

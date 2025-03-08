@@ -294,6 +294,21 @@ class Env(dict):
         """
         self.scope = path
 
+    def write(self, path: str = None):
+        """Writes the environment to an env file.
+
+            >>> env = Env({"FOO": "${BAR}", "BAR": "bar"})
+            >>> env.write("foo.env")
+
+        :param path: File path to write the env file.
+        :returns: Source object.
+        """
+        source = Source()
+        for k, v in self.items():
+            source.data[k] = v
+        source.write(path)
+        return source
+
 
 def clear_file_cache():
     """Clears global file cache."""
