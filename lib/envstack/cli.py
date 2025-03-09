@@ -40,13 +40,12 @@ import traceback
 from envstack import __version__, config
 from envstack.env import (
     bake_environ,
-    clear,
+    Env,
     encrypt_environ,
     export_env_to_shell,
     export,
     load_environ,
     resolve_environ,
-    Source,
     trace_var,
 )
 from envstack.logger import setup_stream_handler
@@ -195,9 +194,7 @@ def main():
             if args.export:
                 print(export_env_to_shell(data))
             elif args.out:
-                source = Source(args.out)
-                source.data = {"all": data}
-                source.write()
+                Env(data).write(args.out)
             else:
                 for key, value in data.items():
                     print(f"{key}={value}")
@@ -210,9 +207,7 @@ def main():
             if args.export:
                 print(export_env_to_shell(data))
             elif args.out:
-                source = Source(args.out)
-                source.data = {"all": data}
-                source.write()
+                Env(data).write(args.out)
             else:
                 for key, value in data.items():
                     print(f"{key}={value}")
@@ -247,6 +242,8 @@ def main():
                 print(source.path)
 
         elif args.clear:
+            from envstack.env import clear
+
             print(clear(args.namespace, config.SHELL))
 
         elif args.export:
