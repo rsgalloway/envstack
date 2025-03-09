@@ -54,7 +54,7 @@ drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
 
 # regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
-    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])((?:\$\{[^}]+\}|[^}])*))?\}"
+    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([-=?])((?:\$\{[^}]+\}|[^}])*))?\}"
 )
 
 

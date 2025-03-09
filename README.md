@@ -145,8 +145,8 @@ allows you to override the value:
 | Value | Description |
 |---------------------|-------------|
 | value |  'value' |
-| ${VAR:-default} | os.environ.get('VAR', 'default') |
 | ${VAR:=default} | VAR = VAR or 'default' |
+| ${VAR:-default} | os.environ.get('VAR', 'default') |
 | ${VAR:?error message} | if not VAR: raise ValueError() |
 
 Without the expansion modifier, values are set and do not change (but can be

@@ -407,6 +407,14 @@ class TestResolveEnviron(unittest.TestCase):
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/foo/bar")
 
+    def test_expansion_modifier_alt(self):
+        """Tests var with an expansion modifier using alt modifier."""
+        from envstack.env import resolve_environ
+
+        env = {"VAR": "${VAR:-/foo/bar}"}
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["VAR"], "/foo/bar")
+
     def test_expansion_modifier_nested_undefined(self):
         """Tests expansion modifier with no value."""
         from envstack.env import resolve_environ
