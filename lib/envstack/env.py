@@ -295,7 +295,11 @@ class Env(dict):
         self.scope = path
 
     def bake(self, filename: str = None, depth: int = 0, encrypt: bool = False):
-        """Bakes the environment into a single environment.
+        """Bakes an environment with multiple sources into a single environment
+        and writes to a new env file.
+
+            >>> env = load_environ(stack_name)
+            >>> env.bake("baked.env")
 
         :param filename: path to save the baked environment.
         :param depth: depth of source files to incldue (default: all).
@@ -345,19 +349,26 @@ class Env(dict):
 
         return baked_env
 
-    def write(self, filename: str = None, encrypt: bool = False):
+    def write(self, filename: str = None):
         """Writes the environment to an env file.
 
             >>> env = Env({"FOO": "${BAR}", "BAR": "bar"})
             >>> env.write("foo.env")
 
-        :param filename: Filename to write the env file.
-        :param encrypt: encrypt the values.
+        To encrypt values, use EncryptedNode:
+
+            >>> env = Env({"FOO": "${BAR}", "BAR": EncryptedNode("bar")})
+            >>> env.write("encrypted.env")
+
+        :param filename: path to save the baked environment.
         :returns: Source object.
         """
+        # the environment was loaded from one or more sources
         if self.sources:
-            baked = self.bake(filename, encrypt=encrypt)
+            baked = self.bake(filename)
             return baked.sources[0]
+
+        # the environment was created from scratch
         else:
             source = Source(filename)
             for k, v in self.items():
