@@ -617,13 +617,13 @@ class TestBakeEnviron(unittest.TestCase):
         # make sure environment sources are different
         if stack_name == "doesnotexist":
             self.assertEqual(env.sources, [])
-            # self.assertEqual(baked.sources, [])
+            self.assertEqual(len(baked.sources), 1)
         elif stack_name == "default":
             self.assertTrue(len(env.sources[0].includes()) == 0)
         else:
             self.assertNotEqual(env.sources, baked.sources)
             self.assertTrue(len(env.sources) > 0)
-            # self.assertEqual(baked.sources, [])
+            self.assertEqual(len(baked.sources), 1)
             self.assertTrue(len(env) > 0)
             self.assertTrue(len(baked) > 0)
 
@@ -649,7 +649,7 @@ class TestBakeEnviron(unittest.TestCase):
         # make sure environment sources are different
         if stack_name == "doesnotexist":
             self.assertEqual(env.sources, [])
-            # self.assertEqual(baked2.sources, [])
+            self.assertEqual(len(baked.sources), 1)
         else:
             self.assertNotEqual(baked2.sources, baked2_reloaded.sources)
             self.assertTrue(len(baked2) > 0)
