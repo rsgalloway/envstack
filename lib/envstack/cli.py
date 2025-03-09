@@ -85,12 +85,25 @@ def parse_args():
         default=[config.DEFAULT_NAMESPACE],
         help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
+    encrypt_group = parser.add_argument_group("encryption options")
+    encrypt_group.add_argument(
+        "-e",
+        "--encrypt",
+        action="store_true",
+        help="encrypt environment values",
+    )
+    encrypt_group.add_argument(
+        "--keygen",
+        action="store_true",
+        help="generate encryption keys",
+    )
+    parser.add_argument_group(encrypt_group)
     bake_group = parser.add_argument_group("bake options")
     bake_group.add_argument(
         "-o",
         "--out",
         metavar="FILENAME",
-        help="write the env stack to a new stack file",
+        help="save the environment to an env file",
     )
     bake_group.add_argument(
         "--depth",
@@ -98,28 +111,19 @@ def parse_args():
         default=0,
         help="depth of environment stack to bake",
     )
-    bake_group.add_argument(
-        "--keygen",
-        action="store_true",
-        help="generate encryption keys",
-    )
-    bake_group.add_argument(
-        "-e",
-        "--encrypt",
-        action="store_true",
-        help="encrypt the baked environment values",
-    )
     parser.add_argument_group(bake_group)
-    parser.add_argument(
+    export_group = parser.add_argument_group("export options")
+    export_group.add_argument(
         "--clear",
         action="store_true",
         help="generate unset commands for %s" % config.SHELL,
     )
-    parser.add_argument(
+    export_group.add_argument(
         "--export",
         action="store_true",
         help="generate export commands for %s" % config.SHELL,
     )
+    parser.add_argument_group(export_group)
     parser.add_argument(
         "-p",
         "--platform",
