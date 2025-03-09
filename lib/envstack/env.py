@@ -89,7 +89,7 @@ class Source(object):
         return hash(self.__repr__())
 
     def __repr__(self):
-        return f'<Source "{self.path}">'
+        return f"<Source '{self.path}'>"
 
     def __str__(self):
         return str(self.path)
@@ -293,6 +293,88 @@ class Env(dict):
         :param path: path of scope.
         """
         self.scope = path
+
+    def bake(self, filename: str = None, depth: int = 0, encrypt: bool = False):
+        """Bakes an environment with multiple sources into a single environment
+        and writes to a new env file.
+
+            >>> env = load_environ(stack_name)
+            >>> env.bake("baked.env")
+
+        :param filename: path to save the baked environment.
+        :param depth: depth of source files to incldue (default: all).
+        :param encrypt: encrypt the values.
+        :returns: baked environment.
+        """
+        # get the sources for the given environment
+        sources = self.sources
+
+        # look for encryption keys in the environment
+        os.environ.update(get_keys_from_env(self))
+
+        # create a baked source
+        baked = Source(filename)
+
+        def get_node_class(value):
+            """Returns the node class to use for a given value."""
+            if encrypt:
+                if type(value) in custom_node_types:
+                    return value.__class__
+                else:
+                    return EncryptedNode
+            return value.__class__
+
+        # merge the sources into the outfile
+        for source in sources[-depth:]:
+            for key, value in source.data.items():
+                if isinstance(value, dict):
+                    for k, v in value.items():
+                        node_class = get_node_class(v)
+                        baked.data.setdefault(key, {})[k] = node_class(v)
+                else:
+                    node_class = get_node_class(value)
+                    baked.data[key] = node_class(value)
+
+        # clear includes if environment stack is fully baked
+        if depth <= 0:
+            baked.data["include"] = []
+
+        # write the baked environment to the file
+        if filename:
+            baked.write()
+
+        # create the baked environment from the baked source
+        baked_env = Env()
+        baked_env.load_source(baked)
+
+        return baked_env
+
+    def write(self, filename: str = None):
+        """Writes the environment to an env file.
+
+            >>> env = Env({"FOO": "${BAR}", "BAR": "bar"})
+            >>> env.write("foo.env")
+
+        To encrypt values, use EncryptedNode:
+
+            >>> env = Env({"FOO": "${BAR}", "BAR": EncryptedNode("bar")})
+            >>> env.write("encrypted.env")
+
+        :param filename: path to save the baked environment.
+        :returns: Source object.
+        """
+        # the environment was loaded from one or more sources
+        if self.sources:
+            baked = self.bake(filename)
+            return baked.sources[0]
+
+        # the environment was created from scratch
+        else:
+            source = Source(filename)
+            for k, v in self.items():
+                source.data[k] = v
+            source.write()
+            return source
 
 
 def clear_file_cache():
@@ -664,55 +746,21 @@ def bake_environ(
     :param encrypt: encrypt the values.
     :returns: baked environment.
     """
-    # load the envrinment for the given stack and get list of sources
-    env = load_environ(name, scope=scope)
-    sources = env.sources
-
-    # resolve internal environment so that encryption keys are found
-    # (encryptors looks in os.environ by default)
-    os.environ.update(util.encode(resolve_environ(env)))
-
-    # create a baked source
-    baked = Source(filename)
-
-    def get_node_class(value):
-        """Returns the node class to use for a given value."""
-        if encrypt:
-            if type(value) in custom_node_types:
-                return value.__class__
-            else:
-                return EncryptedNode
-        return value.__class__
-
-    # merge the sources into the outfile
-    for source in sources[-depth:]:
-        for key, value in source.data.items():
-            if isinstance(value, dict):
-                for k, v in value.items():
-                    node_class = get_node_class(v)
-                    baked.data.setdefault(key, {})[k] = node_class(v)
-            else:
-                node_class = get_node_class(value)
-                baked.data[key] = node_class(value)
-
-    # clear includes if environment stack is fully baked
-    if depth <= 0:
-        baked.data["include"] = []
-
-    # write the baked environment to the file
-    if filename:
-        baked.write()
-
-    # create the baked environment
-    baked_env = Env()
-    baked_env.update(baked.load())
-
-    return baked_env
+    return load_environ(name, scope=scope).bake(filename, depth, encrypt)
 
 
-def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
+def encrypt_environ(
+    env: dict, node_class: BaseNode = EncryptedNode, encrypt: bool = True
+):
     """Encrypts all values in a given environment, returning a new environment.
     Looks for encryption keys in the environment.
+
+    Python:
+
+        >>> env = {"FOO": "bar"}
+        >>> env = envstack.encrypt_environ(env)
+
+    Command line:
 
         $ envstack [STACK] --encrypt
 
@@ -720,6 +768,7 @@ def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
     :param node_class: node class to use for encryption.
         Defaults to EncryptedNode, which looks for encryption keys in the
         environment to determine the encryption method.
+    :param encrypt: pre-encrypt the values.
     :returns: encrypted environment.
     """
     # stores the encrypted environment
@@ -736,7 +785,8 @@ def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode):
         if type(v) not in custom_node_types:
             # TODO: use to_yaml() method to serialize instead?
             node = node_class(v)
-            node.value = node.encryptor(env=resolved_env).encrypt(str(v))
+            if encrypt:
+                node.value = node.encryptor(env=resolved_env).encrypt(str(v))
             encrypted_env[k] = node
         else:
             encrypted_env[k] = v

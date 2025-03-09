@@ -40,7 +40,9 @@ import traceback
 from envstack import __version__, config
 from envstack.env import (
     bake_environ,
-    clear,
+    Env,
+    encrypt_environ,
+    export_env_to_shell,
     export,
     load_environ,
     resolve_environ,
@@ -83,12 +85,25 @@ def parse_args():
         default=[config.DEFAULT_NAMESPACE],
         help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
     )
+    encrypt_group = parser.add_argument_group("encryption options")
+    encrypt_group.add_argument(
+        "-e",
+        "--encrypt",
+        action="store_true",
+        help="encrypt environment values",
+    )
+    encrypt_group.add_argument(
+        "--keygen",
+        action="store_true",
+        help="generate encryption keys",
+    )
+    parser.add_argument_group(encrypt_group)
     bake_group = parser.add_argument_group("bake options")
     bake_group.add_argument(
         "-o",
         "--out",
         metavar="FILENAME",
-        help="write the env stack to a new stack file",
+        help="save the environment to an env file",
     )
     bake_group.add_argument(
         "--depth",
@@ -96,33 +111,32 @@ def parse_args():
         default=0,
         help="depth of environment stack to bake",
     )
-    bake_group.add_argument(
-        "--keygen",
-        action="store_true",
-        help="generate encryption keys",
-    )
-    bake_group.add_argument(
-        "--encrypt",
-        action="store_true",
-        help="encrypt the baked environment values",
-    )
     parser.add_argument_group(bake_group)
-    parser.add_argument(
+    export_group = parser.add_argument_group("export options")
+    export_group.add_argument(
         "--clear",
         action="store_true",
         help="generate unset commands for %s" % config.SHELL,
     )
-    parser.add_argument(
+    export_group.add_argument(
         "--export",
         action="store_true",
         help="generate export commands for %s" % config.SHELL,
     )
+    parser.add_argument_group(export_group)
     parser.add_argument(
         "-p",
         "--platform",
         default=config.PLATFORM,
         metavar="PLATFORM",
         help="platform to resolve variables for (linux, darwin, windows)",
+    )
+    parser.add_argument(
+        "-s",
+        "--set",
+        nargs="*",
+        metavar="VAR:VALUE",
+        help="set a key:value pair in the environment",
     )
     parser.add_argument(
         "--scope",
@@ -179,19 +193,28 @@ def main():
         elif args.keygen:
             from envstack.encrypt import generate_keys
 
-            keys = generate_keys()
+            data = generate_keys()
 
             if args.export:
-                from envstack.env import export_env_to_shell
-
-                print(export_env_to_shell(keys))
+                print(export_env_to_shell(data))
             elif args.out:
-                from envstack.util import dump_yaml
-
-                dump_yaml(file_path=args.out, data=keys)
+                Env(data).write(args.out)
             else:
-                for key, value in keys.items():
-                    print(f"{key}: {value}")
+                for key, value in data.items():
+                    print(f"{key}={value}")
+
+        elif args.set:
+            data = dict(kv.split(":", 1) for kv in args.set)
+
+            if args.encrypt:
+                data = encrypt_environ(data, encrypt=(not args.out))
+            if args.export:
+                print(export_env_to_shell(data))
+            elif args.out:
+                Env(data).write(args.out)
+            else:
+                for key, value in data.items():
+                    print(f"{key}={value}")
 
         elif args.out:
             bake_environ(
@@ -223,6 +246,8 @@ def main():
                 print(source.path)
 
         elif args.clear:
+            from envstack.env import clear
+
             print(clear(args.namespace, config.SHELL))
 
         elif args.export:

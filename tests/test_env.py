@@ -120,30 +120,114 @@ class TestEnvVar(unittest.TestCase):
 
 
 class TestEnv(unittest.TestCase):
+    def setUp(self):
+        self.filename = "testenv.env"
+        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+        self.root = {
+            "linux": "/mnt/pipe",
+            "win32": "X:/pipe",
+            "darwin": "/Volumes/pipe",
+        }.get(sys.platform)
+        os.environ["ENVPATH"] = envpath
+        # remove so we use base64 encoding by default
+        if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
+        if FernetEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[FernetEncryptor.KEY_VAR_NAME]
+
+    def tearDown(self):
+        if os.path.exists(self.filename):
+            os.remove(self.filename)
+
     def test_getitem(self):
+        """Tests getting an item from the environment."""
         env = Env({"FOO": "foo", "BAR": "$FOO"})
         self.assertEqual(env["BAR"], "$FOO")
 
     def test_get(self):
+        """Tests getting a value from the environment."""
         env = Env({"FOO": "foo", "BAR": "$FOO"})
         self.assertEqual(env.get("BAR"), "$FOO")
         self.assertEqual(env.get("BAZ"), None)
         self.assertEqual(env.get("BAZ", "default"), "default")
 
     def test_copy(self):
+        """Tests copying an environment."""
         env = Env({"FOO": "foo", "BAR": "$FOO"})
         copied = env.copy()
         self.assertEqual(copied, {"FOO": "foo", "BAR": "$FOO"})
 
     def test_set_namespace(self):
+        """Tests setting the namespace of the environment."""
         env = Env()
         env.set_namespace("test")
         self.assertEqual(env.namespace, "test")
 
     def test_set_scope(self):
+        """Tests setting the scope of the environment."""
         env = Env()
         env.set_scope("/path/to/scope")
         self.assertEqual(env.scope, "/path/to/scope")
+
+    def test_bake(self):
+        """Tests baking an environment."""
+        from envstack.env import load_environ
+        env = load_environ("thing")
+        baked = env.bake()
+        for k, v in env.items():
+            if k == "STACK":
+                continue
+            self.assertEqual(baked[k], v)
+
+    def test_bake_out(self):
+        """Tests bake, write and load an environment."""
+        from envstack.env import load_environ
+        env1 = load_environ("thing")
+        self.filename = "test_bake_out.env"
+        env1.write(self.filename)
+        env2 = load_environ(self.filename)
+        for k, v in env1.items():
+            if k == "STACK":
+                continue
+            self.assertEqual(env2[k], v)
+
+    def test_write_simple(self):
+        """Tests writing an environment to a file."""
+        from envstack.env import load_environ, resolve_environ
+        env1 = Env({"FOO": "foo", "BAR": "${FOO}"})
+        self.filename = "test_write_simple.env"
+        env1.write(self.filename)
+        env2 = load_environ(self.filename)
+        env3 = resolve_environ(env2)
+        self.assertEqual(env1["FOO"], "foo")
+        self.assertEqual(env1["BAR"], "${FOO}")
+        self.assertEqual(env2["FOO"], "foo")
+        self.assertEqual(env2["BAR"], "${FOO}")
+        self.assertEqual(env3["FOO"], "foo")
+        self.assertEqual(env3["BAR"], "foo")
+
+    def test_write_custom(self):
+        """Tests writing an environment with a custom node to a file."""
+        from envstack.env import load_environ, resolve_environ
+        from envstack.node import EncryptedNode
+        env1 = Env({"FOO": "foo", "BAR": EncryptedNode("bar")})
+        self.filename = "test_write_custom.env"
+        # write it out and reload it
+        env1.write(self.filename)
+        env2 = load_environ(self.filename)
+        env3 = resolve_environ(env2)
+        # write it back out again and reload it (test for double encryption)
+        env3.write(self.filename)
+        env4 = resolve_environ(load_environ(self.filename))
+        self.assertEqual(env1["FOO"], "foo")
+        self.assertEqual(env1["BAR"], EncryptedNode("bar"))
+        self.assertEqual(env2["FOO"], "foo")
+        self.assertEqual(env2["BAR"], EncryptedNode('YmFy'))
+        self.assertEqual(EncryptedNode('YmFy').resolve(env=env2), "bar")
+        self.assertEqual(env3["FOO"], "foo")
+        self.assertEqual(env3["BAR"], "bar")
+        self.assertEqual(env4["FOO"], "foo")
+        self.assertEqual(env4["BAR"], "bar")
 
 
 class TestScope(unittest.TestCase):
@@ -325,6 +409,14 @@ class TestResolveEnviron(unittest.TestCase):
         from envstack.env import resolve_environ
 
         env = {"VAR": "${VAR:=/foo/bar}"}
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["VAR"], "/foo/bar")
+
+    def test_expansion_modifier_alt(self):
+        """Tests var with an expansion modifier using alt modifier."""
+        from envstack.env import resolve_environ
+
+        env = {"VAR": "${VAR:-/foo/bar}"}
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/foo/bar")
 
@@ -525,13 +617,13 @@ class TestBakeEnviron(unittest.TestCase):
         # make sure environment sources are different
         if stack_name == "doesnotexist":
             self.assertEqual(env.sources, [])
-            self.assertEqual(baked.sources, [])
+            self.assertEqual(len(baked.sources), 1)
         elif stack_name == "default":
             self.assertTrue(len(env.sources[0].includes()) == 0)
         else:
             self.assertNotEqual(env.sources, baked.sources)
             self.assertTrue(len(env.sources) > 0)
-            self.assertEqual(baked.sources, [])
+            self.assertEqual(len(baked.sources), 1)
             self.assertTrue(len(env) > 0)
             self.assertTrue(len(baked) > 0)
 
@@ -557,7 +649,7 @@ class TestBakeEnviron(unittest.TestCase):
         # make sure environment sources are different
         if stack_name == "doesnotexist":
             self.assertEqual(env.sources, [])
-            self.assertEqual(baked2.sources, [])
+            self.assertEqual(len(baked.sources), 1)
         else:
             self.assertNotEqual(baked2.sources, baked2_reloaded.sources)
             self.assertTrue(len(baked2) > 0)
@@ -751,6 +843,36 @@ class TestEncryptEnviron(unittest.TestCase):
     def test_thing(self):
         """Tests encrypting the thing environment."""
         self.run_tests("thing")
+
+    def test_encrypt_environ_as_env(self):
+        """Tests encrypting an environment as Env."""
+        from envstack.env import encrypt_environ
+        from envstack.node import EncryptedNode
+
+        env = Env({"HELLO": "world", "FOO": "foo", "BAR": "${FOO}"})
+        encrypted = encrypt_environ(env)
+        self.assertNotEqual(encrypted["HELLO"], "d29ybGQ=")
+        self.assertTrue(isinstance(encrypted["HELLO"], EncryptedNode))
+        self.assertEqual(encrypted["HELLO"].resolve(env=env), "world")
+        self.assertNotEqual(encrypted["FOO"], env["FOO"])
+        self.assertEqual(encrypted["FOO"].resolve(env=env), env["FOO"])
+        self.assertNotEqual(encrypted["BAR"], env["BAR"])
+        self.assertEqual(encrypted["BAR"].resolve(env=env), env["BAR"])
+
+    def test_encrypt_environ_as_dict(self):
+        """Tests encrypting an environment as dict."""
+        from envstack.env import encrypt_environ
+        from envstack.node import EncryptedNode
+
+        env = {"HELLO": "world", "FOO": "foo", "BAR": "${FOO}"}
+        encrypted = encrypt_environ(env)
+        self.assertNotEqual(encrypted["HELLO"], "d29ybGQ=")
+        self.assertTrue(isinstance(encrypted["HELLO"], EncryptedNode))
+        self.assertEqual(encrypted["HELLO"].resolve(env=env), "world")
+        self.assertNotEqual(encrypted["FOO"], env["FOO"])
+        self.assertEqual(encrypted["FOO"].resolve(env=env), env["FOO"])
+        self.assertNotEqual(encrypted["BAR"], env["BAR"])
+        self.assertEqual(encrypted["BAR"].resolve(env=env), env["BAR"])
 
 
 class TestIssues(unittest.TestCase):

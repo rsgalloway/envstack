@@ -54,7 +54,7 @@ drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
 
 # regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
-    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([=?])((?:\$\{[^}]+\}|[^}])*))?\}"
+    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([-=?])((?:\$\{[^}]+\}|[^}])*))?\}"
 )
 
 
@@ -298,17 +298,20 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         else:
             value = value.replace(varstr, "")
 
-        if operator == "=":
+        # ${VAR:=default} or ${VAR:-default}
+        if operator in ("=", "-"):
             if override:
                 value = override
             elif variable_pattern.search(value) or value is None:
                 value = evaluate_modifiers(argument, environ)
             else:
                 value = value or argument
+        # ${VAR:?error message}
         elif operator == "?":
             if not value:
                 error_message = argument if argument else f"{var_name} is not set"
                 raise ValueError(error_message)
+        # handle recursive references
         elif variable_pattern.search(value):
             value = evaluate_modifiers(value, environ)
         # handle simple ${VAR} substitution
@@ -560,9 +563,9 @@ def partition_platform_data(data: dict):
     :param data: dictionary to partition.
     :returns: platform partitioned dictionary.
     """
-    # ensure all is present
+    # ensure "all" key is present
     if "all" not in data:
-        data["all"] = {}  # data.copy()
+        data["all"] = dict((k, v) for k, v in data.items() if k != "include")
 
     # platforms of interest (darwin, linux, windows)
     platforms = ["darwin", "linux", "windows"]

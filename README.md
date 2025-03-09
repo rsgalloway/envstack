@@ -145,8 +145,8 @@ allows you to override the value:
 | Value | Description |
 |---------------------|-------------|
 | value |  'value' |
-| ${VAR:-default} | os.environ.get('VAR', 'default') |
 | ${VAR:=default} | VAR = VAR or 'default' |
+| ${VAR:-default} | os.environ.get('VAR', 'default') |
 | ${VAR:?error message} | if not VAR: raise ValueError() |
 
 Without the expansion modifier, values are set and do not change (but can be
@@ -184,6 +184,37 @@ $ HELLO=goodbye envstack -- echo {HELLO}
 goodbye
 ```
 
+#### Using the command-line
+
+Here we can set values using the `envstack` command:
+
+```bash
+$ envstack --set HELLO:world
+HELLO: world
+```
+
+We can also encrypt the values automatically (base64 by default):
+
+```bash
+$ envstack -s HELLO:world -e
+HELLO: d29ybGQ=
+```
+
+Add more variables (note that `$` needs to be escaped in bash or else it will
+be evaluated immediately):
+
+```bash
+$ envstack -s HELLO:world VAR:\${HELLO}
+HELLO: world
+VAR: ${HELLO}
+```
+
+To write out to a file use the `-o` option:
+
+```bash
+$ envstack -s HELLO:world -o hello.env
+```
+
 ## Creating Stacks
 
 Several example or starter stacks are available in the [env folder of the
@@ -209,6 +240,13 @@ linux:
   <<: *all
 windows:
   <<: *all
+```
+
+Or using Python:
+
+```python
+>>> env = Env({"FOO": "bar", "BAR": "${FOO}"})
+>>> env.write("foobar.env")
 ```
 
 Get the resolved environment for the `foobar` stack:
