@@ -129,6 +129,11 @@ class TestEnv(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
+        # remove so we use base64 encoding by default
+        if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
+        if FernetEncryptor.KEY_VAR_NAME in os.environ:
+            del os.environ[FernetEncryptor.KEY_VAR_NAME]
 
     def tearDown(self):
         if os.path.exists(self.filename):
