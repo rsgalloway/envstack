@@ -966,6 +966,26 @@ class TestIssues(unittest.TestCase):
         self.assertTrue("yaml" in sys.modules)
         self.assertTrue(len(sys.path) > 0)
 
+    def test_issue_51(self):
+        """Tests issue #51 with URL values on all platforms."""
+        from envstack.env import load_environ
+        env = Env({
+            "URL": "https://example.com",
+            "S3": "s3://bucket.amazonaws.com",
+            "GIT": "git://path/to/repo.git",
+        })
+        self.filename = os.path.join(self.root, "test_issue_51.env")
+        env.write(self.filename)
+        self.assertEqual(env["URL"], "https://example.com")
+        self.assertEqual(env["S3"], "s3://bucket.amazonaws.com")
+        self.assertEqual(env["GIT"], "git://path/to/repo.git")
+
+        for platform in ("linux", "windows", "darwin"):
+            env = load_environ(self.filename, platform=platform)
+            self.assertEqual(env["URL"], "https://example.com")
+            self.assertEqual(env["S3"], "s3://bucket.amazonaws.com")
+            self.assertEqual(env["GIT"], "git://path/to/repo.git")
+
 
 if __name__ == "__main__":
     unittest.main()

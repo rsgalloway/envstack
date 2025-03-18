@@ -140,7 +140,9 @@ def split_windows_paths(path_str: str):
             result += [
                 p
                 for part in modified.split("|")
-                for p in re.split(r"(?<![A-Z]):", part)
+                for p in re.split(
+                    r"(?<![A-Z]):", part
+                )  # capture colons not in drive letters
                 if p
             ]
         else:
@@ -174,6 +176,53 @@ def dedupe_paths(path_str: str, platform: str = config.PLATFORM):
     deduped = dedupe_list(split_paths(path_str, platform))
     joiner = ";" if platform == "windows" else ":"
     return joiner.join(deduped)
+
+
+def detect_path(s: str):
+    """
+    Returns True if the given string looks like a filesystem path,
+    and False if it appears to be a URL or not a path.
+
+    This heuristic checks:
+      - That the string does not start with a URL scheme
+      - Windows drive letters or UNC paths
+      - POSIX absolute paths (starting with '/')
+      - Relative paths if they contain path separators or a file extension marker.
+
+    Note: Some valid file names (like "README") may be ambiguous.
+
+    :param s: The input string.
+    :returns: True if the string looks like a filesystem path.
+    """
+    s = s.strip()
+    if not s:
+        return False
+
+    # exclude URL-like strings (scheme://...)
+    if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", s):
+        return False
+
+    # windows: drive-letter (absolute or relative) or UNC path
+    if re.match(r"^[a-zA-Z]:", s) or s.startswith(r"\\\\"):
+        return True
+
+    # posix: absolute path starting with "/"
+    if s.startswith("/"):
+        return True
+
+    # check for delimiter-separated paths
+    if ";" in s or (":" in s and s.count(":") > 1):
+        return True
+
+    # check if the string contains a directory separator
+    if "/" in s or r"\\" in s:
+        return True
+
+    # check if the string has a dot (likely indicating a file extension)
+    # if re.search(r"(?<!^)\.", s):
+    #     return True
+
+    return False
 
 
 def dict_diff(dict1: dict, dict2: dict):
@@ -276,7 +325,7 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         if type(value) is str and value.endswith("}") and not value.startswith("${"):
             return value.rstrip("}")
         # sanitize path-like values
-        elif type(value) is str and ":" in value and ("/" in value or "\\" in value):
+        elif type(value) is str and detect_path(value):
             return dedupe_paths(value)
         return value
 
