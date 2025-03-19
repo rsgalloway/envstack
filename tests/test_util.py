@@ -63,11 +63,23 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression)
         self.assertEqual(result, "world")
 
-    def test_url_value(self):
+    def test_http_url_value(self):
         """Test a url value."""
-        expression = "http://example.com"
+        expression = "https://example.com"
         result = evaluate_modifiers(expression)
-        self.assertEqual(result, "http://example.com")
+        self.assertEqual(result, "https://example.com")
+
+    def test_s3_url_value(self):
+        """Test a s3 url value."""
+        expression = "s3://bucket.amazonaws.com"
+        result = evaluate_modifiers(expression)
+        self.assertEqual(result, "s3://bucket.amazonaws.com")
+
+    def test_git_url_value(self):
+        """Test a git url value."""
+        expression = "git://path/to/repo.git"
+        result = evaluate_modifiers(expression)
+        self.assertEqual(result, "git://path/to/repo.git")
 
     def test_direct_substitution(self):
         """Test direct substitution."""
@@ -335,13 +347,16 @@ class TestUtils(unittest.TestCase):
         self.assertTrue(detect_path("/usr/bin:/usr/local/bin:/some/other/path"))
         self.assertTrue(detect_path("/usr/bin"))
         self.assertTrue(detect_path("C:\\Program Files\\Python;D:/path2;E:/path3"))
-        self.assertTrue(detect_path("C:\\Program Files\\Python:D:/path2:E:/path3"))
+        self.assertTrue(detect_path("c:\\Program Files\\Python:d:/path2:e:/path3"))
+        self.assertTrue(detect_path("x:/path/to/folder;z:/folder2"))
         self.assertTrue(detect_path("C:\\Program Files\\Python"))
-        self.assertTrue(detect_path("C:/Program Files/Python"))
+        self.assertTrue(detect_path("C:/Program Files/Python/site-packages"))
+        self.assertTrue(detect_path("/path/to/some/file.txt"))
+        self.assertTrue(detect_path("\\\\server\\share\\path\\to\\folder"))
         self.assertFalse(detect_path("http://example.com"))
         self.assertFalse(detect_path("https://example.com"))
         self.assertFalse(detect_path("git://path/to/repo.git"))
-        self.assertFalse(detect_path("s3://example.com"))
+        self.assertFalse(detect_path("s3://bucket.amazonaws.com"))
         self.assertFalse(detect_path("README"))
         self.assertFalse(detect_path("README.txt"))
         self.assertFalse(detect_path("example.com"))
@@ -432,6 +447,11 @@ class TestSplitPaths(unittest.TestCase):
         paths = "C:\\Program Files\\Python:D:/path2:E:/path3"
         result = split_windows_paths(paths)
         self.assertEqual(result, ["C:\\Program Files\\Python", "D:/path2", "E:/path3"])
+
+        # lowercase drive letter
+        # paths = "c:\\Program Files\\Python:d:/path2:e:/path3"
+        # result = split_windows_paths(paths)
+        # self.assertEqual(result, ["c:\\Program Files\\Python", "d:/path2", "e:/path3"])
 
         paths = "C:\\Program Files\\Python"
         result = split_windows_paths(paths)

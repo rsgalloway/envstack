@@ -50,6 +50,7 @@ from envstack.node import AESGCMNode, Base64Node, EncryptedNode, FernetNode
 null = ""
 
 # regular expression pattern for matching windows drive letters
+# TODO: support lowercase drive letters
 drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
 
 # regular expression pattern for bash-like variable expansion
@@ -134,6 +135,7 @@ def split_windows_paths(path_str: str):
 
     for token in tokens:
         # token is windows-style, insert a marker before drive letters
+        # TODO: support lowercase drive letters
         if re.match(r"^[A-Z]:[/\\]", token) or "\\" in token:
             modified = drive_letter_pattern.sub(lambda m: "|" + m.group("drive"), token)
             # split on the marker, then on colons that are not in drive-letters
