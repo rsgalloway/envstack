@@ -42,9 +42,15 @@ from envstack.util import (
     null,
     encode,
     evaluate_modifiers,
+    dedupe_list,
+    dedupe_paths,
+    detect_path,
     get_stack_name,
     partition_platform_data,
     safe_eval,
+    split_paths,
+    split_posix_paths,
+    split_windows_paths,
 )
 
 
@@ -56,6 +62,24 @@ class TestEvaluateModifiers(unittest.TestCase):
         expression = "world"
         result = evaluate_modifiers(expression)
         self.assertEqual(result, "world")
+
+    def test_http_url_value(self):
+        """Test a url value."""
+        expression = "https://example.com"
+        result = evaluate_modifiers(expression)
+        self.assertEqual(result, "https://example.com")
+
+    def test_s3_url_value(self):
+        """Test a s3 url value."""
+        expression = "s3://bucket.amazonaws.com"
+        result = evaluate_modifiers(expression)
+        self.assertEqual(result, "s3://bucket.amazonaws.com")
+
+    def test_git_url_value(self):
+        """Test a git url value."""
+        expression = "git://path/to/repo.git"
+        result = evaluate_modifiers(expression)
+        self.assertEqual(result, "git://path/to/repo.git")
 
     def test_direct_substitution(self):
         """Test direct substitution."""
@@ -319,6 +343,25 @@ class TestUtils(unittest.TestCase):
         }
         self.assertEqual(encoded_env, expected_encoded_env)
 
+    def test_detect_path(self):
+        self.assertTrue(detect_path("/usr/bin:/usr/local/bin:/some/other/path"))
+        self.assertTrue(detect_path("/usr/bin"))
+        self.assertTrue(detect_path("C:\\Program Files\\Python;D:/path2;E:/path3"))
+        self.assertTrue(detect_path("c:\\Program Files\\Python:d:/path2:e:/path3"))
+        self.assertTrue(detect_path("x:/path/to/folder;z:/folder2"))
+        self.assertTrue(detect_path("C:\\Program Files\\Python"))
+        self.assertTrue(detect_path("C:/Program Files/Python/site-packages"))
+        self.assertTrue(detect_path("/path/to/some/file.txt"))
+        self.assertTrue(detect_path("\\\\server\\share\\path\\to\\folder"))
+        self.assertFalse(detect_path("http://example.com"))
+        self.assertFalse(detect_path("https://example.com"))
+        self.assertFalse(detect_path("git://path/to/repo.git"))
+        self.assertFalse(detect_path("s3://bucket.amazonaws.com"))
+        self.assertFalse(detect_path("README"))
+        self.assertFalse(detect_path("README.txt"))
+        self.assertFalse(detect_path("example.com"))
+        self.assertFalse(detect_path(""))
+
     def test_get_stack_name_string(self):
         name = "stack_name"
         result = get_stack_name(name)
@@ -375,12 +418,94 @@ darwin:
         os.remove(temp_file.name)
 
 
+class TestSplitPaths(unittest.TestCase):
+    """Tests for path splitting functions."""
+
+    def test_split_posix_paths(self):
+        """Test split_posix_paths function."""
+
+        paths = "/usr/bin:/usr/local/bin:/some/other/path"
+        result = split_posix_paths(paths)
+        self.assertEqual(result, ["/usr/bin", "/usr/local/bin", "/some/other/path"])
+
+        paths = "/usr/bin"
+        result = split_posix_paths(paths)
+        self.assertEqual(result, ["/usr/bin"])
+
+        paths = ""
+        result = split_posix_paths(paths)
+        self.assertEqual(result, [])
+
+    def test_split_windows_paths(self):
+        """Test split_windows_paths function."""
+
+        paths = "C:\\Program Files\\Python;D:/path2;E:/path3"
+        result = split_windows_paths(paths)
+        self.assertEqual(result, ["C:\\Program Files\\Python", "D:/path2", "E:/path3"])
+
+        # same path but using colon delimiter
+        paths = "C:\\Program Files\\Python:D:/path2:E:/path3"
+        result = split_windows_paths(paths)
+        self.assertEqual(result, ["C:\\Program Files\\Python", "D:/path2", "E:/path3"])
+
+        # lowercase drive letter
+        # paths = "c:\\Program Files\\Python:d:/path2:e:/path3"
+        # result = split_windows_paths(paths)
+        # self.assertEqual(result, ["c:\\Program Files\\Python", "d:/path2", "e:/path3"])
+
+        paths = "C:\\Program Files\\Python"
+        result = split_windows_paths(paths)
+        self.assertEqual(result, ["C:\\Program Files\\Python"])
+
+        paths = ""
+        result = split_windows_paths(paths)
+        self.assertEqual(result, [])
+
+    def test_split_paths(self):
+        """Test split_paths function."""
+
+        paths = "/usr/bin:/usr/local/bin:/some/other/path"
+        result = split_paths(paths)
+        self.assertEqual(result, ["/usr/bin", "/usr/local/bin", "/some/other/path"])
+
+        paths = "/usr/bin"
+        result = split_paths(paths)
+        self.assertEqual(result, ["/usr/bin"])
+
+        # will paths and urls ever be mixed?
+        # paths = "/usr/bin:http://example.com"
+        # result = split_paths(paths)
+        # self.assertEqual(result, ["/usr/bin", "http://example.com"])
+
+        paths = ""
+        result = split_paths(paths)
+        self.assertEqual(result, [])
+
+    def test_split_paths_windows(self):
+        """Test split_paths function on windows."""
+
+        paths = "C:\\Program Files\\Python;D:/path2;E:/path3"
+        result = split_paths(paths, platform="windows")
+        self.assertEqual(result, ["C:\\Program Files\\Python", "D:/path2", "E:/path3"])
+
+        paths = "C:\\Program Files\\Python:D:/path2:E:/path3"
+        result = split_paths(paths, platform="windows")
+        self.assertEqual(result, ["C:\\Program Files\\Python", "D:/path2", "E:/path3"])
+
+        paths = "C:\\Program Files\\Python"
+        result = split_paths(paths, platform="windows")
+        self.assertEqual(result, ["C:\\Program Files\\Python"])
+
+        paths = ""
+        result = split_paths(paths, platform="windows")
+        self.assertEqual(result, [])
+
+
 class TestDedupePaths(unittest.TestCase):
     """Tests for dedupe_paths function."""
 
     def test_dedupe_list(self):
         """Test dedupe_list function."""
-        from envstack.util import dedupe_list
 
         paths = [
             "/usr/bin",
@@ -403,7 +528,6 @@ class TestDedupePaths(unittest.TestCase):
 
     def test_dedupe_paths(self):
         """Test dedupe_paths function."""
-        from envstack.util import dedupe_paths
 
         paths = [
             "/usr/bin",
@@ -434,7 +558,6 @@ class TestDedupePaths(unittest.TestCase):
 
     def test_dedupe_paths_windows(self):
         """Test dedupe_paths function on windows."""
-        from envstack.util import dedupe_paths
 
         paths = [
             "C:\\Program Files\\Python",
@@ -471,6 +594,15 @@ class TestDedupePaths(unittest.TestCase):
         self.assertEqual(
             result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin"
         )
+
+        # mixed paths with url (will urls ever be mixed with paths?)
+        # path = (
+        #     "C:\\Program Files\\Python;/usr/local/bin:D:/path2:https://test.com"
+        # )
+        # result = dedupe_paths(path, platform="windows")
+        # self.assertEqual(
+        #     result, "C:\\Program Files\\Python;/usr/local/bin;D:/path2;https://test.com"
+        # )
 
 
 class TestSafeEval(unittest.TestCase):
