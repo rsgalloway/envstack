@@ -986,6 +986,33 @@ class TestIssues(unittest.TestCase):
             self.assertEqual(env["S3"], "s3://bucket.amazonaws.com")
             self.assertEqual(env["GIT"], "git://path/to/repo.git")
 
+    def test_issue_55(self):
+        """Tests issue #55 with missing environment file."""
+        from envstack.env import load_environ, Env
+
+        # update default.env to point to test root
+        default_env_file = os.path.join(self.root, "prod", "env", "default.env")
+        update_env_file(default_env_file, "ROOT", self.root)
+
+        # create a new test env file that only exists in our test env dir
+        test_env = os.path.join(self.root, "test_issue_55", "env")
+        os.makedirs(test_env, exist_ok=True)
+        test_env_file = os.path.join(test_env, "test_issue_55.env")
+    
+        data = {"FOO": "foo", "BAR": "bar", "BAZ": self.root}
+        Env(data).write(test_env_file)
+        self.assertTrue(os.path.exists(test_env_file))
+
+        # load the test env file
+        env = load_environ(["test", "test_issue_55"])
+
+        # last env file should be our test env file
+        self.assertEqual(str(env.sources[-1].path), test_env_file)
+        self.assertEqual(env["FOO"], "foo")
+        self.assertEqual(env["BAR"], "bar")
+        self.assertEqual(env["BAZ"], self.root)
+        self.assertEqual(env["STACK"], "test_issue_55")
+
 
 if __name__ == "__main__":
     unittest.main()
