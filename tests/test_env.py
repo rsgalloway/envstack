@@ -990,8 +990,8 @@ class TestIssues(unittest.TestCase):
         """Tests issue #55 with missing environment file.
         Tests dynamic ${ENVPATH} values that use ${STACK} in the path,
 
-            env/test.env:
-                ENVPATH: ${ROOT}/${STACK}/env:${ROOT}/prod/env
+        env/test.env:
+            ENVPATH: ${ROOT}/${STACK}/env:${ROOT}/prod/env
 
         The STACK name and the test env file name should be the same.
         """
@@ -999,6 +999,7 @@ class TestIssues(unittest.TestCase):
 
         # update default.env to point to test root
         default_env_file = os.path.join(self.root, "prod", "env", "default.env")
+        dev_env_file = os.path.join(self.root, "prod", "env", "dev.env")
         update_env_file(default_env_file, "ROOT", self.root)
 
         # create a new test env file that only exists in our test env dir
@@ -1010,15 +1011,29 @@ class TestIssues(unittest.TestCase):
         Env(data).write(test_env_file)
         self.assertTrue(os.path.exists(test_env_file))
 
-        # load the test env file by loading the test env first
-        env = load_environ(["test", "test_issue_55"])
+        # try to load our test env file by loading the "dev" env first, which
+        # does not use STACK in ENVPATH
+        env1 = load_environ(["dev", "test_issue_55"])
+
+        # last env file should be the "dev" env file
+        self.assertEqual(str(env1.sources[-1].path), dev_env_file)
+        self.assertRaises(KeyError, lambda: env1["FOO"])
+        self.assertRaises(KeyError, lambda: env1["BAR"])
+        self.assertRaises(KeyError, lambda: env1["BAZ"])
+
+        # FIXME: why is this necessary? (think it's caching seen stacks)
+        envstack.revert()
+
+        # load our test env file by loading the "test" env first, which
+        # does use STACK in ENVPATH
+        env2 = load_environ(["test", "test_issue_55"])
 
         # last env file should be our test env file
-        self.assertEqual(str(env.sources[-1].path), test_env_file)
-        self.assertEqual(env["FOO"], "foo")
-        self.assertEqual(env["BAR"], "bar")
-        self.assertEqual(env["BAZ"], self.root)
-        self.assertEqual(env["STACK"], "test_issue_55")
+        self.assertEqual(str(env2.sources[-1].path), test_env_file)
+        self.assertEqual(env2["FOO"], "foo")
+        self.assertEqual(env2["BAR"], "bar")
+        self.assertEqual(env2["BAZ"], self.root)
+        self.assertEqual(env2["STACK"], "test_issue_55")
 
 
 if __name__ == "__main__":
