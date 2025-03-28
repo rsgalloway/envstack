@@ -1005,7 +1005,7 @@ class TestIssues(unittest.TestCase):
         test_env = os.path.join(self.root, "test_issue_55", "env")
         os.makedirs(test_env, exist_ok=True)
         test_env_file = os.path.join(test_env, "test_issue_55.env")
-    
+
         data = {"FOO": "foo", "BAR": "bar", "BAZ": self.root}
         Env(data).write(test_env_file)
         self.assertTrue(os.path.exists(test_env_file))

@@ -922,6 +922,53 @@ class TestIssues(unittest.TestCase):
         )
         self.assertEqual(output, expected_output)
 
+    def test_issue_55(self):
+        """Tests issue 55 missing env files using test environments.
+        Tests dynamic ${ENVPATH} values that use ${STACK} in the path,
+
+        env/dev.env:
+            ENVPATH: ${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
+
+        env/test.env:
+            ENVPATH: ${ROOT}/${STACK}/env:${ROOT}/prod/env
+        """
+        from envstack.env import Env
+
+        # update default.env to point to test root
+        default_env_file = os.path.join(self.root, "prod", "env", "default.env")
+        update_env_file(default_env_file, "ROOT", self.root)
+
+        # create a new test env file that only exists in our test env dir
+        test_env = os.path.join(self.root, "test_issue_55", "env")
+        os.makedirs(test_env, exist_ok=True)
+        test_env_file = os.path.join(test_env, "test_issue_55.env")
+
+        data = {"FOO": "foo", "BAR": "bar", "BAZ": self.root}
+        Env(data).write(test_env_file)
+        self.assertTrue(os.path.exists(test_env_file))
+
+        # dev.env does not use STACK in ENVPATH
+        command = "%s dev test_issue_55 --sources" % self.envstack_bin
+        expected_output = f"""{self.root}/prod/env/default.env
+{self.root}/prod/env/dev.env
+"""
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
+        # test.env does use STACK in ENVPATH and should include our test env
+        command = "%s test test_issue_55 --sources" % self.envstack_bin
+        expected_output = f"""{self.root}/prod/env/default.env
+{self.root}/prod/env/dev.env
+{self.root}/prod/env/test.env
+{self.root}/test_issue_55/env/test_issue_55.env
+"""
+        output = subprocess.check_output(
+            command, start_new_session=True, shell=True, universal_newlines=True
+        )
+        self.assertEqual(output, expected_output)
+
 
 if __name__ == "__main__":
     unittest.main()
