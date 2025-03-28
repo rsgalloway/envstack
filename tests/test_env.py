@@ -987,7 +987,14 @@ class TestIssues(unittest.TestCase):
             self.assertEqual(env["GIT"], "git://path/to/repo.git")
 
     def test_issue_55(self):
-        """Tests issue #55 with missing environment file."""
+        """Tests issue #55 with missing environment file.
+        Tests dynamic ${ENVPATH} values that use ${STACK} in the path,
+
+            env/test.env:
+                ENVPATH: ${ROOT}/${STACK}/env:${ROOT}/prod/env
+
+        The STACK name and the test env file name should be the same.
+        """
         from envstack.env import load_environ, Env
 
         # update default.env to point to test root
@@ -1003,7 +1010,7 @@ class TestIssues(unittest.TestCase):
         Env(data).write(test_env_file)
         self.assertTrue(os.path.exists(test_env_file))
 
-        # load the test env file
+        # load the test env file by loading the test env first
         env = load_environ(["test", "test_issue_55"])
 
         # last env file should be our test env file
