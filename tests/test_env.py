@@ -1063,6 +1063,54 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(env2["BAZ"], self.root)
         self.assertEqual(env2["STACK"], "test_issue_55")
 
+    def test_issue_58(self):
+        """Tests issue #58 for inherited environment variables.
+
+        grandparent:
+            FOO: grandparent
+        parent:
+            include: [grandparent]
+            FOO: ${FOO:=parent}
+        child:
+            include: [parent]
+            FOO: ${FOO:=child}
+        """
+        from envstack.env import load_environ, resolve_environ, Source
+
+        # create grandparent.env that sets a value for FOO
+        grandparent = {
+            "include": [],
+            "all": {"FOO": "grandparent"}
+        }
+        grandparent_env_file = os.path.join(self.root, "prod", "env", "grandparent.env")
+        grandparent_source = Source(grandparent_env_file)
+        grandparent_source.data = grandparent
+        grandparent_source.write()
+
+        # create parent.env that includes grandparent
+        parent = {
+            "include": ["grandparent"],
+            "all": {"FOO": "${FOO:=parent}"}
+        }
+        parent_env_file = os.path.join(self.root, "prod", "env", "parent.env")
+        parent_source = Source(parent_env_file)
+        parent_source.data = parent
+        parent_source.write()
+
+        # create child.env that includes parent
+        child = {
+            "include": ["parent"],
+            "all": {"FOO": "${FOO:=child}"}
+        }
+        child_env_file = os.path.join(self.root, "prod", "env", "child.env")
+        child_source = Source(child_env_file)
+        child_source.data = child
+        child_source.write()
+
+        env = load_environ("child")
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["FOO"], "grandparent")
+
 
 if __name__ == "__main__":
     unittest.main()
