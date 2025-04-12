@@ -364,6 +364,24 @@ class TestInit(unittest.TestCase):
 class TestResolveEnviron(unittest.TestCase):
     """Tests the resolve_environ function."""
 
+    def test_home(self):
+        """Tests to make sure ${HOME} is resolved."""
+        from envstack.env import resolve_environ
+
+        env = {"FOO": "${HOME}/foo"}
+        resolved = resolve_environ(env)
+        home = os.getenv("HOME", os.path.expanduser("~"))
+        self.assertEqual(resolved["FOO"], f"{home}/foo")
+
+    def test_custom(self):
+        """Tests to make sure ${CUSTOM} is resolved from os.environ."""
+        from envstack.env import resolve_environ
+
+        os.environ["CUSTOM"] = "/var/tmp"
+        env = {"FOO": "${CUSTOM}/foo"}
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["FOO"], f"/var/tmp/foo")
+
     def test_simple(self):
         """Tests resolving a simple environment."""
         from envstack.env import resolve_environ

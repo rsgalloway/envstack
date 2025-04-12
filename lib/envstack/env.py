@@ -810,7 +810,7 @@ def resolve_environ(env: Env):
     # copy env to avoid modifying the original
     env_copy = env.copy()
 
-    # evaluate one environment source at a time
+    # evaluate one source environment at a time
     seen_source_paths = []
     included = Env()
     sources = env.sources[:-1]
@@ -827,7 +827,7 @@ def resolve_environ(env: Env):
     env_keys = env.copy()
     env_keys.update(get_keys_from_env(os.environ))
 
-    # decrypt custom custom nodes
+    # decrypt custom nodes
     for key, value in env_copy.items():
         if type(value) in custom_node_types:
             env_copy[key] = value.resolve(env=env_keys)
@@ -841,7 +841,7 @@ def resolve_environ(env: Env):
     return resolved
 
 
-# TODO: make 'name' arg a list (*names) in next minor release
+# TODO: make 'name' arg a list (*names)
 def load_environ(
     name: str = config.DEFAULT_NAMESPACE,
     platform: str = config.PLATFORM,
