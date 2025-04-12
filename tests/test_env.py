@@ -1111,6 +1111,10 @@ class TestIssues(unittest.TestCase):
         resolved = resolve_environ(env)
         self.assertEqual(resolved["FOO"], "grandparent")
 
+        envstack.revert()  # simulate a new process
+        envstack.init("child")
+        self.assertEqual(os.getenv("FOO"), "grandparent")
+
 
 if __name__ == "__main__":
     unittest.main()
