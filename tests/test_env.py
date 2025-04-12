@@ -539,30 +539,40 @@ class TestResolveEnviron(unittest.TestCase):
         """Tests expansion modifier with deferred value."""
         from envstack.env import resolve_environ
 
-        env = {"VAR": "${VAR:=${FOO}}", "FOO": "${FOO:=/foo/bar}"}
-        env["BAR"] = "${BAZ}"
+        env = {
+            "VAR": "${VAR:=${FOO}}",
+            "FOO": "${FOO:=/foo/bar}",
+            "BAR": "${BAZ}",  # has null value
+        }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/foo/bar")
         self.assertEqual(resolved["FOO"], "/foo/bar")
+        self.assertEqual(resolved["BAR"], "")
 
     def test_expansion_modifier_deferred_default(self):
         """Tests expansion modifier with multiple deferred values."""
         from envstack.env import resolve_environ
 
-        env = {"VAR": "${VAR:=${FOO}}", "FOO": "${FOO:=${BAR}}"}
-        env["BAR"] = "${BAZ:=/baz/qux}"  # insert a default value
+        env = {
+            "VAR": "${VAR:=${FOO}}",
+            "FOO": "${FOO:=${BAR}}",
+            "BAR": "${BAZ:=/baz/qux}", # has a default value
+        }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/baz/qux")
         self.assertEqual(resolved["FOO"], "/baz/qux")
         self.assertEqual(resolved["BAR"], "/baz/qux")
 
-    def test_expansion_modifier_deferred_default_slash(self):
-        """Tests expansion modifier with multiple deferred values."""
+    def test_expansion_modifier_deferred_null_value(self):
+        """Tests expansion modifier with multiple deferred values and null."""
         from envstack.env import resolve_environ
 
-        env = {"VAR": "${VAR:=${FOO}}", "FOO": "${FOO:=${BAR}}"}
-        env["BAR"] = "${BAZ:=/baz/qux}"
-        env["BAZ"] = "${QUX}"
+        env = {
+            "VAR": "${VAR:=${FOO}}",
+            "FOO": "${FOO:=${BAR}}",
+            "BAR": "${BAZ:=/baz/qux}",
+            "BAZ": "${QUX}",  # has null value
+        }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/baz/qux")
         self.assertEqual(resolved["FOO"], "/baz/qux")

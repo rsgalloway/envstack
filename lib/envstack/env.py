@@ -794,7 +794,7 @@ def encrypt_environ(
     return encrypted_env
 
 
-def resolve_environ(env: dict):
+def resolve_environ(env: Env):
     """Resolves all variables in a given unresolved environment, returning a
     new environment dict.
 
@@ -804,21 +804,39 @@ def resolve_environ(env: dict):
     # stores the resolved environment
     resolved = Env()
 
+    if type(env) is not Env:
+        env = Env(env)
+
     # copy env to avoid modifying the original
     env_copy = env.copy()
+
+    # evaluate one environment source at a time
+    seen_source_paths = []
+    included = Env()
+    sources = env.sources[:-1]
+    sources.reverse()
+    for source in sources:
+        if source.path in seen_source_paths:
+            continue
+        seen_source_paths.append(source.path)
+        source_environ = resolve_environ(Env(source.load()))
+        for key, value in source_environ.items():
+            included[key] = util.evaluate_modifiers(value, environ=source_environ)
 
     # make a copy that contains the encryption keys
     env_keys = env.copy()
     env_keys.update(get_keys_from_env(os.environ))
 
-    # decrypt custom node types
+    # decrypt custom custom nodes
     for key, value in env_copy.items():
         if type(value) in custom_node_types:
             env_copy[key] = value.resolve(env=env_keys)
 
-    # resolve variables after decrypting custom node types
+    # resolve environment variables after decrypting custom nodes
     for key, value in env_copy.items():
-        resolved[key] = util.evaluate_modifiers(value, environ=env_copy)
+        resolved[key] = util.evaluate_modifiers(
+            value, environ=env_copy, parent=included
+        )
 
     return resolved
 
