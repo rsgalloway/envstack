@@ -73,11 +73,11 @@ class BaseNode(yaml.YAMLObject):
         return False
 
     @classmethod
-    def from_yaml(cls, loader, node):
+    def from_yaml(cls, loader: object, node: yaml.Node):
         return cls(node.value)
 
     @classmethod
-    def to_yaml(cls, dumper, node):
+    def to_yaml(cls, dumper: object, node: yaml.Node):
         return dumper.represent_scalar(cls.yaml_tag, node.value)
 
     def resolve(self, env: dict = os.environ):
@@ -95,14 +95,14 @@ class Base64Node(BaseNode):
         self.original_value = None
 
     @classmethod
-    def from_yaml(cls, loader, node):
+    def from_yaml(cls, loader: object, node: yaml.Node):
         """Returns a new Base64Node instance."""
         node = cls(node.value)
         node.original_value = node.value
         return node
 
     @classmethod
-    def to_yaml(cls, dumper, node):
+    def to_yaml(cls, dumper: object, node: yaml.Node):
         """Encrypts the value before writing to yaml."""
         if node.value == node.original_value:
             encrypted = node.value
@@ -123,12 +123,12 @@ class MD5Node(BaseNode):
     yaml_tag = "!md5"
 
     @classmethod
-    def from_yaml(cls, loader, node):
+    def from_yaml(cls, loader: object, node: yaml.Node):
         """Returns a new MD5Node instance."""
         return cls(node.value)
 
     @classmethod
-    def to_yaml(cls, dumper, node):
+    def to_yaml(cls, dumper: object, node: yaml.Node):
         """Encrypts the value before writing to yaml."""
         md5_hash = hashlib.md5(node.value.encode()).hexdigest()
         return dumper.represent_scalar(cls.yaml_tag, md5_hash)
@@ -155,14 +155,14 @@ class EncryptedNode(BaseNode):
             return Base64Encryptor()
 
     @classmethod
-    def from_yaml(cls, loader, node):
+    def from_yaml(cls, loader: object, node: yaml.Node):
         """Returns a new EncryptedNode instance."""
         node = cls(node.value)
         node.original_value = node.value
         return node
 
     @classmethod
-    def to_yaml(cls, dumper, node):
+    def to_yaml(cls, dumper: object, node: yaml.Node):
         """Encrypts the value before writing (do not double encrypt)."""
         if node.value == node.original_value:
             encrypted = node.value
@@ -195,14 +195,14 @@ class AESGCMNode(BaseNode):
         self.original_value = None
 
     @classmethod
-    def from_yaml(cls, loader, node):
+    def from_yaml(cls, loader: object, node: yaml.Node):
         """Returns a new AESGCMNode instance."""
         node = cls(node.value)
         node.original_value = node.value
         return node
 
     @classmethod
-    def to_yaml(cls, dumper, node):
+    def to_yaml(cls, dumper: object, node: yaml.Node):
         """Encrypts the value before writing to yaml."""
         if node.value == node.original_value:
             encrypted = node.value
@@ -227,14 +227,14 @@ class FernetNode(BaseNode):
         self.original_value = None
 
     @classmethod
-    def from_yaml(cls, loader, node):
+    def from_yaml(cls, loader: object, node: yaml.Node):
         """Returns a new FernetNode instance."""
         node = cls(node.value)
         node.original_value = node.value
         return node
 
     @classmethod
-    def to_yaml(cls, dumper, node):
+    def to_yaml(cls, dumper: object, node: yaml.Node):
         """Encrypts the value before writing to yaml."""
         if node.value == node.original_value:
             encrypted = node.value
@@ -312,13 +312,13 @@ class CustomDumper(yaml.SafeDumper):
             self.anchors.update(self.newanchors)
             self.newanchors.clear()
 
-    def quote_vars(self, node):
+    def quote_vars(self, node: yaml.Node):
         """Quote variables in the node value."""
         if isinstance(node, yaml.ScalarNode):
             if re.match(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}", node.value):
                 node.style = '"%s"' % node.value
 
-    def represent_data(self, data):
+    def represent_data(self, data: dict):
         """Represent data and set flow_style for nested mappings."""
         # increase depth on entering represent_data
         self.depth += 1
@@ -350,7 +350,7 @@ def get_keys_from_env(env: dict = os.environ):
     return keys
 
 
-def add_custom_node_type(node_type):
+def add_custom_node_type(node_type: BaseNode):
     """Add custom node type to yaml. Node type must be a subclass of BaseNode,
     with local implementation of from_yaml and to_yaml methods, and definition
     of yaml_tag.
