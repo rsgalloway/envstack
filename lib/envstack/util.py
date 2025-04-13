@@ -48,7 +48,7 @@ from envstack import config
 from envstack.exceptions import CyclicalReference
 from envstack.node import AESGCMNode, Base64Node, EncryptedNode, FernetNode
 
-# default cache timeout in seconds
+# default memoization cache timeout in seconds
 CACHE_TIMEOUT = 5
 
 # value for unresolvable variables
@@ -609,8 +609,7 @@ def dump_yaml(file_path: str, data: dict, unquote: bool = True):
 
     partitioned_data = partition_platform_data(data)
 
-    # write the platform partidioned data to the env file,
-    # add shebang to make it executable
+    # write the platform partidioned data add shebang
     with open(file_path, "w") as file:
         file.write("#!/usr/bin/env envstack\n")
         if data.get("include"):

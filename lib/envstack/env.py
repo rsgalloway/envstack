@@ -42,7 +42,12 @@ import yaml  # noqa
 
 from envstack import config, logger, path, util
 from envstack.exceptions import *  # noqa
-from envstack.node import BaseNode, EncryptedNode, custom_node_types, get_keys_from_env
+from envstack.node import (
+    BaseNode,
+    EncryptedNode,
+    custom_node_types,
+    get_keys_from_env,
+)
 
 # value delimiter pattern (splits values by os.pathsep)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
@@ -161,7 +166,8 @@ class EnvVar(string.Template, str):
         self.template = v
 
     def extend(self, iterable):
-        """If value is a list, extend list by appending elements from the iterable.
+        """If value is a list, extend list by appending elements from the
+        iterable.
 
         :param iterable: an iterable object
         :returns: extended value
@@ -211,12 +217,12 @@ class EnvVar(string.Template, str):
         return self.template.keys()
 
     def parts(self):
-        """Returns a list of delimited parts, e.g. if a value is delimited by a colon
-        (or semicolon on windows), e.g. ::
+        """Returns a list of delimited parts, e.g. if a value is delimited by a
+        colon (or semicolon on windows), for example:
 
-        >>> v = EnvVar('$FOO:${BAR}/bin')
-        >>> v.parts()
-        ['$FOO', '${BAR}/bin']
+            >>> v = EnvVar('$FOO:${BAR}/bin')
+            >>> v.parts()
+            ['$FOO', '${BAR}/bin']
         """
         if self.template:
             if type(self.template) in (
@@ -882,7 +888,7 @@ def load_environ(
             ignore_missing=ignore_missing,
         )
         for source in sources:
-            # dedupe sources (may override previous sources)
+            # don't load the same source more than once
             if source.path in seen_paths:
                 continue
             env.load_source(source, platform=platform)
@@ -918,6 +924,7 @@ def load_file(path: str):
     return util.validate_yaml(path)
 
 
+@util.cache
 def trace_var(*name, var: str = None, scope: str = None):
     """Traces where a var is getting set for a given name.
 
