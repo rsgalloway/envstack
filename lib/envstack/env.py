@@ -399,15 +399,11 @@ def get_sources(
     :raises TemplateNotFound: if a file is not found in ENVPATH or scope.
     :returns: list of Source objects for the given stack names.
     """
-    # TODO: smarter file caching (issue #26)
-    # clear_file_cache()
-
-    # set default scope to the current working directory
-    scope = Path(scope or os.getcwd()).resolve()
-
     loaded_files = []
     sources = []
     loading_stack = set()
+
+    scope = Path(scope or os.getcwd()).resolve()
 
     def _walk_to_scope(current_path):
         """Generate directories from the current path up to the scope."""
@@ -686,6 +682,9 @@ def revert():
     # restore sys.path from PYTHONPATH
     util.load_sys_path()
 
+    # clear the global file cache
+    clear_file_cache()
+
     saved_environ = None
 
 
@@ -916,9 +915,11 @@ def load_environ(
 
 
 def load_file(path: str):
-    """Reads a given .env file and returns data as dict.
+    """Reads a given .env file and returns data as dict. Stores the file
+    data in a global file cache for later use. Use clear_file_cache() to
+    clear the cache.
 
-    :param path: path to envstack env file.
+    :param path: path to .env file.
     :returns: loaded yaml data as dict.
     """
     global load_file_cache
