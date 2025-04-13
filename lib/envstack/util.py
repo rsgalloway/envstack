@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024, Ryan Galloway (ryan@rsgalloway.com)
+# Copyright (c) 2024-2025, Ryan Galloway (ryan@rsgalloway.com)
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -33,10 +33,12 @@ __doc__ = """
 Contains common utility functions and classes.
 """
 
+import functools
 import glob
 import os
 import re
 import sys
+import time
 from ast import literal_eval
 from collections import OrderedDict
 
@@ -46,17 +48,39 @@ from envstack import config
 from envstack.exceptions import CyclicalReference
 from envstack.node import AESGCMNode, Base64Node, EncryptedNode, FernetNode
 
+# default memoization cache timeout in seconds
+CACHE_TIMEOUT = 5
+
 # value for unresolvable variables
 null = ""
 
 # regular expression pattern for matching windows drive letters
-# TODO: support lowercase drive letters
+# TODO: support lowercase drive letters (issue #53)
 drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
 
 # regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
     r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([-=?])((?:\$\{[^}]+\}|[^}])*))?\}"
 )
+
+
+def cache(func):
+    """Function decorator to memoize return data."""
+
+    cache_dict = {}
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        key = (args, tuple(kwargs.items()))
+        if key in cache_dict:
+            result, timestamp = cache_dict[key]
+            if time.time() - timestamp <= CACHE_TIMEOUT:
+                return result
+        result = func(*args, **kwargs)
+        cache_dict[key] = (result, time.time())
+        return result
+
+    return wrapper
 
 
 def clear_sys_path(var: str = "PYTHONPATH"):
@@ -302,19 +326,20 @@ def get_stack_name(name: str = config.DEFAULT_NAMESPACE):
         raise ValueError("Invalid input type. Expected string, tuple, or list.")
 
 
-def evaluate_modifiers(expression: str, environ: dict = os.environ):
+def evaluate_modifiers(expression: str, environ: dict = os.environ, parent: dict = {}):
     """
     Evaluates Bash-like variable expansion modifiers in a string, resolves
     custom node types, and evaluates lists and dictionaries.
 
     Supported modifiers:
-    - values like "world" (no substitution)
-    - ${VAR} for direct substitution (empty string if unset)
-    - ${VAR:=default} to set and use a default value if unset
-    - ${VAR:?error message} to raise an error if the variable is unset or null
+       - values like "world" (no substitution)
+       - ${VAR} for direct substitution (empty string if unset)
+       - ${VAR:=default} to set and use a default value if unset
+       - ${VAR:?error message} to raise an error if the variable is unset
 
-    :param expression: The Bash-like string, e.g.,
-        "${VAR:=default}/path", "${VAR}/path", or "${VAR:?error message}"
+    :param expression: The bash-like string to evaluate.
+    :param environ: The environment dictionary to use for variable substitution.
+    :param parent: The parent environment dictionary to use for variable substitution.
     :return: The resulting evaluated string with all substitutions applied.
     :raises CyclicalReference: If a cyclical reference is detected.
     :raises ValueError: If a variable is undefined and has the :? syntax with an
@@ -326,7 +351,7 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         # HACK: remove trailing curly braces if they exist
         if type(value) is str and value.endswith("}") and not value.startswith("${"):
             return value.rstrip("}")
-        # sanitize path-like values
+        # sanitize and de-dupe path-like values
         elif type(value) is str and detect_path(value):
             return dedupe_paths(value)
         return value
@@ -336,38 +361,46 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         var_name = match.group(1)
         operator = match.group(2)
         argument = match.group(3)
-        override = os.getenv(var_name, null)
-        value = str(environ.get(var_name, override))
+        parent_value = parent.get(var_name, null)
+        override = os.getenv(var_name, parent_value)
+        value = str(environ.get(var_name, parent_value))
         varstr = "${%s}" % var_name
 
-        # check for self-referential values
+        # check for self-referential values, e.g. FOO: ${FOO}
         is_recursive = value and varstr in value
-
-        # handle recursive references
         if is_recursive and override:
             value = value.replace(varstr, override)
         else:
-            value = value.replace(varstr, "")
+            value = value.replace(varstr, null)
 
         # ${VAR:=default} or ${VAR:-default}
         if operator in ("=", "-"):
+            # get value from os.environ first
             if override:
                 value = override
-            elif variable_pattern.search(value) or value is None:
-                value = evaluate_modifiers(argument, environ)
+            # then from the included (parent) environment
+            elif parent_value:
+                value = parent_value
+            # then look for a value in this environment
+            elif variable_pattern.search(value):
+                value = evaluate_modifiers(argument, environ, parent)
+            # finally, use the default value
             else:
                 value = value or argument
+
         # ${VAR:?error message}
         elif operator == "?":
             if not value:
                 error_message = argument if argument else f"{var_name} is not set"
                 raise ValueError(error_message)
+
         # handle recursive references
         elif variable_pattern.search(value):
-            value = evaluate_modifiers(value, environ)
+            value = evaluate_modifiers(value, environ, parent)
+
         # handle simple ${VAR} substitution
         elif operator is None:
-            value = value or ""
+            value = value or override
 
         return value
 
@@ -379,8 +412,10 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ):
         if variable_pattern.search(result):
             result = evaluate_modifiers(result, environ)
 
-    # detect recursion errors
+    # detect recursion errors, cycles are not errors
     except RecursionError:
+        result = null
+        # TODO: remove in next version (cycles are not errors)
         raise CyclicalReference(f"Cyclical reference detected in {expression}")
 
     # evaluate other data types
@@ -574,8 +609,7 @@ def dump_yaml(file_path: str, data: dict, unquote: bool = True):
 
     partitioned_data = partition_platform_data(data)
 
-    # write the platform partidioned data to the env file,
-    # add shebang to make it executable
+    # write the platform partidioned data add shebang
     with open(file_path, "w") as file:
         file.write("#!/usr/bin/env envstack\n")
         if data.get("include"):

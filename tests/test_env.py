@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024, Ryan Galloway (ryan@rsgalloway.com)
+# Copyright (c) 2024-2025, Ryan Galloway (ryan@rsgalloway.com)
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -364,6 +364,26 @@ class TestInit(unittest.TestCase):
 class TestResolveEnviron(unittest.TestCase):
     """Tests the resolve_environ function."""
 
+    def test_home(self):
+        """Tests to make sure ${HOME} is resolved."""
+        from envstack.env import resolve_environ
+
+        # ${HOME} is undefined on windows
+        home = os.getenv("HOME", os.path.expanduser("~"))
+        os.environ["HOME"] = home
+        env = {"FOO": "${HOME}/foo"}
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["FOO"], f"{home}/foo")
+
+    def test_custom(self):
+        """Tests to make sure ${CUSTOM} is resolved from os.environ."""
+        from envstack.env import resolve_environ
+
+        os.environ["CUSTOM"] = "/var/tmp"
+        env = {"FOO": "${CUSTOM}/foo"}
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["FOO"], f"/var/tmp/foo")
+
     def test_simple(self):
         """Tests resolving a simple environment."""
         from envstack.env import resolve_environ
@@ -539,30 +559,40 @@ class TestResolveEnviron(unittest.TestCase):
         """Tests expansion modifier with deferred value."""
         from envstack.env import resolve_environ
 
-        env = {"VAR": "${VAR:=${FOO}}", "FOO": "${FOO:=/foo/bar}"}
-        env["BAR"] = "${BAZ}"
+        env = {
+            "VAR": "${VAR:=${FOO}}",
+            "FOO": "${FOO:=/foo/bar}",
+            "BAR": "${BAZ}",  # has null value
+        }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/foo/bar")
         self.assertEqual(resolved["FOO"], "/foo/bar")
+        self.assertEqual(resolved["BAR"], "")
 
     def test_expansion_modifier_deferred_default(self):
         """Tests expansion modifier with multiple deferred values."""
         from envstack.env import resolve_environ
 
-        env = {"VAR": "${VAR:=${FOO}}", "FOO": "${FOO:=${BAR}}"}
-        env["BAR"] = "${BAZ:=/baz/qux}"  # insert a default value
+        env = {
+            "VAR": "${VAR:=${FOO}}",
+            "FOO": "${FOO:=${BAR}}",
+            "BAR": "${BAZ:=/baz/qux}", # has a default value
+        }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/baz/qux")
         self.assertEqual(resolved["FOO"], "/baz/qux")
         self.assertEqual(resolved["BAR"], "/baz/qux")
 
-    def test_expansion_modifier_deferred_default_slash(self):
-        """Tests expansion modifier with multiple deferred values."""
+    def test_expansion_modifier_deferred_null_value(self):
+        """Tests expansion modifier with multiple deferred values and null."""
         from envstack.env import resolve_environ
 
-        env = {"VAR": "${VAR:=${FOO}}", "FOO": "${FOO:=${BAR}}"}
-        env["BAR"] = "${BAZ:=/baz/qux}"
-        env["BAZ"] = "${QUX}"
+        env = {
+            "VAR": "${VAR:=${FOO}}",
+            "FOO": "${FOO:=${BAR}}",
+            "BAR": "${BAZ:=/baz/qux}",
+            "BAZ": "${QUX}",  # has null value
+        }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/baz/qux")
         self.assertEqual(resolved["FOO"], "/baz/qux")
@@ -1034,6 +1064,58 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(env2["BAR"], "bar")
         self.assertEqual(env2["BAZ"], self.root)
         self.assertEqual(env2["STACK"], "test_issue_55")
+
+    def test_issue_58(self):
+        """Tests issue #58 for inherited environment variables.
+
+        grandparent:
+            FOO: grandparent
+        parent:
+            include: [grandparent]
+            FOO: ${FOO:=parent}
+        child:
+            include: [parent]
+            FOO: ${FOO:=child}
+        """
+        from envstack.env import load_environ, resolve_environ, Source
+
+        # create grandparent.env that sets a value for FOO
+        grandparent = {
+            "include": [],
+            "all": {"FOO": "grandparent"}
+        }
+        grandparent_env_file = os.path.join(self.root, "prod", "env", "grandparent.env")
+        grandparent_source = Source(grandparent_env_file)
+        grandparent_source.data = grandparent
+        grandparent_source.write()
+
+        # create parent.env that includes grandparent
+        parent = {
+            "include": ["grandparent"],
+            "all": {"FOO": "${FOO:=parent}"}
+        }
+        parent_env_file = os.path.join(self.root, "prod", "env", "parent.env")
+        parent_source = Source(parent_env_file)
+        parent_source.data = parent
+        parent_source.write()
+
+        # create child.env that includes parent
+        child = {
+            "include": ["parent"],
+            "all": {"FOO": "${FOO:=child}"}
+        }
+        child_env_file = os.path.join(self.root, "prod", "env", "child.env")
+        child_source = Source(child_env_file)
+        child_source.data = child
+        child_source.write()
+
+        env = load_environ("child")
+        resolved = resolve_environ(env)
+        self.assertEqual(resolved["FOO"], "grandparent")
+
+        envstack.revert()  # simulate a new process
+        envstack.init("child")
+        self.assertEqual(os.getenv("FOO"), "grandparent")
 
 
 if __name__ == "__main__":

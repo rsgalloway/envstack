@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024, Ryan Galloway (ryan@rsgalloway.com)
+# Copyright (c) 2024-2025, Ryan Galloway (ryan@rsgalloway.com)
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -41,14 +41,16 @@ from pathlib import Path
 import yaml  # noqa
 
 from envstack import config, logger, path, util
-from envstack.node import custom_node_types, get_keys_from_env, BaseNode, EncryptedNode
 from envstack.exceptions import *  # noqa
+from envstack.node import (
+    BaseNode,
+    EncryptedNode,
+    custom_node_types,
+    get_keys_from_env,
+)
 
 # value delimiter pattern (splits values by os.pathsep)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
-
-# stores cached file data in memory
-load_file_cache = {}
 
 # stores environment when calling envstack.save()
 saved_environ = None
@@ -164,7 +166,8 @@ class EnvVar(string.Template, str):
         self.template = v
 
     def extend(self, iterable):
-        """If value is a list, extend list by appending elements from the iterable.
+        """If value is a list, extend list by appending elements from the
+        iterable.
 
         :param iterable: an iterable object
         :returns: extended value
@@ -214,12 +217,12 @@ class EnvVar(string.Template, str):
         return self.template.keys()
 
     def parts(self):
-        """Returns a list of delimited parts, e.g. if a value is delimited by a colon
-        (or semicolon on windows), e.g. ::
+        """Returns a list of delimited parts, e.g. if a value is delimited by a
+        colon (or semicolon on windows), for example:
 
-        >>> v = EnvVar('$FOO:${BAR}/bin')
-        >>> v.parts()
-        ['$FOO', '${BAR}/bin']
+            >>> v = EnvVar('$FOO:${BAR}/bin')
+            >>> v.parts()
+            ['$FOO', '${BAR}/bin']
         """
         if self.template:
             if type(self.template) in (
@@ -377,12 +380,7 @@ class Env(dict):
             return source
 
 
-def clear_file_cache():
-    """Clears global file cache."""
-    global load_file_cache
-    load_file_cache = {}
-
-
+@util.cache
 def get_sources(
     *names,
     scope: str = None,
@@ -399,15 +397,11 @@ def get_sources(
     :raises TemplateNotFound: if a file is not found in ENVPATH or scope.
     :returns: list of Source objects for the given stack names.
     """
-    # TODO: smarter file caching (issue #26)
-    # clear_file_cache()
-
-    # set default scope to the current working directory
-    scope = Path(scope or os.getcwd()).resolve()
-
     loaded_files = []
     sources = []
     loading_stack = set()
+
+    scope = Path(scope or os.getcwd()).resolve()
 
     def _walk_to_scope(current_path):
         """Generate directories from the current path up to the scope."""
@@ -794,7 +788,7 @@ def encrypt_environ(
     return encrypted_env
 
 
-def resolve_environ(env: dict):
+def resolve_environ(env: Env):
     """Resolves all variables in a given unresolved environment, returning a
     new environment dict.
 
@@ -804,26 +798,44 @@ def resolve_environ(env: dict):
     # stores the resolved environment
     resolved = Env()
 
+    if type(env) is not Env:
+        env = Env(env)
+
     # copy env to avoid modifying the original
     env_copy = env.copy()
+
+    # evaluate one source environment at a time
+    seen_source_paths = []
+    included = Env()
+    sources = env.sources[:-1]
+    sources.reverse()
+    for source in sources:
+        if source.path in seen_source_paths:
+            continue
+        seen_source_paths.append(source.path)
+        source_environ = resolve_environ(Env(source.load()))
+        for key, value in source_environ.items():
+            included[key] = util.evaluate_modifiers(value, environ=source_environ)
 
     # make a copy that contains the encryption keys
     env_keys = env.copy()
     env_keys.update(get_keys_from_env(os.environ))
 
-    # decrypt custom node types
+    # decrypt custom nodes
     for key, value in env_copy.items():
         if type(value) in custom_node_types:
             env_copy[key] = value.resolve(env=env_keys)
 
-    # resolve variables after decrypting custom node types
+    # resolve environment variables after decrypting custom nodes
     for key, value in env_copy.items():
-        resolved[key] = util.evaluate_modifiers(value, environ=env_copy)
+        resolved[key] = util.evaluate_modifiers(
+            value, environ=env_copy, parent=included
+        )
 
     return resolved
 
 
-# TODO: make 'name' arg a list (*names) in next minor release
+# TODO: make 'name' arg a list (*names)
 def load_environ(
     name: str = config.DEFAULT_NAMESPACE,
     platform: str = config.PLATFORM,
@@ -876,7 +888,7 @@ def load_environ(
             ignore_missing=ignore_missing,
         )
         for source in sources:
-            # dedupe sources (may override previous sources)
+            # don't load the same source more than once
             if source.path in seen_paths:
                 continue
             env.load_source(source, platform=platform)
@@ -897,27 +909,22 @@ def load_environ(
     return env
 
 
+@util.cache
 def load_file(path: str):
-    """Reads a given .env file and returns data as dict.
+    """Reads a given .env file and returns data as dict. Data is memoized in
+    memory for faster access.
 
-    :param path: path to envstack env file.
+    :param path: path to .env file.
     :returns: loaded yaml data as dict.
     """
-    global load_file_cache
-
-    if path in load_file_cache:
-        return load_file_cache[path]
 
     if not os.path.exists(path):
         return {}
 
-    else:
-        data = util.validate_yaml(path)
-        load_file_cache[path] = data
-
-    return data
+    return util.validate_yaml(path)
 
 
+@util.cache
 def trace_var(*name, var: str = None, scope: str = None):
     """Traces where a var is getting set for a given name.
 

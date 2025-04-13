@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (c) 2024, Ryan Galloway (ryan@rsgalloway.com)
+# Copyright (c) 2024-2025, Ryan Galloway (ryan@rsgalloway.com)
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -77,7 +77,7 @@ class Path(str):
 
     SEPARATORS = ["/", "\\"]
 
-    def __init__(self, path, platform=config.PLATFORM):
+    def __init__(self, path, platform: str = config.PLATFORM):
         self.path = path
         self.platform = platform
 
@@ -100,10 +100,11 @@ class Path(str):
         tokens = directory_re.findall(self.path)
         return [t for t in tokens if t not in self.SEPARATORS]
 
-    def toPlatform(self, platform=config.PLATFORM):
+    def toPlatform(self, platform: str = config.PLATFORM):
         """Converts path to platform.
 
-        :param platform: name of platform to convert to
+        :param platform: name of platform to convert to.
+        :returns: converted path.
         """
         if platform == self.platform:
             return str(self)
@@ -144,7 +145,7 @@ class Template(object):
         '/show/foo/pub/bar/v003'
     """
 
-    def __init__(self, path):
+    def __init__(self, path: str):
         assert path, "Template path format cannot be empty"
         self.path_format = str(path)
 
@@ -154,7 +155,7 @@ class Template(object):
     def __str__(self):
         return self.path_format
 
-    def _parse(self, pattern):
+    def _parse(self, pattern: str):
         tokens = pattern.split(self.path_format)
         keys = []
         for token in tokens[1::2]:
@@ -166,9 +167,9 @@ class Template(object):
         """
         Applies key/value pairs matching template format.
 
-        :param fields: key/values to apply to template
-        :returns: resolved path as string
-        :raises: MissingFieldError
+        :param fields: key/values to apply to template.
+        :returns: resolved path as string.
+        :raises: MissingFieldError.
         """
         formats = self.get_formats()
 
@@ -207,11 +208,11 @@ class Template(object):
             results[key] = _type
         return results
 
-    def get_fields(self, path):
+    def get_fields(self, path: str):
         """Gets key/value pairs from path that map to template path.
 
-        :param path: file system path as string
-        :returns: dict of key/value pairs
+        :param path: file system path as string.
+        :returns: dict of key/value pairs.
         """
         # conform path and template slashes
         path = path.replace("\\", "/")
@@ -256,7 +257,7 @@ class Template(object):
         return {k: cast(k, matches.group(k)) for k in keywords}
 
 
-def extract_fields(filepath, template):
+def extract_fields(filepath: str, template: Template):
     """Convenience function that extracts template fields from
     a given filepath for a given template name. For example: ::
 
@@ -264,8 +265,9 @@ def extract_fields(filepath, template):
                                 'TASKDIR')
         {'task': 'comp', 'sequence': 'vsr', 'shot': 'vsr0100', 'show': 'bunny'}
 
-    :param filepath: path to file
-    :param template: Template instance, or name of template
+    :param filepath: path to file.
+    :param template: Template instance, or name of template.
+    :returns: dictionary of template fields.
     """
     try:
         p = Path(filepath)
@@ -286,28 +288,29 @@ def extract_fields(filepath, template):
         return {}
 
 
-def get_scope(filepath):
+def get_scope(filepath: str):
     """Convenience function that returns the scope of a given filepath.
 
-    :param filepath: filepath
+    :param filepath: filepath.
+    :returns: scope of the filepath.
     """
     return Path(filepath).scope()
 
 
-def get_template_environ(platform=config.PLATFORM, scope=None):
+def get_template_environ(platform: str = config.PLATFORM, scope: str = None):
     """Returns default template Env instance defined by the value
     config.TEMPLATES_ENV_NAME.
 
-    :param platform: optional platform name
-    :param scope: environment scope (default: cwd)
-    :returns: Env instance
+    :param platform: optional platform name.
+    :param scope: environment scope (default: cwd).
+    :returns: Env instance.
     """
     from .env import load_environ
 
     return load_environ(TEMPLATES_ENV_NAME, platform=platform, scope=scope)
 
 
-def get_template(name, platform=config.PLATFORM, scope=None):
+def get_template(name: str, platform: str = config.PLATFORM, scope: str = None):
     """Returns a Template instance for a given name. Template paths are
     defined by default in the env file set on config.TEMPLATES_ENV_NAME.
 
@@ -321,9 +324,10 @@ def get_template(name, platform=config.PLATFORM, scope=None):
                            version=1)
         <Path '/projects/bunny/abc/0100/comp/nuke/bunny_abc_0100_comp.1.nk'>
 
-    :param platform: optional platform name
-    :param scope: environment scope (default: cwd)
-    :returns: Template instance
+    :param name: name of template.
+    :param platform: optional platform name.
+    :param scope: environment scope (default: cwd).
+    :returns: Template instance.
     """
     env = get_template_environ(platform, scope=scope)
     template = env.get(name)
@@ -332,7 +336,7 @@ def get_template(name, platform=config.PLATFORM, scope=None):
     return Template(template)
 
 
-def match_template(path, platform=config.PLATFORM, scope=None):
+def match_template(path: str, platform: str = config.PLATFORM, scope: str = None):
     """Returns a Template that matches a given `path`.
 
     :path: path to match Template.
