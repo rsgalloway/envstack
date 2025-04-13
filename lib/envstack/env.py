@@ -41,14 +41,11 @@ from pathlib import Path
 import yaml  # noqa
 
 from envstack import config, logger, path, util
-from envstack.node import custom_node_types, get_keys_from_env, BaseNode, EncryptedNode
 from envstack.exceptions import *  # noqa
+from envstack.node import BaseNode, EncryptedNode, custom_node_types, get_keys_from_env
 
 # value delimiter pattern (splits values by os.pathsep)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
-
-# stores cached file data in memory
-load_file_cache = {}
 
 # stores environment when calling envstack.save()
 saved_environ = None
@@ -377,12 +374,7 @@ class Env(dict):
             return source
 
 
-def clear_file_cache():
-    """Clears global file cache."""
-    global load_file_cache
-    load_file_cache = {}
-
-
+@util.cache
 def get_sources(
     *names,
     scope: str = None,
@@ -682,9 +674,6 @@ def revert():
     # restore sys.path from PYTHONPATH
     util.load_sys_path()
 
-    # clear the global file cache
-    clear_file_cache()
-
     saved_environ = None
 
 
@@ -914,27 +903,19 @@ def load_environ(
     return env
 
 
+@util.cache
 def load_file(path: str):
-    """Reads a given .env file and returns data as dict. Stores the file
-    data in a global file cache for later use. Use clear_file_cache() to
-    clear the cache.
+    """Reads a given .env file and returns data as dict. Data is memoized in
+    memory for faster access.
 
     :param path: path to .env file.
     :returns: loaded yaml data as dict.
     """
-    global load_file_cache
-
-    if path in load_file_cache:
-        return load_file_cache[path]
 
     if not os.path.exists(path):
         return {}
 
-    else:
-        data = util.validate_yaml(path)
-        load_file_cache[path] = data
-
-    return data
+    return util.validate_yaml(path)
 
 
 def trace_var(*name, var: str = None, scope: str = None):

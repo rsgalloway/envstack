@@ -33,10 +33,12 @@ __doc__ = """
 Contains common utility functions and classes.
 """
 
+import functools
 import glob
 import os
 import re
 import sys
+import time
 from ast import literal_eval
 from collections import OrderedDict
 
@@ -46,17 +48,39 @@ from envstack import config
 from envstack.exceptions import CyclicalReference
 from envstack.node import AESGCMNode, Base64Node, EncryptedNode, FernetNode
 
+# default cache timeout in seconds
+CACHE_TIMEOUT = 5
+
 # value for unresolvable variables
 null = ""
 
 # regular expression pattern for matching windows drive letters
-# TODO: support lowercase drive letters
+# TODO: support lowercase drive letters (issue #53)
 drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
 
 # regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
     r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([-=?])((?:\$\{[^}]+\}|[^}])*))?\}"
 )
+
+
+def cache(func):
+    """Function decorator to memoize return data."""
+
+    cache_dict = {}
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        key = (args, tuple(kwargs.items()))
+        if key in cache_dict:
+            result, timestamp = cache_dict[key]
+            if time.time() - timestamp <= CACHE_TIMEOUT:
+                return result
+        result = func(*args, **kwargs)
+        cache_dict[key] = (result, time.time())
+        return result
+
+    return wrapper
 
 
 def clear_sys_path(var: str = "PYTHONPATH"):
