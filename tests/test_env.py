@@ -368,9 +368,11 @@ class TestResolveEnviron(unittest.TestCase):
         """Tests to make sure ${HOME} is resolved."""
         from envstack.env import resolve_environ
 
+        # ${HOME} is undefined on windows
+        home = os.getenv("HOME", os.path.expanduser("~"))
+        os.environ["HOME"] = home
         env = {"FOO": "${HOME}/foo"}
         resolved = resolve_environ(env)
-        home = os.getenv("HOME", os.path.expanduser("~"))
         self.assertEqual(resolved["FOO"], f"{home}/foo")
 
     def test_custom(self):
