@@ -402,7 +402,11 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ, parent: dict
         elif operator is None:
             value = value or override
 
-        return value
+        return str(value)
+
+    # no need to evaluate further
+    if type(safe_eval(expression)) in (int, float, bool):
+        return expression
 
     try:
         # substitute all matches in the expression
