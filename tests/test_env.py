@@ -1066,8 +1066,8 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(env2["STACK"], "test_issue_55")
 
     def test_issue_58(self):
-        """Tests issue #58 for inherited environment variables. Tests different
-        kinds of inheritance and expansion modifiers.
+        """Tests for issue #58 and #62, inherited environment variables.
+        Tests different kinds of inheritance, values and expansion modifiers.
 
         grandparent:
             FOO: grandparent
@@ -1099,7 +1099,9 @@ class TestIssues(unittest.TestCase):
                 "NUM": "2"
             }
         }
-        grandparent_env_file = os.path.join(self.root, "prod", "env", "grandparent.env")
+        grandparent_env_file = os.path.join(
+            self.root, "prod", "env", "grandparent.env"
+        )
         grandparent_source = Source(grandparent_env_file)
         grandparent_source.data = grandparent
         grandparent_source.write()
