@@ -1066,25 +1066,42 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(env2["STACK"], "test_issue_55")
 
     def test_issue_58(self):
-        """Tests issue #58 for inherited environment variables.
+        """Tests for issue #58 and #62, inherited environment variables.
+        Tests different kinds of inheritance, values and expansion modifiers.
 
         grandparent:
             FOO: grandparent
+            BAR: ${BAR:=c}
+            BAZ: baz
+            NUM: 2
         parent:
             include: [grandparent]
             FOO: ${FOO:=parent}
+            BAR: ${BAR:=b}
+            BAZ: ${BAZ}
+            NUM: ${NUM:=1}
         child:
             include: [parent]
             FOO: ${FOO:=child}
+            BAR: ${BAR:=a}
+            BAZ: ${BAZ}
+            NUM: ${NUM:=0}
         """
         from envstack.env import load_environ, resolve_environ, Source
 
         # create grandparent.env that sets a value for FOO
         grandparent = {
             "include": [],
-            "all": {"FOO": "grandparent"}
+            "all": {
+                "FOO": "grandparent",
+                "BAR": "${BAR:=c}",
+                "BAZ": "baz",
+                "NUM": "2"
+            }
         }
-        grandparent_env_file = os.path.join(self.root, "prod", "env", "grandparent.env")
+        grandparent_env_file = os.path.join(
+            self.root, "prod", "env", "grandparent.env"
+        )
         grandparent_source = Source(grandparent_env_file)
         grandparent_source.data = grandparent
         grandparent_source.write()
@@ -1092,17 +1109,35 @@ class TestIssues(unittest.TestCase):
         # create parent.env that includes grandparent
         parent = {
             "include": ["grandparent"],
-            "all": {"FOO": "${FOO:=parent}"}
+            "all": {
+                "FOO": "${FOO:=parent}",
+                "BAR": "${BAR:=b}",
+                "BAZ": "${BAZ}",
+                "INT": "1",
+                "NUM": "${NUM:=1}"
+            }
         }
         parent_env_file = os.path.join(self.root, "prod", "env", "parent.env")
         parent_source = Source(parent_env_file)
         parent_source.data = parent
         parent_source.write()
+        parent_env = load_environ("parent")
+        self.assertEqual(parent_env["INT"], 1)
+
+        # FIXME: need to revert to clear the cached environment
+        envstack.revert()
 
         # create child.env that includes parent
         child = {
             "include": ["parent"],
-            "all": {"FOO": "${FOO:=child}"}
+            "all": {
+                "FOO": "${FOO:=child}",
+                "BAR": "${BAR:=a}",
+                "BAZ": "${BAZ}",
+                "INT": "${INT}",
+                "NUM": "${NUM:=0}",
+                "TEST": "foo"
+            }
         }
         child_env_file = os.path.join(self.root, "prod", "env", "child.env")
         child_source = Source(child_env_file)
@@ -1111,11 +1146,31 @@ class TestIssues(unittest.TestCase):
 
         env = load_environ("child")
         resolved = resolve_environ(env)
+        self.assertEqual(len(env.sources), 3)
+        self.assertEqual(env["FOO"], "${FOO:=child}")
+        self.assertEqual(env["BAR"], "${BAR:=a}")
+        self.assertEqual(env["BAZ"], "${BAZ}")
+        self.assertEqual(env["NUM"], "${NUM:=0}")
+        self.assertEqual(env["INT"], "${INT}")
+        self.assertEqual(env["TEST"], "foo")
         self.assertEqual(resolved["FOO"], "grandparent")
+        self.assertEqual(resolved["BAR"], "c")
+        self.assertEqual(resolved["BAZ"], "baz")
+        self.assertEqual(resolved["NUM"], 2)
+        self.assertEqual(resolved["INT"], 1)
+        self.assertEqual(resolved["TEST"], "foo")
 
-        envstack.revert()  # simulate a new process
+        # simulate a new process, and init the environment
+        envstack.revert()  
         envstack.init("child")
+
+        # os.environ expects str values
         self.assertEqual(os.getenv("FOO"), "grandparent")
+        self.assertEqual(os.getenv("BAR"), "c")
+        self.assertEqual(os.getenv("BAZ"), "baz")
+        self.assertEqual(os.getenv("INT"), "1")
+        self.assertEqual(os.getenv("NUM"), "2")
+        self.assertEqual(os.getenv("TEST"), "foo")
 
 
 if __name__ == "__main__":

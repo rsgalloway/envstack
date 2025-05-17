@@ -402,9 +402,13 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ, parent: dict
         elif operator is None:
             value = value or override
 
-        return value
+        return str(value)
 
     try:
+        # expression must be a string
+        if type(expression) in (int, float, bool):
+            expression = str(expression)
+
         # substitute all matches in the expression
         result = variable_pattern.sub(substitute_variable, expression)
 
@@ -418,8 +422,7 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ, parent: dict
         # TODO: remove in next version (cycles are not errors)
         raise CyclicalReference(f"Cyclical reference detected in {expression}")
 
-    # evaluate other data types
-    # TODO: find a better way to evaluate other data types
+    # TODO: find a better way to handle TypeErrors
     except TypeError:
         if isinstance(expression, AESGCMNode):
             result = expression.resolve(env=environ)
