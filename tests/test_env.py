@@ -1129,6 +1129,7 @@ class TestIssues(unittest.TestCase):
                 "BAR": "${BAR:=a}",
                 "BAZ": "${BAZ}",
                 "NUM": "${NUM:=0}",
+                "INT": "1",
                 "TEST": "foo"
             }
         }
@@ -1140,10 +1141,17 @@ class TestIssues(unittest.TestCase):
         env = load_environ("child")
         resolved = resolve_environ(env)
         self.assertEqual(len(env.sources), 3)
+        self.assertEqual(env["FOO"], "${FOO:=child}")
+        self.assertEqual(env["BAR"], "${BAR:=a}")
+        self.assertEqual(env["BAZ"], "${BAZ}")
+        self.assertEqual(env["NUM"], "${NUM:=0}")
+        self.assertEqual(env["INT"], 1)
+        self.assertEqual(env["TEST"], "foo")
         self.assertEqual(resolved["FOO"], "grandparent")
         self.assertEqual(resolved["BAR"], "c")
         self.assertEqual(resolved["BAZ"], "baz")
         self.assertEqual(resolved["NUM"], "2")
+        self.assertEqual(resolved["INT"], 1)
         self.assertEqual(resolved["TEST"], "foo")
 
         envstack.revert()  # simulate a new process
