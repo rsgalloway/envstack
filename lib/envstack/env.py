@@ -716,6 +716,9 @@ def init(*name, ignore_missing: bool = config.IGNORE_MISSING):
 
     # load the stack and update the environment
     env = resolve_environ(load_environ(name, ignore_missing=ignore_missing))
+
+    # os.environ expects strings, so encode the values
+    # TypeError: str expected, not int
     os.environ.update(util.encode(env))
 
     # update sys.path from resolved PYTHONPATH
@@ -789,8 +792,10 @@ def encrypt_environ(
 
 
 def resolve_environ(env: Env):
-    """Resolves all variables in a given unresolved environment, returning a
-    new environment dict.
+    """Resolves all variables in a given environment, returning a new
+    environment with resolved values.
+
+        >>> env = resolve_environ(load_environ(name))
 
     :param env: unresolved environment.
     :returns: resolved environment.
@@ -828,9 +833,8 @@ def resolve_environ(env: Env):
 
     # resolve environment variables after decrypting custom nodes
     for key, value in env_copy.items():
-        resolved[key] = util.evaluate_modifiers(
-            value, environ=env_copy, parent=included
-        )
+        value = util.evaluate_modifiers(value, environ=env_copy, parent=included)
+        resolved[key] = util.safe_eval(value)
 
     return resolved
 
@@ -843,8 +847,8 @@ def load_environ(
     ignore_missing: bool = config.IGNORE_MISSING,
     encrypt: bool = False,
 ):
-    """Loads env stack data for a given name. Adds "STACK" key to environment,
-    and sets the value to `name`.
+    """Loads raw environment for a given stack namespace.
+    Adds "STACK" key to environment, and sets the value to `name`.
 
     To load an environment for a given namespace, where the scope is the current
     working directory (cwd):
@@ -854,6 +858,10 @@ def load_environ(
     To reload the same namespace for a different scope (different cwd):
 
         >>> env = load_environ(name, scope="/path/to/scope")
+
+    To load resolved environment, use `resolve_environ()`:
+
+        >>> env = resolve_environ(load_environ(name))
 
     :param name: list of stack names to load (basename of env files).
     :param platform: name of platform (linux, darwin, windows).
