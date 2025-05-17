@@ -1113,6 +1113,7 @@ class TestIssues(unittest.TestCase):
                 "FOO": "${FOO:=parent}",
                 "BAR": "${BAR:=b}",
                 "BAZ": "${BAZ}",
+                "INT": "1",
                 "NUM": "${NUM:=1}"
             }
         }
@@ -1120,6 +1121,11 @@ class TestIssues(unittest.TestCase):
         parent_source = Source(parent_env_file)
         parent_source.data = parent
         parent_source.write()
+        parent_env = load_environ("parent")
+        self.assertEqual(parent_env["INT"], 1)
+
+        # FIXME: need to revert to clear the cached environment
+        envstack.revert()
 
         # create child.env that includes parent
         child = {
@@ -1128,8 +1134,8 @@ class TestIssues(unittest.TestCase):
                 "FOO": "${FOO:=child}",
                 "BAR": "${BAR:=a}",
                 "BAZ": "${BAZ}",
+                "INT": "${INT}",
                 "NUM": "${NUM:=0}",
-                "INT": "1",
                 "TEST": "foo"
             }
         }
@@ -1145,20 +1151,24 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(env["BAR"], "${BAR:=a}")
         self.assertEqual(env["BAZ"], "${BAZ}")
         self.assertEqual(env["NUM"], "${NUM:=0}")
-        self.assertEqual(env["INT"], 1)
+        self.assertEqual(env["INT"], "${INT}")
         self.assertEqual(env["TEST"], "foo")
         self.assertEqual(resolved["FOO"], "grandparent")
         self.assertEqual(resolved["BAR"], "c")
         self.assertEqual(resolved["BAZ"], "baz")
-        self.assertEqual(resolved["NUM"], "2")
+        self.assertEqual(resolved["NUM"], 2)
         self.assertEqual(resolved["INT"], 1)
         self.assertEqual(resolved["TEST"], "foo")
 
-        envstack.revert()  # simulate a new process
+        # simulate a new process, and init the environment
+        envstack.revert()  
         envstack.init("child")
+
+        # os.environ expects str values
         self.assertEqual(os.getenv("FOO"), "grandparent")
         self.assertEqual(os.getenv("BAR"), "c")
         self.assertEqual(os.getenv("BAZ"), "baz")
+        self.assertEqual(os.getenv("INT"), "1")
         self.assertEqual(os.getenv("NUM"), "2")
         self.assertEqual(os.getenv("TEST"), "foo")
 
