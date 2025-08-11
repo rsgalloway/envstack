@@ -207,6 +207,7 @@ def parse_args():
         "-r",
         "--resolve",
         nargs="*",
+        action=StoreOnce,
         metavar="VAR",
         help="resolve environment variables",
     )
@@ -214,6 +215,7 @@ def parse_args():
         "-t",
         "--trace",
         nargs="*",
+        action=StoreOnce,
         metavar="VAR",
         help="trace where environment variables are being set",
     )
