@@ -55,6 +55,18 @@ from envstack.wrapper import run_command
 setup_stream_handler()
 
 
+class StoreOnce(argparse.Action):
+    """Custom argparse action to ensure an option is only set once."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        # if we've already seen this option once, bail
+        if getattr(namespace, f"__seen_{self.dest}", False):
+            aliases = "/".join(self.option_strings)
+            parser.error(f"{aliases} specified more than once.")
+        setattr(namespace, f"__seen_{self.dest}", True)
+        setattr(namespace, self.dest, values)
+
+
 def _parse_env_lines(lines):
     """Parse lines of environment variables from an iterable.
 
@@ -182,8 +194,9 @@ def parse_args():
         "-s",
         "--set",
         nargs="*",
+        action=StoreOnce,
         metavar="VAR=VALUE",
-        help="set a key=value pair in the environment",
+        help="convert KEY=VALUE pairs to envstack environment variables",
     )
     parser.add_argument(
         "--scope",
