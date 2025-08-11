@@ -34,6 +34,7 @@ Command line interface for envstack: stacked environment variable management.
 """
 
 import argparse
+import re
 import sys
 import traceback
 
@@ -52,6 +53,54 @@ from envstack.logger import setup_stream_handler
 from envstack.wrapper import run_command
 
 setup_stream_handler()
+
+
+def _parse_env_stdin(fp):
+    """Parse environment variables from stdin.
+
+    :param fp: File-like object to read from (usually sys.stdin).
+    :return: Dictionary of environment variables.
+    """
+    ENV_LINE_RE = re.compile(
+        r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$"
+    )
+    data = {}
+    for raw in fp:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        m = ENV_LINE_RE.match(line)
+        if not m:
+            # allow "key: value" as a convenience
+            if ":" in line and "=" not in line:
+                k, v = line.split(":", 1)
+                data[k.strip()] = v.strip()
+            continue
+        k, v = m.group(1), m.group(2).strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
+            v = v[1:-1]
+        data[k] = v
+    return data
+
+
+def _parse_keyvals(items: dict):
+    """Parse a list of key-value pairs into a dictionary.
+
+    :param items: A list of strings in the format KEY=VALUE or KEY:VALUE.
+    :return: A dictionary mapping keys to values.
+    """
+    # existing CLI style: KEY:VALUE (keep backward-compat)
+    out = {}
+    for kv in items:
+        if ":" in kv:
+            k, v = kv.split(":", 1)
+        elif "=" in kv:
+            k, v = kv.split("=", 1)
+        else:
+            # treat bare KEY as KEY= (empty)
+            k, v = kv, ""
+        out[k] = v
+    return out
 
 
 def parse_args():
@@ -135,8 +184,8 @@ def parse_args():
         "-s",
         "--set",
         nargs="*",
-        metavar="VAR:VALUE",
-        help="set a key:value pair in the environment",
+        metavar="VAR=VALUE",
+        help="set a key=value pair in the environment",
     )
     parser.add_argument(
         "--scope",
@@ -203,8 +252,16 @@ def main():
                 for key, value in data.items():
                     print(f"{key}={value}")
 
-        elif args.set:
-            data = dict(kv.split(":", 1) for kv in args.set)
+        elif args.set is not None:
+            force_stdin = args.set == ["-"]
+            using_stdin = force_stdin or (args.set == [] and not sys.stdin.isatty())
+
+            if using_stdin:
+                data = _parse_env_stdin(sys.stdin)
+                if not data:
+                    raise ValueError("no KEY=VALUE pairs found on stdin")
+            else:
+                data = _parse_keyvals(args.set)
 
             if args.encrypt:
                 data = encrypt_environ(data, encrypt=(not args.out))
