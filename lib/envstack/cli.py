@@ -55,23 +55,23 @@ from envstack.wrapper import run_command
 setup_stream_handler()
 
 
-def _parse_env_stdin(fp):
-    """Parse environment variables from stdin.
+def _parse_env_lines(lines):
+    """Parse lines of environment variables from an iterable.
 
-    :param fp: File-like object to read from (usually sys.stdin).
-    :return: Dictionary of environment variables.
+    :param lines: An iterable of lines, such as a file or stdin.
+    :return: A dictionary of environment variables.
     """
     ENV_LINE_RE = re.compile(
         r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$"
     )
     data = {}
-    for raw in fp:
+    for raw in lines:
         line = raw.strip()
         if not line or line.startswith("#"):
             continue
         m = ENV_LINE_RE.match(line)
         if not m:
-            # allow "key: value" as a convenience
+            # allow "key:value" and "key=value"
             if ":" in line and "=" not in line:
                 k, v = line.split(":", 1)
                 data[k.strip()] = v.strip()
@@ -84,12 +84,11 @@ def _parse_env_stdin(fp):
 
 
 def _parse_keyvals(items: dict):
-    """Parse a list of key-value pairs into a dictionary.
+    """Parse a list of key=value pairs.
 
-    :param items: A list of strings in the format KEY=VALUE or KEY:VALUE.
+    :param items: A list of strings in the form "key=value" or "key:value".
     :return: A dictionary mapping keys to values.
     """
-    # existing CLI style: KEY:VALUE (keep backward-compat)
     out = {}
     for kv in items:
         if ":" in kv:
@@ -97,7 +96,6 @@ def _parse_keyvals(items: dict):
         elif "=" in kv:
             k, v = kv.split("=", 1)
         else:
-            # treat bare KEY as KEY= (empty)
             k, v = kv, ""
         out[k] = v
     return out
@@ -253,13 +251,29 @@ def main():
                     print(f"{key}={value}")
 
         elif args.set is not None:
-            force_stdin = args.set == ["-"]
-            using_stdin = force_stdin or (args.set == [] and not sys.stdin.isatty())
-
-            if using_stdin:
-                data = _parse_env_stdin(sys.stdin)
+            force_stdin = args.set == [] or args.set == ["-"]
+            using_pipe = args.set == [] and not sys.stdin.isatty()
+            # interactive mode
+            if force_stdin and sys.stdin.isatty():
+                print(
+                    "Enter KEY=VALUE pairs. Press Ctrl+D or Ctrl+C to finish:",
+                    file=sys.stderr,
+                )
+                lines = []
+                try:
+                    while True:
+                        lines.append(input() + "\n")
+                except (EOFError, KeyboardInterrupt):
+                    print("Output environment:", file=sys.stderr)
+                data = _parse_env_lines(lines)
+                if not data:
+                    raise ValueError("no pairs entered")
+            # pipe stdin (or '-' with non-tty stdin)
+            elif force_stdin or using_pipe:
+                data = _parse_env_lines(sys.stdin)
                 if not data:
                     raise ValueError("no KEY=VALUE pairs found on stdin")
+            # explicit args path
             else:
                 data = _parse_keyvals(args.set)
 
