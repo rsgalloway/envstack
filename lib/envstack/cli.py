@@ -279,7 +279,7 @@ def main():
                     while True:
                         lines.append(input() + "\n")
                 except (EOFError, KeyboardInterrupt):
-                    print("Output environment:", file=sys.stderr)
+                    pass
                 data = _parse_env_lines(lines)
                 if not data:
                     raise ValueError("no pairs entered")
@@ -299,6 +299,7 @@ def main():
             elif args.out:
                 Env(data).write(args.out)
             else:
+                print("Output environment:", file=sys.stderr)
                 for key, value in data.items():
                     print(f"{key}={value}")
 
