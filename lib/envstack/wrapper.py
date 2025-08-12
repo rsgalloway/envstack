@@ -37,6 +37,7 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 import traceback
 
 from envstack import config, logger
@@ -202,7 +203,10 @@ class ShellWrapper(CommandWrapper):
 
     def get_interactive(self):
         """Returns whether to run the command in an interactive shell."""
-        return bool(int(os.getenv("INTERACTIVE", 1)))
+        override = os.getenv("INTERACTIVE")
+        if override is not None:
+            return override.lower() in {"1", "true", "yes", "on"}
+        return sys.stdin.isatty() and sys.stdout.isatty()
 
     def get_subprocess_command(self, env: dict):
         """Returns the command to be passed to the shell in a subprocess."""
