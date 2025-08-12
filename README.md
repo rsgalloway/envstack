@@ -189,30 +189,36 @@ goodbye
 Here we can set values using the `envstack` command:
 
 ```bash
-$ envstack --set HELLO:world
-HELLO: world
+$ envstack --set HELLO=world
+HELLO=world
 ```
 
 We can also encrypt the values automatically (base64 by default):
 
 ```bash
-$ envstack -s HELLO:world -e
-HELLO: d29ybGQ=
+$ envstack -s HELLO=world -e
+HELLO=d29ybGQ=
 ```
 
 Add more variables (note that `$` needs to be escaped in bash or else it will
 be evaluated immediately):
 
 ```bash
-$ envstack -s HELLO:world VAR:\${HELLO}
-HELLO: world
-VAR: ${HELLO}
+$ envstack -s HELLO=world VAR=\${HELLO}
+HELLO=world
+VAR=${HELLO}
 ```
 
-To write out to a file use the `-o` option:
+To write out the results to an env file, use the `-o` option:
 
 ```bash
-$ envstack -s HELLO:world -o hello.env
+$ envstack -s HELLO=world -o hello.env
+```
+
+You can convert existing `.env` files to envstack by piping them into envstack:
+
+```bash
+$ cat .env | envstack --set -o dev.env
 ```
 
 ## Creating Stacks

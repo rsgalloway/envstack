@@ -317,15 +317,16 @@ class CustomDumper(yaml.SafeDumper):
             self.anchors.update(self.newanchors)
             self.newanchors.clear()
 
-    def santize_value(self, node: yaml.Node):
-        """Sanitize node value.
+    def sanitize_value(self, node: yaml.Node):
+        """Sanitize node value by quoting it if it starts with special characters
+        or contains a colon followed by a space, e.g. "@var", "|value", "key: value".
 
         :param node: yaml node to sanitize.
         """
         if isinstance(node, yaml.ScalarNode):
-            if node.value[0] in "@|?,%`&":
+            if node.value and node.value[0] in "@|?,%`&":
                 node.style = '"%s"' % node.value
-            elif node.value[-1] == ":":
+            elif node.value and node.value[-1] == ":":
                 node.style = '"%s"' % node.value
             elif ": " in node.value:
                 node.style = '"%s"' % node.value
@@ -360,7 +361,7 @@ class CustomDumper(yaml.SafeDumper):
             for element in node.value:
                 self.quote_vars(element)
         elif isinstance(node, yaml.ScalarNode):
-            self.santize_value(node)
+            self.sanitize_value(node)
 
         return node
 

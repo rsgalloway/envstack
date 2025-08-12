@@ -299,7 +299,6 @@ def main():
             elif args.out:
                 Env(data).write(args.out)
             else:
-                print("---")
                 for key, value in data.items():
                     print(f"{key}={value}")
 
