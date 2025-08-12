@@ -384,7 +384,6 @@ class TestBake(unittest.TestCase):
         expected_output = """#!/usr/bin/env envstack
 include: []
 all: &all
-  <<: *all
   DEPLOY_ROOT: ${ROOT}/${ENV}
   ENV: prod
   ENVPATH: ${DEPLOY_ROOT}/env:${ENVPATH}
@@ -415,7 +414,6 @@ windows:
         expected_output = """#!/usr/bin/env envstack
 include: []
 all: &all
-  <<: *all
   DEPLOY_ROOT: ${ROOT}/dev
   ENV: dev
   ENVPATH: ${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
@@ -449,7 +447,6 @@ windows:
         expected_output = """#!/usr/bin/env envstack
 include: [default]
 all: &all
-  <<: *all
   CHAR_LIST: [a, b, c, "${HELLO}"]
   DICT: {a: 1, b: 2, c: "${INT}"}
   FLOAT: 1.0
@@ -482,7 +479,6 @@ windows:
         expected_output = """#!/usr/bin/env envstack
 include: []
 all: &all
-  <<: *all
   DEPLOY_ROOT: !encrypt JHtST09UfS8ke0VOVn0=
   ENV: !encrypt cHJvZA==
   ENVPATH: !encrypt JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
@@ -516,7 +512,6 @@ windows:
         expected_output = """#!/usr/bin/env envstack
 include: [default]
 all: &all
-  <<: *all
   CHAR_LIST: !encrypt WydhJywgJ2InLCAnYycsICcke0hFTExPfSdd
   DICT: !encrypt eydhJzogMSwgJ2InOiAyLCAnYyc6ICcke0lOVH0nfQ==
   FLOAT: !encrypt MS4w
@@ -705,7 +700,6 @@ class TestSet(unittest.TestCase):
         expected_output = """#!/usr/bin/env envstack
 include: []
 all: &all
-  <<: *all
   BAR: ${FOO}
   FOO: foo
 darwin:
@@ -732,7 +726,6 @@ windows:
         expected_output = """#!/usr/bin/env envstack
 include: []
 all: &all
-  <<: *all
   BAR: !encrypt JHtGT099
   FOO: !encrypt Zm9v
 darwin:
