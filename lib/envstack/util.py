@@ -674,7 +674,10 @@ def partition_platform_data(data: dict):
                 common_keys.append(key)
 
     # build a new all dict for common items
-    new_all = {"<<": "*all"}  # avoids syntax errors when no vars are present
+    if common_keys or all_platform_keys or data.get("all"):
+        new_all = {}
+    else:
+        new_all = {"<<": "*all"}  # avoids syntax errors when no vars are present
     for k in common_keys:
         if k in data["all"]:
             new_all[k] = data["all"][k]

@@ -34,6 +34,7 @@ Command line interface for envstack: stacked environment variable management.
 """
 
 import argparse
+import re
 import sys
 import traceback
 
@@ -52,6 +53,64 @@ from envstack.logger import setup_stream_handler
 from envstack.wrapper import run_command
 
 setup_stream_handler()
+
+
+class StoreOnce(argparse.Action):
+    """Custom argparse action to ensure an option is only set once."""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        # if we've already seen this option once, bail
+        if getattr(namespace, f"__seen_{self.dest}", False):
+            aliases = "/".join(self.option_strings)
+            parser.error(f"{aliases} specified more than once.")
+        setattr(namespace, f"__seen_{self.dest}", True)
+        setattr(namespace, self.dest, values)
+
+
+def _parse_env_lines(lines):
+    """Parse lines of environment variables from an iterable.
+
+    :param lines: An iterable of lines, such as a file or stdin.
+    :return: A dictionary of environment variables.
+    """
+    ENV_LINE_RE = re.compile(
+        r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$"
+    )
+    data = {}
+    for raw in lines:
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        m = ENV_LINE_RE.match(line)
+        if not m:
+            # allow "key:value" and "key=value"
+            if ":" in line and "=" not in line:
+                k, v = line.split(":", 1)
+                data[k.strip()] = v.strip()
+            continue
+        k, v = m.group(1), m.group(2).strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
+            v = v[1:-1]
+        data[k] = v
+    return data
+
+
+def _parse_keyvals(items: dict):
+    """Parse a list of key=value pairs.
+
+    :param items: A list of strings in the form "key=value" or "key:value".
+    :return: A dictionary mapping keys to values.
+    """
+    out = {}
+    for kv in items:
+        if ":" in kv:
+            k, v = kv.split(":", 1)
+        elif "=" in kv:
+            k, v = kv.split("=", 1)
+        else:
+            k, v = kv, ""
+        out[k] = v
+    return out
 
 
 def parse_args():
@@ -135,8 +194,9 @@ def parse_args():
         "-s",
         "--set",
         nargs="*",
-        metavar="VAR:VALUE",
-        help="set a key:value pair in the environment",
+        action=StoreOnce,
+        metavar="VAR=VALUE",
+        help="convert KEY=VALUE pairs to envstack environment variables",
     )
     parser.add_argument(
         "--scope",
@@ -147,6 +207,7 @@ def parse_args():
         "-r",
         "--resolve",
         nargs="*",
+        action=StoreOnce,
         metavar="VAR",
         help="resolve environment variables",
     )
@@ -154,6 +215,7 @@ def parse_args():
         "-t",
         "--trace",
         nargs="*",
+        action=StoreOnce,
         metavar="VAR",
         help="trace where environment variables are being set",
     )
@@ -203,8 +265,32 @@ def main():
                 for key, value in data.items():
                     print(f"{key}={value}")
 
-        elif args.set:
-            data = dict(kv.split(":", 1) for kv in args.set)
+        elif args.set is not None:
+            force_stdin = args.set == [] or args.set == ["-"]
+            using_pipe = args.set == [] and not sys.stdin.isatty()
+            # interactive mode
+            if force_stdin and sys.stdin.isatty():
+                print(
+                    "Enter KEY=VALUE pairs. Press Ctrl+D or Ctrl+C to finish:",
+                    file=sys.stderr,
+                )
+                lines = []
+                try:
+                    while True:
+                        lines.append(input() + "\n")
+                except (EOFError, KeyboardInterrupt):
+                    pass
+                data = _parse_env_lines(lines)
+                if not data:
+                    raise ValueError("no pairs entered")
+            # pipe stdin (or '-' with non-tty stdin)
+            elif force_stdin or using_pipe:
+                data = _parse_env_lines(sys.stdin)
+                if not data:
+                    raise ValueError("no KEY=VALUE pairs found on stdin")
+            # explicit args path
+            else:
+                data = _parse_keyvals(args.set)
 
             if args.encrypt:
                 data = encrypt_environ(data, encrypt=(not args.out))

@@ -283,6 +283,8 @@ class CustomDumper(yaml.SafeDumper):
     mappings.
     """
 
+    _VAR_LIKE = re.compile(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}")
+
     def __init__(self, *args, **kwargs):
         super(CustomDumper, self).__init__(*args, **kwargs)
         self.depth = 0
@@ -290,7 +292,10 @@ class CustomDumper(yaml.SafeDumper):
         self.newanchors = {}
 
     def anchor_node(self, node: yaml.Node):
-        """Anchor the node and set the basekey for the node."""
+        """Anchor the node and set the basekey for the node.
+
+        :param node: yaml node to anchor.
+        """
         # increase depth on entering anchor_node
         self.depth += 1
 
@@ -312,14 +317,35 @@ class CustomDumper(yaml.SafeDumper):
             self.anchors.update(self.newanchors)
             self.newanchors.clear()
 
-    def quote_vars(self, node: yaml.Node):
-        """Quote variables in the node value."""
+    def sanitize_value(self, node: yaml.Node):
+        """Sanitize node value by quoting it if it starts with special characters
+        or contains a colon followed by a space, e.g. "@var", "|value", "key: value".
+
+        :param node: yaml node to sanitize.
+        """
         if isinstance(node, yaml.ScalarNode):
-            if re.match(r"\$\{[A-Za-z_][A-Za-z0-9_]*\}", node.value):
+            if node.value and node.value[0] in "@|?,%`&":
+                node.style = '"%s"' % node.value
+            elif node.value and node.value[-1] == ":":
+                node.style = '"%s"' % node.value
+            elif ": " in node.value:
+                node.style = '"%s"' % node.value
+
+    def quote_vars(self, node: yaml.Node):
+        """Quote embedded variables the node value, e.g. LIST: [1, 2, 3, ${VAR}].
+
+        :param node: yaml node to quote.
+        """
+        if isinstance(node, yaml.ScalarNode):
+            if self._VAR_LIKE.match(node.value):
                 node.style = '"%s"' % node.value
 
     def represent_data(self, data: dict):
-        """Represent data and set flow_style for nested mappings."""
+        """Represent data and set flow_style for nested mappings.
+
+        :param data: Data to represent.
+        :return: yaml node.
+        """
         # increase depth on entering represent_data
         self.depth += 1
         node = super().represent_data(data)
@@ -334,6 +360,8 @@ class CustomDumper(yaml.SafeDumper):
             node.flow_style = True
             for element in node.value:
                 self.quote_vars(element)
+        elif isinstance(node, yaml.ScalarNode):
+            self.sanitize_value(node)
 
         return node
 
