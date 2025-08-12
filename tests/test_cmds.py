@@ -59,7 +59,7 @@ class TestUnresolved(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
+        # os.environ["INTERACTIVE"] = "0"
 
     def test_default(self):
         expected_output = (
@@ -169,7 +169,7 @@ class TestEncrypt(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
+        # os.environ["INTERACTIVE"] = "0"
         os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
         # remove so we use base64 encoding by default
         if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
@@ -271,7 +271,7 @@ class TestResolved(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
+        # os.environ["INTERACTIVE"] = "0"
         os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
 
     def test_default(self):
@@ -367,7 +367,7 @@ class TestBake(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
+        # os.environ["INTERACTIVE"] = "0"
         # remove so we use base64 encoding by default
         if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
             del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
@@ -575,7 +575,7 @@ class TestCommands(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
+        # os.environ["INTERACTIVE"] = "0"
 
     def test_default_echo(self):
         """Tests the default stack with an echo command."""
@@ -640,7 +640,7 @@ class TestSet(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
+        # os.environ["INTERACTIVE"] = "0"
 
     def tearDown(self):
         if os.path.exists(self.filename):
@@ -752,7 +752,7 @@ class TestVarFlow(unittest.TestCase):
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
+        # os.environ["INTERACTIVE"] = "0"
 
     def test_default_hello(self):
         command = "%s -- echo {HELLO}" % self.envstack_bin
@@ -802,7 +802,7 @@ class TestDistman(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
+        # os.environ["INTERACTIVE"] = "0"
 
     def test_default_deploy_root(self):
         os.environ["ENV"] = "invalid"  # should not be able to override ENV
@@ -849,7 +849,7 @@ class TestIssues(unittest.TestCase):
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
         os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
-        os.environ["INTERACTIVE"] = "0"
+        # os.environ["INTERACTIVE"] = "0"
 
     def tearDown(self):
         shutil.rmtree(self.root)
