@@ -37,6 +37,7 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 import traceback
 
 from envstack import config, logger
@@ -198,21 +199,24 @@ class ShellWrapper(CommandWrapper):
         :param interactive: run the command in an interactive shell (default: True).
         """
         super(ShellWrapper, self).__init__(namespace, args)
-        self.interactive = self.get_interactive()
 
-    def get_interactive(self):
+    def get_interactive(self, env: dict = os.environ):
         """Returns whether to run the command in an interactive shell."""
-        return bool(int(os.getenv("INTERACTIVE", 1)))
+        override = env.get("INTERACTIVE")
+        if override is not None:
+            return override.lower() in {"1", "true", "yes", "on"}
+        return sys.stdin.isatty() and sys.stdout.isatty()
 
-    def get_subprocess_command(self, env: dict):
+    def get_subprocess_command(self, env: dict = os.environ):
         """Returns the command to be passed to the shell in a subprocess."""
+        interactive = self.get_interactive(env)
         if re.search(r"\$\w+", self.cmd):
-            if self.interactive:
+            if interactive:
                 return f'{config.SHELL} -i -c "{self.cmd}"'
             return f'{config.SHELL} -c "{self.cmd}"'
         else:
             escaped_command = shlex.quote(self.cmd)
-            if self.interactive:
+            if interactive:
                 return f"{config.SHELL} -i -c {escaped_command}"
             return f"{config.SHELL} -c {escaped_command}"
 

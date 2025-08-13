@@ -37,6 +37,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import unittest
 
 import envstack
@@ -59,7 +60,6 @@ class TestUnresolved(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
 
     def test_default(self):
         expected_output = (
@@ -169,7 +169,6 @@ class TestEncrypt(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
         os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
         # remove so we use base64 encoding by default
         if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
@@ -271,7 +270,6 @@ class TestResolved(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
         os.environ["ROOT"] = "/var/tmp/pipe"  # ROOT cannot be overridden
 
     def test_default(self):
@@ -295,7 +293,7 @@ STACK=dev
         self.assertEqual(output, expected_output)
 
     def test_distman(self):
-        expected_output = f"""DEPLOY_ROOT={self.root}/prod
+        expected_output = f"""DEPLOY_ROOT={self.root}/{os.getenv('ENV', 'prod')}
 ROOT={self.root}
 STACK=distman
 """
@@ -367,7 +365,6 @@ class TestBake(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
         # remove so we use base64 encoding by default
         if AESGCMEncryptor.KEY_VAR_NAME in os.environ:
             del os.environ[AESGCMEncryptor.KEY_VAR_NAME]
@@ -575,7 +572,6 @@ class TestCommands(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
 
     def test_default_echo(self):
         """Tests the default stack with an echo command."""
@@ -640,7 +636,6 @@ class TestSet(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
 
     def tearDown(self):
         if os.path.exists(self.filename):
@@ -752,7 +747,6 @@ class TestVarFlow(unittest.TestCase):
         )
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
 
     def test_default_hello(self):
         command = "%s -- echo {HELLO}" % self.envstack_bin
@@ -802,7 +796,6 @@ class TestDistman(unittest.TestCase):
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
-        os.environ["INTERACTIVE"] = "0"
 
     def test_default_deploy_root(self):
         os.environ["ENV"] = "invalid"  # should not be able to override ENV
@@ -849,7 +842,6 @@ class TestIssues(unittest.TestCase):
             os.path.dirname(__file__), "..", "bin", "envstack"
         )
         os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
-        os.environ["INTERACTIVE"] = "0"
 
     def tearDown(self):
         shutil.rmtree(self.root)
@@ -961,6 +953,41 @@ class TestIssues(unittest.TestCase):
             command, start_new_session=True, shell=True, universal_newlines=True
         )
         self.assertEqual(output, expected_output)
+
+    def test_issue_66(self):
+        """Test hanging on interactive shells."""
+        # create a hostile .bashrc that will hang if loaded
+        tmp_home = tempfile.mkdtemp()
+        bashrc_path = os.path.join(tmp_home, ".bashrc")
+        with open(bashrc_path, "w") as f:
+            f.write('echo "Sourcing TEST .bashrc (PID $$)"\n')
+            f.write('read -p "Press ENTER to continue: " _\n')
+
+        # command to run envstack without inheriting our terminal
+        # use login shell to pick up bashrc if interactive
+        cmd = [
+            "bash",
+            "-lc",
+            'envstack -- "echo hello from envstack"',
+        ]
+
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,  # no user input possible
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env={**os.environ, "HOME": tmp_home},
+        )
+
+        err = None
+        try:
+            _, err = proc.communicate(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            self.fail("envstack command hung")
+        else:
+            if err:
+                self.fail("STDERR: " + err.decode())
 
 
 if __name__ == "__main__":
