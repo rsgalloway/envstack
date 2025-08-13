@@ -426,8 +426,15 @@ def get_sources(
         found_files = []
         for directory in search_paths:
             potential_file = Path(directory) / file_basename
-            if potential_file.exists() and potential_file not in found_files:
-                found_files.append(potential_file)
+            try:
+                if potential_file.exists() and potential_file not in found_files:
+                    found_files.append(potential_file)
+            except PermissionError:
+                logger.log.warning(f"Permission denied: {potential_file}")
+                continue
+            except OSError:
+                logger.log.warning(f"Error accessing {potential_file}")
+                continue
         if not found_files and not ignore_missing:
             raise TemplateNotFound(  # noqa
                 f"{file_basename} not found in ENVPATH or scope."
