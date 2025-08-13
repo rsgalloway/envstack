@@ -987,7 +987,7 @@ class TestIssues(unittest.TestCase):
             self.fail("envstack command hung")
         else:
             if err:
-                print("STDERR:", err.decode())
+                self.fail("STDERR:", err.decode())
 
 
 if __name__ == "__main__":
