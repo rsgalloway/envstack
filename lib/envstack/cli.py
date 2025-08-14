@@ -74,23 +74,33 @@ def _parse_env_lines(lines):
     :return: A dictionary of environment variables.
     """
     ENV_LINE_RE = re.compile(
-        r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$"
+        r"""
+        ^\s*
+        (?:export\s+)?
+        (?P<key>(?:<<|[A-Za-z_][A-Za-z0-9_]*))
+        \s*
+        (?P<op>[:=])
+        \s*
+        (?P<val>.*)
+        \s*$
+        """,
+        re.VERBOSE,
     )
-    data = {}
-    for raw in lines:
-        line = raw.strip()
-        if not line or line.startswith("#"):
-            continue
+
+    def parse_line(line: str):
         m = ENV_LINE_RE.match(line)
         if not m:
-            # allow "key:value" and "key=value"
-            if ":" in line and "=" not in line:
-                k, v = line.split(":", 1)
-                data[k.strip()] = v.strip()
-            continue
-        k, v = m.group(1), m.group(2).strip()
-        if len(v) >= 2 and v[0] == v[-1] and v[0] in ("'", '"'):
-            v = v[1:-1]
+            return None
+        key = m.group("key")
+        val = m.group("val")
+        # strip matching quotes only if present
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in ("'", '"'):
+            val = val[1:-1]
+        return key, val
+
+    data = {}
+    for raw in lines:
+        k, v = parse_line(raw.strip())
         data[k] = v
     return data
 
@@ -271,7 +281,7 @@ def main():
             # interactive mode
             if force_stdin and sys.stdin.isatty():
                 print(
-                    "Enter KEY=VALUE pairs. Press Ctrl+D or Ctrl+C to finish:",
+                    "Enter ENV:VAR or ENV=VAR pairs. Press Ctrl+D or Ctrl+C to finish:",
                     file=sys.stderr,
                 )
                 lines = []
@@ -282,7 +292,7 @@ def main():
                     pass
                 data = _parse_env_lines(lines)
                 if not data:
-                    raise ValueError("no pairs entered")
+                    return 0
             # pipe stdin (or '-' with non-tty stdin)
             elif force_stdin or using_pipe:
                 data = _parse_env_lines(sys.stdin)
