@@ -144,11 +144,11 @@ class TestEvaluateModifiers(unittest.TestCase):
             evaluate_modifiers(expression, environ)
 
     def test_cyclical_reference_error(self):
-        """Test cyclical reference error."""
+        """Test variable with cyclic reference is empty string."""
         expression = "${VAR}"
         environ = {"VAR": "${FOO}", "FOO": "${BAR}", "BAR": "${VAR}"}
-        with self.assertRaises(CyclicalReference):
-            evaluate_modifiers(expression, environ)
+        value = evaluate_modifiers(expression, environ)
+        self.assertEqual(value, "")
 
     def test_multiple_substitutions(self):
         """Test multiple substitutions."""
@@ -745,31 +745,36 @@ class TestIssue18(unittest.TestCase):
     """Tests for issue #18."""
 
     def test_non_cyclical_reference_error_1(self):
+        """Test non-cyclical reference with self-referencing."""
         expression = "${FOO}"
         environ = {"FOO": "${FOO}"}
         self.assertEqual(evaluate_modifiers(expression, environ), "")
 
     def test_non_cyclical_reference_error_2(self):
+        """Test non-cyclical reference with self-referencing."""
         expression = "${FOO}"
         environ = {"FOO": "foo:${FOO}"}
         self.assertEqual(evaluate_modifiers(expression, environ), "foo:")
 
     def test_non_cyclical_reference_error_3(self):
+        """Test non-cyclical reference with self-referencing."""
         expression = "${FOO}"
         environ = {"FOO": "bar/${FOO}"}
         self.assertEqual(evaluate_modifiers(expression, environ), "bar/")
 
     def test_cyclical_reference_error_1(self):
+        """Test variable with cyclic reference is empty string."""
         expression = "${VAR}"
         environ = {"VAR": "${FOO}", "FOO": "${BAR}", "BAR": "${VAR}"}
-        with self.assertRaises(CyclicalReference):
-            evaluate_modifiers(expression, environ)
+        value = evaluate_modifiers(expression, environ)
+        self.assertEqual(value, "")
 
     def test_cyclical_reference_error_2(self):
+        """Test variable with cyclic reference is empty string."""
         expression = "${FOO}"
         environ = {"FOO": "${BAR}", "BAR": "${FOO}"}
-        with self.assertRaises(CyclicalReference):
-            evaluate_modifiers(expression, environ)
+        value = evaluate_modifiers(expression, environ)
+        self.assertEqual(value, "")
 
 
 if __name__ == "__main__":

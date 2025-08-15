@@ -172,6 +172,7 @@ class TestEnv(unittest.TestCase):
     def test_bake(self):
         """Tests baking an environment."""
         from envstack.env import load_environ
+
         env = load_environ("thing")
         baked = env.bake()
         for k, v in env.items():
@@ -182,6 +183,7 @@ class TestEnv(unittest.TestCase):
     def test_bake_out(self):
         """Tests bake, write and load an environment."""
         from envstack.env import load_environ
+
         env1 = load_environ("thing")
         self.filename = "test_bake_out.env"
         env1.write(self.filename)
@@ -194,6 +196,7 @@ class TestEnv(unittest.TestCase):
     def test_write_simple(self):
         """Tests writing an environment to a file."""
         from envstack.env import load_environ, resolve_environ
+
         env1 = Env({"FOO": "foo", "BAR": "${FOO}"})
         self.filename = "test_write_simple.env"
         env1.write(self.filename)
@@ -210,6 +213,7 @@ class TestEnv(unittest.TestCase):
         """Tests writing an environment with a custom node to a file."""
         from envstack.env import load_environ, resolve_environ
         from envstack.node import EncryptedNode
+
         env1 = Env({"FOO": "foo", "BAR": EncryptedNode("bar")})
         self.filename = "test_write_custom.env"
         # write it out and reload it
@@ -222,8 +226,8 @@ class TestEnv(unittest.TestCase):
         self.assertEqual(env1["FOO"], "foo")
         self.assertEqual(env1["BAR"], EncryptedNode("bar"))
         self.assertEqual(env2["FOO"], "foo")
-        self.assertEqual(env2["BAR"], EncryptedNode('YmFy'))
-        self.assertEqual(EncryptedNode('YmFy').resolve(env=env2), "bar")
+        self.assertEqual(env2["BAR"], EncryptedNode("YmFy"))
+        self.assertEqual(EncryptedNode("YmFy").resolve(env=env2), "bar")
         self.assertEqual(env3["FOO"], "foo")
         self.assertEqual(env3["BAR"], "bar")
         self.assertEqual(env4["FOO"], "foo")
@@ -477,7 +481,7 @@ class TestResolveEnviron(unittest.TestCase):
         os.environ["ROOT"] = "/mnt/pipe"
         os.environ["ENV"] = "dev"
         env = {
-            "DEPLOY_ROOT": "${ROOT}/${ENV}}",
+            "DEPLOY_ROOT": "${ROOT}/${ENV}",
             "ENV": "${ENV:=prod}",
             "ROOT": "${ROOT:=/var/tmp}",
         }
@@ -490,7 +494,7 @@ class TestResolveEnviron(unittest.TestCase):
 
         env_value = os.getenv("ENV", "prod")
         env = {
-            "DEPLOY_ROOT": "${MOUNT}/${DRIVE}/${ENV}}",
+            "DEPLOY_ROOT": "${MOUNT}/${DRIVE}/${ENV}",
             "ENV": "${ENV:=prod}",
             "MOUNT": "/mnt",
             "DRIVE": "${DRIVE:=pipe}",
@@ -562,7 +566,7 @@ class TestResolveEnviron(unittest.TestCase):
         env = {
             "VAR": "${VAR:=${FOO}}",
             "FOO": "${FOO:=/foo/bar}",
-            "BAR": "${BAZ}",  # has null value
+            "BAR": "${BAZ}",  # has emptry string value
         }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/foo/bar")
@@ -576,7 +580,7 @@ class TestResolveEnviron(unittest.TestCase):
         env = {
             "VAR": "${VAR:=${FOO}}",
             "FOO": "${FOO:=${BAR}}",
-            "BAR": "${BAZ:=/baz/qux}", # has a default value
+            "BAR": "${BAZ:=/baz/qux}",  # has a default value
         }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/baz/qux")
@@ -584,14 +588,14 @@ class TestResolveEnviron(unittest.TestCase):
         self.assertEqual(resolved["BAR"], "/baz/qux")
 
     def test_expansion_modifier_deferred_null_value(self):
-        """Tests expansion modifier with multiple deferred values and null."""
+        """Tests expansion modifier with multiple deferred values and empty string."""
         from envstack.env import resolve_environ
 
         env = {
             "VAR": "${VAR:=${FOO}}",
             "FOO": "${FOO:=${BAR}}",
             "BAR": "${BAZ:=/baz/qux}",
-            "BAZ": "${QUX}",  # has null value
+            "BAZ": "${QUX}",  # has empty string value
         }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/baz/qux")
@@ -999,11 +1003,14 @@ class TestIssues(unittest.TestCase):
     def test_issue_51(self):
         """Tests issue #51 with URL values on all platforms."""
         from envstack.env import load_environ
-        env = Env({
-            "URL": "https://example.com",
-            "S3": "s3://bucket.amazonaws.com",
-            "GIT": "git://path/to/repo.git",
-        })
+
+        env = Env(
+            {
+                "URL": "https://example.com",
+                "S3": "s3://bucket.amazonaws.com",
+                "GIT": "git://path/to/repo.git",
+            }
+        )
         self.filename = os.path.join(self.root, "test_issue_51.env")
         env.write(self.filename)
         self.assertEqual(env["URL"], "https://example.com")
@@ -1092,16 +1099,9 @@ class TestIssues(unittest.TestCase):
         # create grandparent.env that sets a value for FOO
         grandparent = {
             "include": [],
-            "all": {
-                "FOO": "grandparent",
-                "BAR": "${BAR:=c}",
-                "BAZ": "baz",
-                "NUM": "2"
-            }
+            "all": {"FOO": "grandparent", "BAR": "${BAR:=c}", "BAZ": "baz", "NUM": "2"},
         }
-        grandparent_env_file = os.path.join(
-            self.root, "prod", "env", "grandparent.env"
-        )
+        grandparent_env_file = os.path.join(self.root, "prod", "env", "grandparent.env")
         grandparent_source = Source(grandparent_env_file)
         grandparent_source.data = grandparent
         grandparent_source.write()
@@ -1114,8 +1114,8 @@ class TestIssues(unittest.TestCase):
                 "BAR": "${BAR:=b}",
                 "BAZ": "${BAZ}",
                 "INT": "1",
-                "NUM": "${NUM:=1}"
-            }
+                "NUM": "${NUM:=1}",
+            },
         }
         parent_env_file = os.path.join(self.root, "prod", "env", "parent.env")
         parent_source = Source(parent_env_file)
@@ -1136,8 +1136,8 @@ class TestIssues(unittest.TestCase):
                 "BAZ": "${BAZ}",
                 "INT": "${INT}",
                 "NUM": "${NUM:=0}",
-                "TEST": "foo"
-            }
+                "TEST": "foo",
+            },
         }
         child_env_file = os.path.join(self.root, "prod", "env", "child.env")
         child_source = Source(child_env_file)
@@ -1161,7 +1161,7 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(resolved["TEST"], "foo")
 
         # simulate a new process, and init the environment
-        envstack.revert()  
+        envstack.revert()
         envstack.init("child")
 
         # os.environ expects str values
@@ -1171,6 +1171,32 @@ class TestIssues(unittest.TestCase):
         self.assertEqual(os.getenv("INT"), "1")
         self.assertEqual(os.getenv("NUM"), "2")
         self.assertEqual(os.getenv("TEST"), "foo")
+
+    def test_issue_59(self):
+        """Tests for issue #59: multiple levels of indirect references."""
+        from envstack.env import resolve_environ
+
+        # two levels of indirect references with defaults
+        environ = {"VAR": "${FOO:=var}", "FOO": "${BAR:=foo}", "BAR": "bar"}
+        resolved = resolve_environ(environ)
+        self.assertEqual(resolved["VAR"], "bar")
+        self.assertEqual(resolved["FOO"], "bar")
+        self.assertEqual(resolved["BAR"], "bar")
+
+        # four levels of indirect references w/o defaults
+        environ = {
+            "VAR": "${FOO}",
+            "FOO": "${BAR}",
+            "BAR": "${BAZ}",
+            "BAZ": "${QUX}",
+            "QUX": "foo",
+        }
+        resolved = resolve_environ(environ)
+        self.assertEqual(resolved["VAR"], "foo")
+        self.assertEqual(resolved["FOO"], "foo")
+        self.assertEqual(resolved["BAR"], "foo")
+        self.assertEqual(resolved["BAZ"], "foo")
+        self.assertEqual(resolved["QUX"], "foo")
 
 
 if __name__ == "__main__":

@@ -834,12 +834,12 @@ def resolve_environ(env: Env):
     env_keys.update(get_keys_from_env(os.environ))
 
     # decrypt custom nodes
-    for key, value in env_copy.items():
+    for key, value in list(env_copy.items()):
         if type(value) in custom_node_types:
             env_copy[key] = value.resolve(env=env_keys)
 
     # resolve environment variables after decrypting custom nodes
-    for key, value in env_copy.items():
+    for key, value in list(env_copy.items()):
         value = util.evaluate_modifiers(value, environ=env_copy, parent=included)
         resolved[key] = util.safe_eval(value)
 
