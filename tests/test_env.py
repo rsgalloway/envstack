@@ -566,7 +566,7 @@ class TestResolveEnviron(unittest.TestCase):
         env = {
             "VAR": "${VAR:=${FOO}}",
             "FOO": "${FOO:=/foo/bar}",
-            "BAR": "${BAZ}",  # has null value
+            "BAR": "${BAZ}",  # has emptry string value
         }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/foo/bar")
@@ -588,14 +588,14 @@ class TestResolveEnviron(unittest.TestCase):
         self.assertEqual(resolved["BAR"], "/baz/qux")
 
     def test_expansion_modifier_deferred_null_value(self):
-        """Tests expansion modifier with multiple deferred values and null."""
+        """Tests expansion modifier with multiple deferred values and empty string."""
         from envstack.env import resolve_environ
 
         env = {
             "VAR": "${VAR:=${FOO}}",
             "FOO": "${FOO:=${BAR}}",
             "BAR": "${BAZ:=/baz/qux}",
-            "BAZ": "${QUX}",  # has null value
+            "BAZ": "${QUX}",  # has empty string value
         }
         resolved = resolve_environ(env)
         self.assertEqual(resolved["VAR"], "/baz/qux")

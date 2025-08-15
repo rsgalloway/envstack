@@ -144,7 +144,7 @@ class TestEvaluateModifiers(unittest.TestCase):
             evaluate_modifiers(expression, environ)
 
     def test_cyclical_reference_error(self):
-        """Test variable with cyclic reference is null."""
+        """Test variable with cyclic reference is empty string."""
         expression = "${VAR}"
         environ = {"VAR": "${FOO}", "FOO": "${BAR}", "BAR": "${VAR}"}
         value = evaluate_modifiers(expression, environ)
@@ -763,14 +763,14 @@ class TestIssue18(unittest.TestCase):
         self.assertEqual(evaluate_modifiers(expression, environ), "bar/")
 
     def test_cyclical_reference_error_1(self):
-        """Test variable with cyclic reference is null."""
+        """Test variable with cyclic reference is empty string."""
         expression = "${VAR}"
         environ = {"VAR": "${FOO}", "FOO": "${BAR}", "BAR": "${VAR}"}
         value = evaluate_modifiers(expression, environ)
         self.assertEqual(value, "")
 
     def test_cyclical_reference_error_2(self):
-        """Test variable with cyclic reference is null."""
+        """Test variable with cyclic reference is empty string."""
         expression = "${FOO}"
         environ = {"FOO": "${BAR}", "BAR": "${FOO}"}
         value = evaluate_modifiers(expression, environ)
