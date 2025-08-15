@@ -374,6 +374,7 @@ def evaluate_modifiers(
         return isinstance(s, str) and s != "" and not is_template(s)
 
     def substitute_variable(match):
+        # extract variable name, operator, and argument from the match
         var_name = match.group(1)
         operator = match.group(2)  # '=', '-', '?', or None
         argument = match.group(3)  # may be None
@@ -387,7 +388,7 @@ def evaluate_modifiers(
         # cycle / self-reference guard
         if var_name in resolving:
             if operator in ("=", "-"):
-                # If OS/parent provides a value, that *wins* over the default.
+                # if os/parent provides a value, that wins over the default
                 if override:
                     return str(override)
                 default = evaluate_modifiers(argument or "", environ, parent, resolving)
@@ -408,21 +409,21 @@ def evaluate_modifiers(
 
             # defaults branch (:=, :-)
             if operator in ("=", "-"):
-                # 1) Explicit env/parent wins if non-empty (bash: considered "set")
+                # 1) explicit env/parent wins if non-empty (bash: considered "set")
                 if non_empty(override):
                     return str(override)
 
-                # 2) Compute the effective value of the current entry
+                # 2) compute the effective value of the current entry
                 if is_template(current):
                     eff = evaluate_modifiers(current, environ, parent, resolving)
                 else:
                     eff = current or ""
 
-                # 3) If effective value is non-empty, do NOT take default
+                # 3) if effective value is non-empty, do NOT take default
                 if non_empty(eff):
                     return str(eff)
 
-                # 4) Unset or null → use default (and assign for :=)
+                # 4) unset or null,  use default (and assign for :=)
                 default = evaluate_modifiers(argument or "", environ, parent, resolving)
                 if operator == "=":
                     environ[var_name] = default
@@ -445,7 +446,7 @@ def evaluate_modifiers(
                     return current  # file literal wins
                 if is_template(current):
                     return str(evaluate_modifiers(current, environ, parent, resolving))
-                # current is unset/empty → use parent/os if present, else empty
+                # current is unset/empty, use parent/os if present, else empty
                 return str(override or "")
 
             # simple ${VAR}
