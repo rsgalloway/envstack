@@ -477,7 +477,7 @@ class TestResolveEnviron(unittest.TestCase):
         os.environ["ROOT"] = "/mnt/pipe"
         os.environ["ENV"] = "dev"
         env = {
-            "DEPLOY_ROOT": "${ROOT}/${ENV}}",
+            "DEPLOY_ROOT": "${ROOT}/${ENV}",
             "ENV": "${ENV:=prod}",
             "ROOT": "${ROOT:=/var/tmp}",
         }
@@ -490,7 +490,7 @@ class TestResolveEnviron(unittest.TestCase):
 
         env_value = os.getenv("ENV", "prod")
         env = {
-            "DEPLOY_ROOT": "${MOUNT}/${DRIVE}/${ENV}}",
+            "DEPLOY_ROOT": "${MOUNT}/${DRIVE}/${ENV}",
             "ENV": "${ENV:=prod}",
             "MOUNT": "/mnt",
             "DRIVE": "${DRIVE:=pipe}",

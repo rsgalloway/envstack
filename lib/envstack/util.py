@@ -45,7 +45,6 @@ from collections import OrderedDict
 import yaml
 
 from envstack import config
-from envstack.exceptions import CyclicalReference
 from envstack.node import AESGCMNode, Base64Node, EncryptedNode, FernetNode
 
 # default memoization cache timeout in seconds
@@ -326,104 +325,154 @@ def get_stack_name(name: str = config.DEFAULT_NAMESPACE):
         raise ValueError("Invalid input type. Expected string, tuple, or list.")
 
 
-def evaluate_modifiers(expression: str, environ: dict = os.environ, parent: dict = {}):
+def evaluate_modifiers(
+    expression: str,
+    environ: dict = os.environ,
+    parent: dict = {},
+    resolving: set = None,
+):
     """
-    Evaluates Bash-like variable expansion modifiers in a string, resolves
-    custom node types, and evaluates lists and dictionaries.
+    Evaluates Bash-like variable expansion modifiers.
 
-    Supported modifiers:
-       - values like "world" (no substitution)
-       - ${VAR} for direct substitution (empty string if unset)
-       - ${VAR:=default} to set and use a default value if unset
-       - ${VAR:?error message} to raise an error if the variable is unset
+    - ${VAR}              → empty string if unset
+    - ${VAR:=default}     → if unset/null, set to default and use it
+    - ${VAR:-default}     → if unset/null, use default (do not set)
+    - ${VAR:?message}     → error if unset/null
 
-    :param expression: The bash-like string to evaluate.
-    :param environ: The environment dictionary to use for variable substitution.
-    :param parent: The parent environment dictionary to use for variable substitution.
-    :return: The resulting evaluated string with all substitutions applied.
-    :raises CyclicalReference: If a cyclical reference is detected.
-    :raises ValueError: If a variable is undefined and has the :? syntax with an
-        error message.
+    :param expression: The string to evaluate.
+    :param environ: The environment variables to use for substitution.
+    :param parent: Parent environment variables to use for substitution.
+    :param resolving: A set of currently resolving variables to prevent cycles.
+    :returns: The evaluated string with variables substituted.
+    :raises ValueError: If a variable is not set and a message is provided.
     """
+    if resolving is None:
+        resolving = set()
 
     def sanitize_value(value):
-        """Sanitize the value before returning it."""
-        # HACK: remove trailing curly braces if they exist
-        if type(value) is str and value.endswith("}") and not value.startswith("${"):
+        # sanitize the value to ensure it is a string or a path
+        if (
+            isinstance(value, str)
+            and value.endswith("}")
+            and not value.startswith("${")
+        ):
             return value.rstrip("}")
-        # sanitize and de-dupe path-like values
-        elif type(value) is str and detect_path(value):
+        elif isinstance(value, str) and detect_path(value):
             return dedupe_paths(value)
         return value
 
+    def is_template(s: str) -> bool:
+        # Check if the string is a template variable like ${VAR}
+        return isinstance(s, str) and bool(variable_pattern.search(s))
+
+    def non_empty(s: str) -> bool:
+        # non-empty string, not just whitespace
+        return isinstance(s, str) and s != ""
+
+    def is_literal(s: str) -> bool:
+        # non-empty, does not contain ${...}
+        return isinstance(s, str) and s != "" and not is_template(s)
+
     def substitute_variable(match):
-        """Substitute a variable match with its value."""
         var_name = match.group(1)
-        operator = match.group(2)
-        argument = match.group(3)
-        parent_value = parent.get(var_name, null)
+        operator = match.group(2)  # '=', '-', '?', or None
+        argument = match.group(3)  # may be None
+        parent_value = parent.get(var_name, "")
         override = os.getenv(var_name, parent_value)
-        value = str(environ.get(var_name, parent_value))
+        current = str(
+            environ.get(var_name, parent_value or "")
+        )  # current value we have
         varstr = "${%s}" % var_name
 
-        # check for self-referential values, e.g. FOO: ${FOO}
-        is_recursive = value and varstr in value
-        if is_recursive and override:
-            value = value.replace(varstr, override)
-        else:
-            value = value.replace(varstr, null)
+        # cycle / self-reference guard
+        if var_name in resolving:
+            if operator in ("=", "-"):
+                # If OS/parent provides a value, that *wins* over the default.
+                if override:
+                    return str(override)
+                default = evaluate_modifiers(argument or "", environ, parent, resolving)
+                if operator == "=":
+                    environ[var_name] = default
+                return str(default)
+            elif operator == "?":
+                msg = argument or f"{var_name} is not set"
+                raise ValueError(msg)
+            else:  # plain ${VAR}
+                return str(override or "")
 
-        # ${VAR:=default} or ${VAR:-default}
-        if operator in ("=", "-"):
-            # get value from os.environ first
-            if override:
-                value = override
-            # then from the included (parent) environment
-            elif parent_value:
-                value = parent_value
-            # then look for a value in this environment
-            elif variable_pattern.search(value):
-                value = evaluate_modifiers(argument, environ, parent)
-            # finally, use the default value
+        resolving.add(var_name)
+        try:
+            # replace literal self-references inside current (best-effort)
+            if current and varstr in current:
+                current = current.replace(varstr, override or "")
+
+            # defaults branch (:=, :-)
+            if operator in ("=", "-"):
+                # 1) Explicit env/parent wins if non-empty (bash: considered "set")
+                if non_empty(override):
+                    return str(override)
+
+                # 2) Compute the effective value of the current entry
+                if is_template(current):
+                    eff = evaluate_modifiers(current, environ, parent, resolving)
+                else:
+                    eff = current or ""
+
+                # 3) If effective value is non-empty, do NOT take default
+                if non_empty(eff):
+                    return str(eff)
+
+                # 4) Unset or null → use default (and assign for :=)
+                default = evaluate_modifiers(argument or "", environ, parent, resolving)
+                if operator == "=":
+                    environ[var_name] = default
+                return str(default)
+
+            # error branch (:?)
+            elif operator == "?":
+                if not current:
+                    msg = argument or f"{var_name} is not set"
+                    raise ValueError(msg)
+                # resolve if it contains vars
+                return (
+                    evaluate_modifiers(current, environ, parent, resolving)
+                    if variable_pattern.search(current)
+                    else current
+                )
+
+            elif operator is None:
+                if is_literal(current):
+                    return current  # file literal wins
+                if is_template(current):
+                    return str(evaluate_modifiers(current, environ, parent, resolving))
+                # current is unset/empty → use parent/os if present, else empty
+                return str(override or "")
+
+            # simple ${VAR}
             else:
-                value = value or argument
+                value = current or override or ""
+                if variable_pattern.search(value):
+                    value = evaluate_modifiers(value, environ, parent, resolving)
+                return str(value)
 
-        # ${VAR:?error message}
-        elif operator == "?":
-            if not value:
-                error_message = argument if argument else f"{var_name} is not set"
-                raise ValueError(error_message)
-
-        # handle recursive references
-        elif variable_pattern.search(value):
-            value = evaluate_modifiers(value, environ, parent)
-
-        # handle simple ${VAR} substitution
-        elif operator is None:
-            value = value or override
-
-        return str(value)
+        finally:
+            resolving.discard(var_name)
 
     try:
-        # expression must be a string
-        if type(expression) in (int, float, bool):
+        if isinstance(expression, (int, float, bool)):
             expression = str(expression)
 
-        # substitute all matches in the expression
         result = variable_pattern.sub(substitute_variable, expression)
 
-        # evaluate any remaining modifiers, eg. ${VAR:=${FOO:=bar}}
         if variable_pattern.search(result):
-            result = evaluate_modifiers(result, environ)
+            result = evaluate_modifiers(result, environ, parent, resolving)
 
-    # detect recursion errors, cycles are not errors
     except RecursionError:
-        result = null
-        # TODO: remove in next version (cycles are not errors)
-        raise CyclicalReference(f"Cyclical reference detected in {expression}")
+        # treat cycles as empty string instead of crashing (like bash)
+        result = ""
 
-    # TODO: find a better way to handle TypeErrors
     except TypeError:
+        # node/list/dict handlers
         if isinstance(expression, AESGCMNode):
             result = expression.resolve(env=environ)
         elif isinstance(expression, Base64Node):
@@ -433,10 +482,10 @@ def evaluate_modifiers(expression: str, environ: dict = os.environ, parent: dict
         elif isinstance(expression, FernetNode):
             result = expression.resolve(env=environ)
         elif isinstance(expression, list):
-            result = [(evaluate_modifiers(v, environ)) for v in expression]
+            result = [evaluate_modifiers(v, environ, parent) for v in expression]
         elif isinstance(expression, dict):
             result = {
-                k: (evaluate_modifiers(v, environ)) for k, v in expression.items()
+                k: evaluate_modifiers(v, environ, parent) for k, v in expression.items()
             }
         else:
             result = expression
