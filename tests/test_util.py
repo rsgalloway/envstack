@@ -449,9 +449,9 @@ class TestSplitPaths(unittest.TestCase):
         self.assertEqual(result, ["C:\\Program Files\\Python", "D:/path2", "E:/path3"])
 
         # lowercase drive letter
-        # paths = "c:\\Program Files\\Python:d:/path2:e:/path3"
-        # result = split_windows_paths(paths)
-        # self.assertEqual(result, ["c:\\Program Files\\Python", "d:/path2", "e:/path3"])
+        paths = "c:\\Program Files\\Python:d:/path2:e:/path3"
+        result = split_windows_paths(paths)
+        self.assertEqual(result, ["c:\\Program Files\\Python", "d:/path2", "e:/path3"])
 
         paths = "C:\\Program Files\\Python"
         result = split_windows_paths(paths)
