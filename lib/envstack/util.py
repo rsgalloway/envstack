@@ -54,7 +54,6 @@ CACHE_TIMEOUT = 5
 null = ""
 
 # regular expression pattern for matching windows drive letters
-# TODO: support lowercase drive letters (issue #53)
 drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[a-zA-Z]:[/\\])")
 
 # regular expression pattern for bash-like variable expansion
