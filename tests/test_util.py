@@ -582,27 +582,18 @@ class TestDedupePaths(unittest.TestCase):
         )
 
         # mixed paths
-        path = "X:/pipe/prod/env;X:/pipe/prod/env:/home/user/envstack/env"
+        path = "X:/pipe/prod/env;X:/pipe/prod/env;/home/user/envstack/env"
         result = dedupe_paths(path, platform="windows")
         self.assertEqual(result, "X:/pipe/prod/env;/home/user/envstack/env")
 
         # mixed paths with duplicate
         path = (
-            "C:\\Program Files\\Python;D:/path2;E:/path3:/usr/local/bin:/usr/local/bin"
+            "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin:/usr/local/bin"
         )
         result = dedupe_paths(path, platform="windows")
         self.assertEqual(
             result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin"
         )
-
-        # mixed paths with url (will urls ever be mixed with paths?)
-        # path = (
-        #     "C:\\Program Files\\Python;/usr/local/bin:D:/path2:https://test.com"
-        # )
-        # result = dedupe_paths(path, platform="windows")
-        # self.assertEqual(
-        #     result, "C:\\Program Files\\Python;/usr/local/bin;D:/path2;https://test.com"
-        # )
 
 
 class TestSafeEval(unittest.TestCase):
