@@ -156,8 +156,7 @@ def split_windows_paths(path_str: str):
     tokens = [p.strip() for p in path_str.split(";") if p.strip()]
 
     for token in tokens:
-        # token is windows-style, insert a marker before drive letters
-        # TODO: support lowercase drive letters
+        # windows-style path token; insert a marker before drive letters
         if re.match(r"^[a-zA-Z]:[/\\]", token) or "\\" in token:
             modified = drive_letter_pattern.sub(lambda m: "|" + m.group("drive"), token)
             # split on the marker, then on colons that are not in drive-letters
