@@ -31,7 +31,7 @@
 # This script provides tab completion for the `envstack` command.
 #
 # INSTALLATION:
-# copy to /etc/bash_completion.d/ or source in your .bashrc
+# copy to /etc/bash_completion.d/envstack or source in your .bashrc
 #
 
 _envstack_completions() {
