@@ -222,6 +222,10 @@ def detect_path(s: str):
     if not s:
         return False
 
+    # exclude variables
+    if s.startswith("$") or s.startswith("{") or s.endswith("}"):
+        return False
+
     # exclude URL-like strings (scheme://...)
     if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", s):
         return False
