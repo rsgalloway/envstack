@@ -34,6 +34,7 @@ Contains unit tests for running commands.
 """
 
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -44,6 +45,19 @@ import envstack
 from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
 
 from test_env import create_test_root, update_env_file
+
+
+def make_command(envstack_bin: str, filename: str, *args: str):
+    """
+    Build a cross-platform shell command that runs envstack (with args)
+    and then prints the output file.
+    """
+    envstack_cmd = f'{envstack_bin} {" ".join(args)} -o "{filename}"'
+
+    if os.name == "nt" or platform.system().lower().startswith("win"):
+        return f'{envstack_cmd} & type "{filename}"'
+    else:
+        return f'{envstack_cmd}; cat "{filename}"'
 
 
 class TestUnresolved(unittest.TestCase):
@@ -377,7 +391,7 @@ class TestBake(unittest.TestCase):
 
     def test_default(self):
         """Tests baking the default stack."""
-        command = f"%s -o {self.filename}; cat {self.filename}" % self.envstack_bin
+        command = make_command(self.envstack_bin, self.filename)
         expected_output = """#!/usr/bin/env envstack
 include: []
 all: &all
@@ -407,7 +421,7 @@ windows:
 
     def test_dev(self):
         """Tests baking the dev stack."""
-        command = f"%s dev -o {self.filename}; cat {self.filename}" % self.envstack_bin
+        command = make_command(self.envstack_bin, self.filename, "dev")
         expected_output = """#!/usr/bin/env envstack
 include: []
 all: &all
@@ -437,9 +451,8 @@ windows:
 
     def test_thing(self):
         """Tests baking the thing stack with depth of 1."""
-        command = (
-            f"%s thing -o {self.filename} --depth 1; cat {self.filename}"
-            % self.envstack_bin
+        command = make_command(
+            self.envstack_bin, self.filename, "thing", "--depth", "1"
         )
         expected_output = """#!/usr/bin/env envstack
 include: [default]
@@ -470,9 +483,7 @@ windows:
 
     def test_default_encrypted(self):
         """Tests baking the default stack encrypted with base64."""
-        command = (
-            f"%s --encrypt -o {self.filename}; cat {self.filename}" % self.envstack_bin
-        )
+        command = make_command(self.envstack_bin, self.filename, "--encrypt")
         expected_output = """#!/usr/bin/env envstack
 include: []
 all: &all
@@ -502,9 +513,8 @@ windows:
 
     def test_thing_encrypted(self):
         """Tests baking the thing stack with depth of 1 excrypted."""
-        command = (
-            f"%s thing --encrypt -o {self.filename} --depth 1; cat {self.filename}"
-            % self.envstack_bin
+        command = make_command(
+            self.envstack_bin, self.filename, "thing", "--encrypt", "--depth", "1"
         )
         expected_output = """#!/usr/bin/env envstack
 include: [default]
@@ -535,10 +545,7 @@ windows:
 
     def test_blank(self):
         """Tests baking a blank stack."""
-        command = (
-            f"%s doesnotexist -o {self.filename}; cat {self.filename}"
-            % self.envstack_bin
-        )
+        command = make_command(self.envstack_bin, self.filename, "doesnotexist")
         expected_output = """#!/usr/bin/env envstack
 include: []
 all: &all
@@ -687,10 +694,8 @@ class TestSet(unittest.TestCase):
 
     def test_foo_bar_bake(self):
         """Tests setting FOO and BAR and bake it out to a file."""
-        command = r"%s --set FOO:foo BAR:\${FOO} -o %s; cat %s" % (
-            self.envstack_bin,
-            self.filename,
-            self.filename,
+        command = make_command(
+            self.envstack_bin, self.filename, "--set", "FOO:foo", "BAR:\${FOO}"
         )
         expected_output = """#!/usr/bin/env envstack
 include: []
@@ -713,10 +718,13 @@ windows:
 
     def test_foo_bar_bake_encrypted(self):
         """Tests setting FOO and BAR and bake it out to a file with encrypted values."""
-        command = r"%s --set FOO:foo BAR:\${FOO} -eo %s; cat %s" % (
+        command = make_command(
             self.envstack_bin,
             self.filename,
-            self.filename,
+            "--set",
+            "FOO:foo",
+            "BAR:\${FOO}",
+            "--encrypt",
         )
         expected_output = """#!/usr/bin/env envstack
 include: []

@@ -1,49 +1,17 @@
 {
     "author": "ryan@rsg.io",
     "targets": {
-        "env-default": {
-            "source": "env/default.env",
-            "destination": "{DEPLOY_ROOT}/env/default.env"
+        "env": {
+            "source": "env/*",
+            "destination": "{DEPLOY_ROOT}/env/%1"
         },
-        "env-dev": {
-            "source": "env/dev.env",
-            "destination": "{DEPLOY_ROOT}/env/dev.env"
+        "bin": {
+            "source": "bin/*",
+            "destination": "{DEPLOY_ROOT}/bin/%1"
         },
-        "env-distman": {
-            "source": "env/distman.env",
-            "destination": "{DEPLOY_ROOT}/env/distman.env"
-        },
-        "env-hello": {
-            "source": "env/hello.env",
-            "destination": "{DEPLOY_ROOT}/env/hello.env"
-        },
-        "env-test": {
-            "source": "env/test.env",
-            "destination": "{DEPLOY_ROOT}/env/test.env"
-        },
-        "env-thing": {
-            "source": "env/thing.env",
-            "destination": "{DEPLOY_ROOT}/env/thing.env"
-        },
-        "bin-envstack": {
-            "source": "bin/envstack",
-            "destination": "{DEPLOY_ROOT}/bin/envstack"
-        },
-        "bat-envstack": {
-            "source": "bin/envstack.bat",
-            "destination": "{DEPLOY_ROOT}/bin/envstack.bat"
-        },
-        "bin-whichenv": {
-            "source": "bin/whichenv",
-            "destination": "{DEPLOY_ROOT}/bin/whichenv"
-        },
-        "bat-whichenv": {
-            "source": "bin/whichenv.bat",
-            "destination": "{DEPLOY_ROOT}/bin/whichenv.bat"
-        },
-        "bin-hello": {
-            "source": "bin/hello",
-            "destination": "{DEPLOY_ROOT}/bin/hello"
+        "envstack_completion": {
+            "source": "bin/envstack_completion.sh",
+            "destination": "/etc/bash_completion.d/envstack"
         },
         "lib-envstack": {
             "source": "lib/envstack",

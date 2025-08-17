@@ -54,8 +54,7 @@ CACHE_TIMEOUT = 5
 null = ""
 
 # regular expression pattern for matching windows drive letters
-# TODO: support lowercase drive letters (issue #53)
-drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
+drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[a-zA-Z]:[/\\])")
 
 # regular expression pattern for bash-like variable expansion
 variable_pattern = re.compile(
@@ -157,16 +156,15 @@ def split_windows_paths(path_str: str):
     tokens = [p.strip() for p in path_str.split(";") if p.strip()]
 
     for token in tokens:
-        # token is windows-style, insert a marker before drive letters
-        # TODO: support lowercase drive letters
-        if re.match(r"^[A-Z]:[/\\]", token) or "\\" in token:
+        # windows-style path token; insert a marker before drive letters
+        if re.match(r"^[a-zA-Z]:[/\\]", token) or "\\" in token:
             modified = drive_letter_pattern.sub(lambda m: "|" + m.group("drive"), token)
             # split on the marker, then on colons that are not in drive-letters
             result += [
                 p
                 for part in modified.split("|")
                 for p in re.split(
-                    r"(?<![A-Z]):", part
+                    r"(?<![a-zA-Z]):", part
                 )  # capture colons not in drive letters
                 if p
             ]
@@ -221,6 +219,10 @@ def detect_path(s: str):
     """
     s = s.strip()
     if not s:
+        return False
+
+    # exclude variables
+    if s.startswith("$") or s.startswith("{") or s.endswith("}"):
         return False
 
     # exclude URL-like strings (scheme://...)
