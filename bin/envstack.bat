@@ -1,2 +1,2 @@
 @echo off
-python %~dp0\envstack %*
+python3 %~dp0\envstack %*
