@@ -1,2 +1,2 @@
 @echo off
-python3 %~dp0\whichenv %*
+python %~dp0\whichenv %*
