@@ -41,12 +41,12 @@ test:
 
 # Install dryrun target to simulate installation
 dryrun:
-	$(ENVSTACK_CMD) -- distman --dryrun
+	$(ENVSTACK_CMD) -- dist --dryrun
 
 # Install target to install the builds using distman
 # using --force allows uncommitted changes to be disted
 install: build
-	distman --force --yes
+	dist --force --yes
 
 # Phony targets
 .PHONY: build dryrun install clean

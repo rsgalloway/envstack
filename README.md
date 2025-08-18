@@ -52,7 +52,8 @@ If installing from source to a network location, you can use
 install envstack using the provided `dist.json` file:
 
 ```bash
-$ ENVPATH=./env distman [-d]
+$ pip install -U distman
+$ ENVPATH=./env dist [-d]
 ```
 
 Using distman will deploy the targets defined in the `dist.json` file to the
@@ -74,22 +75,12 @@ stack files:
 $ export ENVPATH=/path/to/env/files
 ```
 
-#### cmd
-```cmd
-> set ENVPATH=/path/to/env/files
-```
-
 Define as many paths as you want, and envstack will search for stack files in
 order from left to right, for example:
 
 #### bash
 ```bash
 $ export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
-```
-
-#### cmd
-```cmd
-> set ENVPATH=X:/pipe/dev/env;X:/pipe/prod/env
 ```
 
 In the examples above, stack files in `dev` will take precedence over those
@@ -363,13 +354,6 @@ first generate and source keys in the shell using the `--keygen` option:
 $ source <(envstack --keygen --export)
 ```
 
-In Windows CMD you have to output the commands to a .bat file to source them:
-
-```cmd
-> envstack --keygen > keys.bat
-> call keys.bat
-```
-
 Once the keys are in the environment, you can encrypt the env stack:
 
 ```bash
@@ -594,7 +578,7 @@ On linux, environment stack files are also executable scripts that can be called
 directly:
 
 ```bash
-$ ./env/test.env
+$ ./test.env
 DEPLOY_ROOT=${ROOT}/${STACK}
 ENV=${STACK}
 ENVPATH=${DEPLOY_ROOT}/env:${ROOT}/prod/env
@@ -609,53 +593,20 @@ STACK=test
 Run commands inside a specific environment stack file:
 
 ```bash
-$ ./env/test.env -- <command>
+$ ./test.env -- [COMMAND]
 ```
 
 For example:
 
 ```bash
-$ ./env/hello.env -- echo {HELLO}
+$ ./hello.env -- echo {HELLO}
 world
 ```
 
 Export a specific environment stack file:
 
 ```bash
-$ ./env/hello.env --export
-```
-
-## Shells
-
-In order to set an environment stack in your current shell, the stack must be
-sourced (that's because Python processes and subshells cannot alter the
-environment of the parent process).
-
-To source the environment in your current shell, create an alias that sources
-the output of the `--export` command:
-
-#### bash
-```bash
-alias envstack-init='source <(envstack --export)';
-```
-
-#### cmd
-```cmd
-doskey envstack-set=for /f "usebackq" %i in (`envstack --export $*`) do %%i
-```
-
-Then you can set the environment stack in your shell with the `envstack-init`
-command. To clear the environment in your current shell, create an alias that
-sources the output of the `--clear` command:
-
-#### bash
-```bash
-alias envstack-clear='source <(envstack --clear)';
-```
-
-#### cmd
-```cmd
-doskey envstack-clear=for /f "usebackq" %i in (`envstack --clear $*`) do %%i
+$ ./hello.env --export
 ```
 
 ## Config
