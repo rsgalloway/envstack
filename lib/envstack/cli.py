@@ -327,7 +327,8 @@ def main():
             keys = args.resolve or resolved.keys()
             for key in sorted(str(k) for k in keys):
                 val = resolved.get(key)
-                print(f"{key}={val}")
+                if key in resolved:
+                    print(f"{key}={val}")
 
         elif args.trace is not None:
             if len(args.trace) == 0:
