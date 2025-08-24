@@ -74,3 +74,9 @@ class TemplateNotFound(Exception):
     """Custom exception class for missing Templates."""
 
     pass
+
+
+class WriteError(Exception):
+    """Custom exception class for errors during export operations."""
+
+    pass

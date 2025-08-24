@@ -17,3 +17,4 @@ venv*/
 keys.env
 encrypted.env
 baketest.env
+out.env

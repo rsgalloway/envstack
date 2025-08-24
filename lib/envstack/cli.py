@@ -205,8 +205,14 @@ def parse_args():
         "--set",
         nargs="*",
         action=StoreOnce,
-        metavar="VAR=VALUE",
-        help="convert KEY=VALUE pairs to envstack environment variables",
+        metavar="KEY=VALUE",
+        help="overlay KEY=VALUE pairs to envstack environments",
+    )
+    parser.add_argument(
+        "-b",
+        "--bare",
+        action="store_true",
+        help="create a bare environment",
     )
     parser.add_argument(
         "--scope",
@@ -284,6 +290,13 @@ def main():
         elif args.set is not None:
             force_stdin = args.set == [] or args.set == ["-"]
             using_pipe = args.set == [] and not sys.stdin.isatty()
+
+            # load the environment if not in bare mode
+            if args.bare:
+                env = Env()
+            else:
+                env = load_environ(args.namespace, platform=args.platform)
+
             # interactive mode
             if force_stdin and sys.stdin.isatty():
                 print(
@@ -308,15 +321,27 @@ def main():
             else:
                 data = _parse_keyvals(args.set)
 
+            # encrypt the new data only
             if args.encrypt:
-                data = encrypt_environ(data, encrypt=(not args.out))
+                data = encrypt_environ(data)
+
+            # update the environment with the new data
+            env.update(data)
+
             if args.export:
-                print(export_env_to_shell(data))
+                print(export_env_to_shell(env))
             elif args.out:
-                Env(data).write(args.out)
+                Env(env).write(args.out)
             else:
-                for key, value in data.items():
-                    print(f"{key}={value}")
+                for key, val in env.items():
+                    if args.quiet:
+                        if len(env) > 1:
+                            print("error: --quiet requires exactly one KEY")
+                            return 2
+                        else:
+                            print(val)
+                    else:
+                        print(f"{key}={val}")
 
         elif args.out:
             bake_environ(

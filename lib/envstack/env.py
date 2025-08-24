@@ -344,7 +344,10 @@ class Env(dict):
 
         # write the baked environment to the file
         if filename:
-            baked.write()
+            try:
+                baked.write()
+            except Exception as err:
+                raise WriteError(f"Failed to write {filename}", err)
 
         # create the baked environment from the baked source
         baked_env = Env()
@@ -791,6 +794,7 @@ def encrypt_environ(
             node = node_class(v)
             if encrypt:
                 node.value = node.encryptor(env=resolved_env).encrypt(str(v))
+                node.original_value = node.value
             encrypted_env[k] = node
         else:
             encrypted_env[k] = v
