@@ -234,6 +234,12 @@ def parse_args():
         action="store_true",
         help="list the env stack file sources",
     )
+    export_group.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="print values only",
+    )
 
     args = parser.parse_args(args_before_dash)
 
@@ -328,7 +334,14 @@ def main():
             for key in sorted(str(k) for k in keys):
                 val = resolved.get(key)
                 if key in resolved:
-                    print(f"{key}={val}")
+                    if args.quiet:
+                        if len(keys) > 1:
+                            print("error: --quiet requires exactly one KEY")
+                            return 2
+                        else:
+                            print(val)
+                    else:
+                        print(f"{key}={val}")
 
         elif args.trace is not None:
             if len(args.trace) == 0:
@@ -336,7 +349,14 @@ def main():
             for trace in args.trace:
                 path = trace_var(*args.namespace, var=trace)
                 if path:
-                    print("{0}={1}".format(trace, path))
+                    if args.quiet:
+                        if len(args.trace) > 1:
+                            print("error: --quiet requires exactly one KEY")
+                            return 2
+                        else:
+                            print(path)
+                    else:
+                        print("{0}={1}".format(trace, path))
 
         elif args.sources:
             env = load_environ(args.namespace, platform=args.platform)
