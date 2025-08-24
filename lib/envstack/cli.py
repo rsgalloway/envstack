@@ -335,7 +335,8 @@ def main():
                 args.trace = load_environ(args.namespace).keys()
             for trace in args.trace:
                 path = trace_var(*args.namespace, var=trace)
-                print("{0}: {1}".format(trace, path))
+                if path:
+                    print("{0}={1}".format(trace, path))
 
         elif args.sources:
             env = load_environ(args.namespace, platform=args.platform)
