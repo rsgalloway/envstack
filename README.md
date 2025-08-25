@@ -12,23 +12,6 @@ Environment variable management system.
 [Python API](#python-api) |
 [Running Commands](#running-commands)
 
-
-| Feature | Description |
-|---------|-------------|
-| Namespaced environments | Environments in envstack are namespaced, allowing you to organize and manage variables based on different contexts or projects. Each environment stack can have its own set of variables, providing a clean separation and avoiding conflicts between different environments. |
-| Environment stacks | Allows you to manage environment variables using .env files called environment stacks. These stacks provide a hierarchical and contextual approach to managing variables. |
-| Encryption support | Secure encryption, including AES-GCM, Fernet, and Base64. This allows you to securely encrypt and decrypt sensitive environment variables. |
-| Hierarchical structure | Stacks can be combined and have a defined order of priority. Variables defined in higher scope stacks flow from higher scope to lower scope, left to right. |
-| Variable expansion modifiers | Supports bash-like variable expansion modifiers, allowing you to set default values for variables and override them in the environment or by higher scope stacks. |
-| Platform-specific variables | Stacks can have platform-specific variables and values. This allows you to define different values for variables based on the platform. |
-| Variable references | Variables can reference other variables, allowing for more flexibility and dynamic value assignment. |
-| Multi-line values | Supports variables with multi-line values. |
-| Includes | Stack files can include other stacks, making it easy to reuse and combine different stacks. |
-| Python API | Provides a Python API that allows you to initialize and work with environment stacks programmatically. Easily initialize pre-defined environments with Python scripts, tools, and wrappers. |
-| Running commands | Allows you to run command line executables inside an environment stack, providing a convenient way to execute commands with a pre-defined environment. |
-| Wrappers | Supports wrappers, which are command line executable scripts that automatically run a given command in the environment stack. This allows for easy customization and management of environments. |
-| Shell integration | Provides instructions for sourcing the environment stack in your current shell, allowing you to set and clear the environment easily. |
-
 ## Installation
 
 The easiest way to install:
@@ -70,7 +53,6 @@ $ curl -o default.env https://raw.githubusercontent.com/rsgalloway/envstack/mast
 Alternatively, set `${ENVPATH}` to the directory containing your environment
 stack files:
 
-#### bash
 ```bash
 $ export ENVPATH=/path/to/env/files
 ```
@@ -78,7 +60,6 @@ $ export ENVPATH=/path/to/env/files
 Define as many paths as you want, and envstack will search for stack files in
 order from left to right, for example:
 
-#### bash
 ```bash
 $ export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
 ```
@@ -341,7 +322,7 @@ $ source <(envstack --keygen --export)
 Once the keys are in the environment, you can encrypt the env stack:
 
 ```bash
-$ envstack --encrypt -o encrypted.env
+$ envstack -o encrypted.env --encrypt
 ```
 
 Encrypted variables will resolve as long as the key is in the environment:
@@ -353,17 +334,17 @@ HELLO=world
 
 #### Storing Keys
 
-Keys can be stored in other environment stacks, e.g. a `keys.env` file. To
-generate keys and store them in a `keys.env` env stack file:
+Keys can be stored in other environment stacks, e.g. a `keys.env` file
+(keys are automatically base64 encoded):
 
 ```bash
 $ envstack --keygen -o keys.env
 ```
 
-Then use the `keys.env` env stack to encrypt any other env stack:
+Then use `keys.env` to encrypt any other environment files:
 
 ```bash
-$ envstack keys -- envstack --encrypt -o encrypted.env
+$ ./keys.env -- envstack -eo encrypted.env
 ```
 
 To decrypt, add `keys` to the env stack:
@@ -373,7 +354,14 @@ $ envstack keys encrypted -r HELLO
 HELLO=world
 ```
 
-Or add the `keys` env stack to `include` to automatically decrypt:
+Or run the command inside the `keys` environment like this:
+
+```bash
+$ ./keys.env -- envsatck encrypted -r HELLO
+HELLO=world
+```
+
+Or include `keys` in environments to automatically decrypt:
 
 ```yaml
 include: [keys]
