@@ -47,7 +47,7 @@ from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
 from test_env import create_test_root, update_env_file
 
 
-def make_command(envstack_bin: str, filename: str = None, *args: str):
+def make_command(envstack_bin: str, filename: str, *args: str):
     """
     Build a cross-platform shell command that runs envstack (with args)
     and then prints the output file.

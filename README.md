@@ -209,50 +209,34 @@ $ envstack -s HELLO=world -o hello.env
 You can convert existing `.env` files to envstack by piping them into envstack:
 
 ```bash
-$ cat .env | envstack --set -o dev.env
+$ cat .env | envstack --set -o out.env
 ```
 
-## Creating Stacks
+## Creating Environments
 
 Several example or starter stacks are available in the [env folder of the
 envstack repo](https://github.com/rsgalloway/envstack/tree/master/env).
 
-To create a new environment stack, create an envstack file and declare some
-variables.
+To create a new environment file, use `--set` to declare some variables:
 
 ```bash
-$ envstack foobar -o foobar.env
+$ envstack -s FOO=bar BAR=\${FOO} -o out.env
 ```
 
-Add the `${FOO}` and `${BAR}` env vars to the foobar.env environment stack file:
-
-```yaml
-#!/usr/bin/env envstack
-all: &all
-  FOO: bar
-  BAR: ${FOO}
-darwin:
-  <<: *all
-linux:
-  <<: *all
-windows:
-  <<: *all
-```
-
-Or using Python:
+Using Python:
 
 ```python
 >>> env = Env({"FOO": "bar", "BAR": "${FOO}"})
->>> env.write("foobar.env")
+>>> env.write("out.env")
 ```
 
-Get the resolved environment for the `foobar` stack:
+Get the resolved values back:
 
 ```bash
-$ ./foobar.env -r
+$ ./out.env -r
 BAR=bar
 FOO=bar
-STACK=foobar
+STACK=out
 ```
 
 #### More Details
@@ -330,7 +314,7 @@ nodes look for keys in the following order, favoring AES-GCM over Fernet:
 | Fernet | ${ENVSTACK_FERNET_KEY} |
 
 If no encryption keys are found in the environment, envstack will default to
-using Base64 encryption:
+using Base64 encoding:
 
 ```bash
 $ envstack --encrypt
