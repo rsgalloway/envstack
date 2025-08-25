@@ -52,7 +52,10 @@ def make_command(envstack_bin: str, filename: str, *args: str):
     Build a cross-platform shell command that runs envstack (with args)
     and then prints the output file.
     """
-    envstack_cmd = f'{envstack_bin} {" ".join(args)} -o "{filename}"'
+
+    envstack_cmd = f'{envstack_bin} {" ".join(args)}'
+    if filename:
+        envstack_cmd += f' -o "{filename}"'
 
     if os.name == "nt" or platform.system().lower().startswith("win"):
         return f'{envstack_cmd} & type "{filename}"'
@@ -650,7 +653,7 @@ class TestSet(unittest.TestCase):
 
     def test_hello_world(self):
         """Tests setting HELLO to world."""
-        command = "%s --set HELLO:world" % self.envstack_bin
+        command = "%s --set HELLO=world --bare" % self.envstack_bin
         expected_output = "HELLO=world\n"
         output = subprocess.check_output(
             command,
@@ -661,7 +664,7 @@ class TestSet(unittest.TestCase):
 
     def test_hello_world_encrypted(self):
         """Tests setting HELLO to world encrypted."""
-        command = "%s --set HELLO:world --encrypt" % self.envstack_bin
+        command = "%s --set HELLO:world --encrypt --bare" % self.envstack_bin
         expected_output = "HELLO=d29ybGQ=\n"
         output = subprocess.check_output(
             command,
@@ -672,7 +675,7 @@ class TestSet(unittest.TestCase):
 
     def test_foo_bar(self):
         """Tests setting FOO and BAR."""
-        command = r"%s -s FOO:foo BAR:\${FOO}" % self.envstack_bin
+        command = r"%s -s FOO:foo BAR:\${FOO} --bare" % self.envstack_bin
         expected_output = "FOO=foo\nBAR=${FOO}\n"
         output = subprocess.check_output(
             command,
@@ -683,7 +686,7 @@ class TestSet(unittest.TestCase):
 
     def test_foo_bar_encrypted(self):
         """Tests setting FOO and BAR encrypted."""
-        command = r"%s -s FOO:foo BAR:\${FOO} --encrypt" % self.envstack_bin
+        command = r"%s -s FOO:foo BAR:\${FOO} --encrypt --bare" % self.envstack_bin
         expected_output = "FOO=Zm9v\nBAR=JHtGT099\n"
         output = subprocess.check_output(
             command,
@@ -695,7 +698,12 @@ class TestSet(unittest.TestCase):
     def test_foo_bar_bake(self):
         """Tests setting FOO and BAR and bake it out to a file."""
         command = make_command(
-            self.envstack_bin, self.filename, "--set", "FOO:foo", "BAR:\${FOO}"
+            self.envstack_bin,
+            self.filename,
+            "--set",
+            "FOO:foo",
+            "BAR:\${FOO}",
+            "--bare",
         )
         expected_output = """#!/usr/bin/env envstack
 include: []
@@ -725,6 +733,7 @@ windows:
             "FOO:foo",
             "BAR:\${FOO}",
             "--encrypt",
+            "--bare",
         )
         expected_output = """#!/usr/bin/env envstack
 include: []
