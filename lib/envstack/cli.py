@@ -175,9 +175,10 @@ def parse_args():
         help="save the environment to an env file",
     )
     bake_group.add_argument(
+        "-d",
         "--depth",
         type=int,
-        default=0,
+        default=1,
         help="depth of environment stack to bake",
     )
     parser.add_argument_group(bake_group)
@@ -331,7 +332,7 @@ def main():
             if args.export:
                 print(export_env_to_shell(env))
             elif args.out:
-                Env(env).write(args.out)
+                env.write(args.out, depth=args.depth)
             else:
                 for key, val in env.items():
                     if args.quiet:
@@ -344,12 +345,8 @@ def main():
                         print(f"{key}={val}")
 
         elif args.out:
-            bake_environ(
-                args.namespace,
-                filename=args.out,
-                depth=args.depth or 0,
-                encrypt=args.encrypt,
-            )
+            env = load_environ(args.namespace, platform=args.platform)
+            env.write(args.out, depth=args.depth, encrypt=args.encrypt)
 
         elif args.resolve is not None:
             resolved = resolve_environ(
