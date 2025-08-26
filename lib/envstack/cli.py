@@ -345,8 +345,12 @@ def main():
                         print(f"{key}={val}")
 
         elif args.out:
-            env = load_environ(args.namespace, platform=args.platform)
-            env.write(args.out, depth=args.depth, encrypt=args.encrypt)
+            bake_environ(
+                args.namespace,
+                filename=args.out,
+                depth=args.depth,
+                encrypt=args.encrypt,
+            )
 
         elif args.resolve is not None:
             resolved = resolve_environ(

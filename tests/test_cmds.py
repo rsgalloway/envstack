@@ -134,14 +134,14 @@ STACK=distman
 
     def test_hello(self):
         expected_output = (
-            """DEPLOY_ROOT=${ROOT}/${ENV}
-ENV=prod
-ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
+            """DEPLOY_ROOT=${ROOT}/dev
+ENV=dev
+ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
-PATH=${DEPLOY_ROOT}/bin:${PATH}
+PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
 PYEXE=/usr/bin/python
-PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
 ROOT=%s
 STACK=hello
 """
@@ -426,24 +426,20 @@ windows:
         """Tests baking the dev stack."""
         command = make_command(self.envstack_bin, self.filename, "dev")
         expected_output = """#!/usr/bin/env envstack
-include: []
+include: [default]
 all: &all
   DEPLOY_ROOT: ${ROOT}/dev
   ENV: dev
   ENVPATH: ${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
-  HELLO: ${HELLO:=world}
   LOG_LEVEL: DEBUG
   PATH: ${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
   PYTHONPATH: ${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
 darwin:
   <<: *all
-  ROOT: /Volumes/pipe
 linux:
   <<: *all
-  ROOT: /mnt/pipe
 windows:
   <<: *all
-  ROOT: X:/pipe
 """
         output = subprocess.check_output(
             command,
@@ -902,9 +898,10 @@ class TestIssues(unittest.TestCase):
         hello_env_file = os.path.join(self.root, "dev", "env", "hello.env")
         update_env_file(hello_env_file, "PYEXE", "/usr/bin/foobar")
 
-        # test "default" should only include prod sources
+        # 'envstack hello' should only include prod sources
         command = "%s hello --sources" % self.envstack_bin
         expected_output = f"""{self.root}/prod/env/default.env
+{self.root}/prod/env/dev.env
 {self.root}/prod/env/hello.env
 """
         output = subprocess.check_output(
@@ -912,7 +909,7 @@ class TestIssues(unittest.TestCase):
         )
         self.assertEqual(output, expected_output)
 
-        # test "dev" should include prod and dev sources
+        # 'envstack dev hello' should include prod and dev sources
         command = "%s dev hello --sources" % self.envstack_bin
         expected_output = f"""{self.root}/prod/env/default.env
 {self.root}/prod/env/dev.env

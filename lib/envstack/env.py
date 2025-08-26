@@ -114,7 +114,7 @@ class Source(object):
         """Returns the char length of the path"""
         return len(self.path)
 
-    def load(self, platform=config.PLATFORM):
+    def load(self, platform: str = config.PLATFORM):
         """Reads .env from .path, and returns an Env class object"""
         if self.path and not self.data:
             self.data = load_file(self.path)
@@ -317,7 +317,6 @@ class Env(dict):
 
         # create a baked source
         baked = Source(filename)
-        flattend = Env()
 
         def get_node_class(value):
             """Returns the node class to use for a given value."""
@@ -340,10 +339,8 @@ class Env(dict):
                         if k in self:
                             v = self[k]
                         node_class = get_node_class(v)
-                        flattend[k] = node_class(v)
                         seen.add(k)
                 else:
-                    flattend[key] = get_node_class(value)(value)
                     seen.add(key)
 
         current_depth = 0
@@ -354,7 +351,8 @@ class Env(dict):
                     continue
                 if isinstance(value, dict):
                     for k, v in value.items():
-                        if k in self:
+                        # override with values from "all" in current environment
+                        if k in self and key == "all":
                             v = self[k]
                         node_class = get_node_class(v)
                         baked.data.setdefault(key, {})[k] = node_class(v)
