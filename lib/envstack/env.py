@@ -790,10 +790,7 @@ def bake_environ(
     :param encrypt: encrypt the values.
     :returns: baked environment.
     """
-    env = Env()
-    env.update(load_environ(name, scope=scope))
-    return env.bake(filename, depth, encrypt)
-    # return load_environ(name, scope=scope).bake(filename, depth, encrypt)
+    return load_environ(name, scope=scope).bake(filename, depth, encrypt)
 
 
 def encrypt_environ(
