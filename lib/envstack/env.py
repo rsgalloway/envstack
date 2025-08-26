@@ -371,7 +371,7 @@ class Env(dict):
             baked.data["all"][key] = get_node_class(value)(value)
 
         # clear includes if environment stack is fully baked
-        if depth <= 0:
+        if depth <= 0 or depth >= len(sources):
             baked.data["include"] = []
         else:
             baked.data["include"] = includes
@@ -379,9 +379,6 @@ class Env(dict):
         # create the baked environment from the baked source
         baked_env = Env()
         baked_env.load_source(baked)
-
-        # copy data from the original environment
-        baked_env.update(self)
 
         # write the baked environment to the file
         if filename:
