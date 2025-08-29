@@ -147,12 +147,19 @@ def parse_args():
         action="version",
         version=f"envstack {__version__}",
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument(
         "namespace",
         metavar="STACK",
         nargs="*",
         default=[config.DEFAULT_NAMESPACE],
-        help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
+        help="the environment stacks to use",
+    )
+    group.add_argument(
+        "-b",
+        "--bare",
+        action="store_true",
+        help="create a bare environment",
     )
     encrypt_group = parser.add_argument_group("encryption options")
     encrypt_group.add_argument(
@@ -208,12 +215,6 @@ def parse_args():
         action=StoreOnce,
         metavar="KEY=VALUE",
         help="overlay KEY=VALUE pairs to envstack environments",
-    )
-    parser.add_argument(
-        "-b",
-        "--bare",
-        action="store_true",
-        help="create a bare environment",
     )
     parser.add_argument(
         "--scope",
