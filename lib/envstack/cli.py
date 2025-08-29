@@ -178,8 +178,8 @@ def parse_args():
         "-d",
         "--depth",
         type=int,
-        default=1,
-        help="depth of environment stack to bake",
+        default=0,
+        help="depth of environment stack to bake (default: 0 = flatten)",
     )
     parser.add_argument_group(bake_group)
     export_group = parser.add_argument_group("export options")

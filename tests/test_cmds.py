@@ -424,7 +424,7 @@ windows:
 
     def test_dev(self):
         """Tests baking the dev stack."""
-        command = make_command(self.envstack_bin, self.filename, "dev")
+        command = make_command(self.envstack_bin, self.filename, "dev", "-d 1")
         expected_output = """#!/usr/bin/env envstack
 include: [default]
 all: &all
