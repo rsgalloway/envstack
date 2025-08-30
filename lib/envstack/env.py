@@ -305,7 +305,7 @@ class Env(dict):
             >>> env.bake("baked.env")
 
         :param filename: path to save the baked environment.
-        :param depth: depth of source files to incldue (default 0).
+        :param depth: depth of source files to include (optional).
         :param encrypt: encrypt the values.
         :returns: baked environment.
         """
@@ -399,7 +399,7 @@ class Env(dict):
             >>> env.write("encrypted.env")
 
         :param filename: path to save the baked environment.
-        :param depth: depth of source files to incldue (default 0 = flatten).
+        :param depth: depth of source files to include (optional).
         :returns: Source object.
         """
         # the environment was loaded from one or more sources
@@ -780,8 +780,8 @@ def bake_environ(
         $ envstack [STACK] -o <filename>
 
     :param name: stack namespace.
-    :param scope: environment scope (default: cwd).
-    :param depth: depth of source files to incldue (default: all).
+    :param scope: environment scope (optional).
+    :param depth: depth of source files to include (optional).
     :param filename: path to save the baked environment.
     :param encrypt: encrypt the values.
     :returns: baked environment.
