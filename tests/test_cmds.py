@@ -134,14 +134,14 @@ STACK=distman
 
     def test_hello(self):
         expected_output = (
-            """DEPLOY_ROOT=${ROOT}/${ENV}
-ENV=prod
-ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
+            """DEPLOY_ROOT=${ROOT}/dev
+ENV=dev
+ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
-PATH=${DEPLOY_ROOT}/bin:${PATH}
+PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
 PYEXE=/usr/bin/python
-PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
 ROOT=%s
 STACK=hello
 """
@@ -215,33 +215,36 @@ STACK=ZGVmYXVsdA==
         """Test that the AESGCM encryption works, and resolves vars since the
         encrypted values change every time."""
         os.environ[AESGCMEncryptor.KEY_VAR_NAME] = AESGCMEncryptor.generate_key()
-        expected_output = f"""DEPLOY_ROOT={self.root}/prod
-ENV=prod
-ROOT={self.root}
-"""
-        command = "%s --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
+        expected_output = f"""{self.root}/prod\n"""
+        command = "%s -e -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(
             command, shell=True, env=os.environ, universal_newlines=True
         )
         self.assertEqual(output, expected_output)
 
     def test_default_resolve(self):
-        expected_output = f"""DEPLOY_ROOT={self.root}/prod
-ENV=prod
-ROOT={self.root}
-"""
-        command = "%s --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
-        output = subprocess.check_output(command, shell=True, universal_newlines=True)
-        self.assertEqual(output, expected_output)
-
-    def test_default_command_echo(self):
-        expected_output = f"""{self.root}/prod
-"""
+        """Get and encrypt default stack values, and test they are resolved in a subprocess."""
+        expected_output = f"""{self.root}/prod\n"""
         command = "%s --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
+    def test_default_command_echo(self):
+        """Tests that the default stack works with encrypted values."""
+        expected_output = f"""{self.root}/prod\n"""
+        command = "%s --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_hello_command_echo(self):
+        """Tests that resolved and encrypted values resolve in subprocesses."""
+        expected_output = f"""goodbye\n"""
+        command = "%s thing -r HELLO -e -- echo {HELLO}" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
     def test_dev(self):
+        """Tests encrypting values in the dev stack."""
         expected_output = """DEPLOY_ROOT=JHtST09UfS9kZXY=
 ENV=ZGV2
 ENVPATH=JHtST09UfS9kZXYvZW52OiR7Uk9PVH0vcHJvZC9lbnY6JHtFTlZQQVRIfQ==
@@ -256,18 +259,9 @@ STACK=ZGV2
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
-    def test_dev_resolve(self):
-        expected_output = f"""DEPLOY_ROOT={self.root}/dev
-ENV=dev
-ROOT={self.root}
-"""
-        command = "%s dev --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
-        output = subprocess.check_output(command, shell=True, universal_newlines=True)
-        self.assertEqual(output, expected_output)
-
-    def test_dev_command_echo(self):
-        expected_output = f"""{self.root}/dev
-"""
+    def test_dev_command(self):
+        """Tests that encrypted values resolve in subprocess in the dev stack."""
+        expected_output = f"""{self.root}/dev\n"""
         command = "%s dev --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
@@ -424,26 +418,22 @@ windows:
 
     def test_dev(self):
         """Tests baking the dev stack."""
-        command = make_command(self.envstack_bin, self.filename, "dev")
+        command = make_command(self.envstack_bin, self.filename, "dev", "-d 1")
         expected_output = """#!/usr/bin/env envstack
-include: []
+include: [default]
 all: &all
   DEPLOY_ROOT: ${ROOT}/dev
   ENV: dev
   ENVPATH: ${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
-  HELLO: ${HELLO:=world}
   LOG_LEVEL: DEBUG
   PATH: ${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
   PYTHONPATH: ${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
 darwin:
   <<: *all
-  ROOT: /Volumes/pipe
 linux:
   <<: *all
-  ROOT: /mnt/pipe
 windows:
   <<: *all
-  ROOT: X:/pipe
 """
         output = subprocess.check_output(
             command,
@@ -702,7 +692,7 @@ class TestSet(unittest.TestCase):
             self.filename,
             "--set",
             "FOO:foo",
-            "BAR:\${FOO}",
+            "BAR:\${FOO}",  # not a typo, need to escape $ for shell
             "--bare",
         )
         expected_output = """#!/usr/bin/env envstack
@@ -731,7 +721,7 @@ windows:
             self.filename,
             "--set",
             "FOO:foo",
-            "BAR:\${FOO}",
+            "BAR:\${FOO}",  # not a typo, need to escape $ for shell
             "--encrypt",
             "--bare",
         )
@@ -902,9 +892,10 @@ class TestIssues(unittest.TestCase):
         hello_env_file = os.path.join(self.root, "dev", "env", "hello.env")
         update_env_file(hello_env_file, "PYEXE", "/usr/bin/foobar")
 
-        # test "default" should only include prod sources
+        # 'envstack hello' should only include prod sources
         command = "%s hello --sources" % self.envstack_bin
         expected_output = f"""{self.root}/prod/env/default.env
+{self.root}/prod/env/dev.env
 {self.root}/prod/env/hello.env
 """
         output = subprocess.check_output(
@@ -912,7 +903,7 @@ class TestIssues(unittest.TestCase):
         )
         self.assertEqual(output, expected_output)
 
-        # test "dev" should include prod and dev sources
+        # 'envstack dev hello' should include prod and dev sources
         command = "%s dev hello --sources" % self.envstack_bin
         expected_output = f"""{self.root}/prod/env/default.env
 {self.root}/prod/env/dev.env

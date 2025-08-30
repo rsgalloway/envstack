@@ -186,7 +186,7 @@ class TestEnv(unittest.TestCase):
 
         env1 = load_environ("thing")
         self.filename = "test_bake_out.env"
-        env1.write(self.filename)
+        env1.write(self.filename, depth=0)
         env2 = load_environ(self.filename)
         for k, v in env1.items():
             if k == "STACK":
@@ -809,7 +809,7 @@ class TestEncryptEnviron(unittest.TestCase):
             if key == "STACK":  # skip the stack name
                 continue
             encrypted_value = encrypted[key]
-            self.assertTrue(isinstance(encrypted_value, EncryptedNode))
+            self.assertTrue(isinstance(encrypted_value, EncryptedNode), f"type is {type(encrypted_value)}")
             self.assertEqual(encrypted_value.original_value, None)
             # self.assertNotEqual(encrypted_value.original_value, value)  # from_yaml only
             self.assertEqual(encrypted_value.value, value)
@@ -955,6 +955,7 @@ class TestIssues(unittest.TestCase):
 
         expected_paths = [
             os.path.join(self.root, "prod", "env", "default.env"),
+            os.path.join(self.root, "prod", "env", "dev.env"),
             os.path.join(self.root, "prod", "env", "hello.env"),
         ]
         self.assertEqual(paths, expected_paths)

@@ -147,12 +147,19 @@ def parse_args():
         action="version",
         version=f"envstack {__version__}",
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group(required=False)
+    group.add_argument(
         "namespace",
         metavar="STACK",
         nargs="*",
         default=[config.DEFAULT_NAMESPACE],
-        help="the environment stacks to use (default '%s')" % config.DEFAULT_NAMESPACE,
+        help="the environment stacks to use",
+    )
+    group.add_argument(
+        "-b",
+        "--bare",
+        action="store_true",
+        help="create a bare environment",
     )
     encrypt_group = parser.add_argument_group("encryption options")
     encrypt_group.add_argument(
@@ -175,10 +182,11 @@ def parse_args():
         help="save the environment to an env file",
     )
     bake_group.add_argument(
+        "-d",
         "--depth",
         type=int,
         default=0,
-        help="depth of environment stack to bake",
+        help="depth of environment stack to bake (default: 0 = flatten)",
     )
     parser.add_argument_group(bake_group)
     export_group = parser.add_argument_group("export options")
@@ -207,12 +215,6 @@ def parse_args():
         action=StoreOnce,
         metavar="KEY=VALUE",
         help="overlay KEY=VALUE pairs to envstack environments",
-    )
-    parser.add_argument(
-        "-b",
-        "--bare",
-        action="store_true",
-        help="create a bare environment",
     )
     parser.add_argument(
         "--scope",
@@ -244,7 +246,7 @@ def parse_args():
         "-q",
         "--quiet",
         action="store_true",
-        help="print values only",
+        help="print the value of an environment variable only (no key)",
     )
 
     args = parser.parse_args(args_before_dash)
@@ -287,7 +289,15 @@ def main():
                 for key, value in data.items():
                     print(f"{key}={value}")
 
-        elif args.set is not None:
+        elif args.clear:
+            from envstack.env import clear
+
+            print(clear(args.namespace, shell=config.SHELL))
+
+        elif args.export and args.resolve is None and args.set is None:
+            print(export(args.namespace, shell=config.SHELL, encrypt=args.encrypt))
+
+        elif args.set is not None and args.resolve is None:
             force_stdin = args.set == [] or args.set == ["-"]
             using_pipe = args.set == [] and not sys.stdin.isatty()
 
@@ -331,7 +341,7 @@ def main():
             if args.export:
                 print(export_env_to_shell(env))
             elif args.out:
-                Env(env).write(args.out)
+                env.write(args.out, depth=args.depth)
             else:
                 for key, val in env.items():
                     if args.quiet:
@@ -343,30 +353,58 @@ def main():
                     else:
                         print(f"{key}={val}")
 
-        elif args.out:
+        elif args.out and args.resolve is None:
             bake_environ(
                 args.namespace,
                 filename=args.out,
-                depth=args.depth or 0,
+                depth=args.depth,
                 encrypt=args.encrypt,
             )
 
         elif args.resolve is not None:
+            if args.depth:
+                print("error: --depth is not valid with --resolve")
+                return 2
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
             )
-            keys = args.resolve or resolved.keys()
-            for key in sorted(str(k) for k in keys):
-                val = resolved.get(key)
-                if key in resolved:
-                    if args.quiet:
-                        if len(keys) > 1:
-                            print("error: --quiet requires exactly one KEY")
-                            return 2
+            if args.set:
+                resolved.update(_parse_keyvals(args.set))
+            if args.encrypt:
+                resolved = encrypt_environ(resolved)
+            if args.out:
+                if len(args.resolve) == 0:
+                    resolved.write(args.out, depth=0)
+                else:
+                    keys = args.resolve or resolved.keys()
+                    if args.set:
+                        keys = set(keys).union(_parse_keyvals(args.set).keys())
+                    env = Env({key: resolved[key] for key in keys})
+                    env.write(args.out, depth=0)
+            elif args.export:
+                if len(args.resolve) == 0:
+                    print(export_env_to_shell(resolved, shell=config.SHELL))
+                else:
+                    keys = args.resolve or resolved.keys()
+                    if args.set:
+                        keys = set(keys).union(_parse_keyvals(args.set).keys())
+                    env = Env({key: resolved[key] for key in keys})
+                    print(export_env_to_shell(env, shell=config.SHELL))
+            else:
+                keys = args.resolve or resolved.keys()
+                if args.set:
+                    keys = set(keys).union(_parse_keyvals(args.set).keys())
+                for key in sorted(str(k) for k in keys):
+                    val = resolved.get(key)
+                    if key in resolved:
+                        if args.quiet:
+                            if len(keys) > 1:
+                                print("error: --quiet requires exactly one KEY")
+                                return 2
+                            else:
+                                print(val)
                         else:
-                            print(val)
-                    else:
-                        print(f"{key}={val}")
+                            print(f"{key}={val}")
 
         elif args.trace is not None:
             if len(args.trace) == 0:
@@ -387,14 +425,6 @@ def main():
             env = load_environ(args.namespace, platform=args.platform)
             for source in env.sources:
                 print(source.path)
-
-        elif args.clear:
-            from envstack.env import clear
-
-            print(clear(args.namespace, config.SHELL))
-
-        elif args.export:
-            print(export(args.namespace, config.SHELL))
 
         else:
             env = load_environ(

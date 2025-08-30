@@ -114,7 +114,7 @@ class Source(object):
         """Returns the char length of the path"""
         return len(self.path)
 
-    def load(self, platform=config.PLATFORM):
+    def load(self, platform: str = config.PLATFORM):
         """Reads .env from .path, and returns an Env class object"""
         if self.path and not self.data:
             self.data = load_file(self.path)
@@ -305,17 +305,12 @@ class Env(dict):
             >>> env.bake("baked.env")
 
         :param filename: path to save the baked environment.
-        :param depth: depth of source files to incldue (default: all).
-        :param encrypt: encrypt the values.
+        :param depth: depth of source files to include (optional).
+        :param encrypt: encrypt the values (optional).
         :returns: baked environment.
         """
-        # get the sources for the given environment
         sources = self.sources
-
-        # look for encryption keys in the environment
-        os.environ.update(get_keys_from_env(self))
-
-        # create a baked source
+        os.environ.update(get_keys_from_env(self))  # for encryption
         baked = Source(filename)
 
         def get_node_class(value):
@@ -327,35 +322,63 @@ class Env(dict):
                     return EncryptedNode
             return value.__class__
 
-        # merge the sources into the outfile
-        for source in sources[-depth:]:
+        # track included files and seen keys
+        includes = []
+        seen_keys = set()
+
+        for source in sources[:depth]:
             for key, value in source.data.items():
                 if isinstance(value, dict):
                     for k, v in value.items():
+                        if k in self:
+                            v = self[k]
+                        node_class = get_node_class(v)
+                        seen_keys.add(k)
+                else:
+                    seen_keys.add(key)
+
+        current_depth = 0
+        for source in sources[-depth:]:
+            for key, value in source.data.items():
+                if key == "include" and current_depth <= depth:
+                    includes = value
+                    continue
+                if isinstance(value, dict):
+                    for k, v in value.items():
+                        if k in self and key == "all":  # override only in "all"
+                            v = self[k]
                         node_class = get_node_class(v)
                         baked.data.setdefault(key, {})[k] = node_class(v)
+                        seen_keys.add(k)
                 else:
-                    node_class = get_node_class(value)
-                    baked.data[key] = node_class(value)
+                    baked.data[key] = get_node_class(value)(value)
+                    seen_keys.add(key)
+                current_depth += 1
+
+        # add/override with values from the current environment
+        for key, value in self.items():
+            if key == "STACK" or key in seen_keys:
+                continue
+            baked.data["all"][key] = get_node_class(value)(value)
 
         # clear includes if environment stack is fully baked
-        if depth <= 0:
+        if depth <= 0 or depth >= len(sources):
             baked.data["include"] = []
+        else:
+            baked.data["include"] = includes
 
-        # write the baked environment to the file
+        # create the baked environment from the baked source
+        baked_env = Env()
+        baked_env.load_source(baked)
         if filename:
             try:
                 baked.write()
             except Exception as err:
                 raise WriteError(f"Failed to write {filename}", err)
 
-        # create the baked environment from the baked source
-        baked_env = Env()
-        baked_env.load_source(baked)
-
         return baked_env
 
-    def write(self, filename: str = None):
+    def write(self, filename: str, depth: int = 0, encrypt: bool = False):
         """Writes the environment to an env file.
 
             >>> env = Env({"FOO": "${BAR}", "BAR": "bar"})
@@ -367,11 +390,13 @@ class Env(dict):
             >>> env.write("encrypted.env")
 
         :param filename: path to save the baked environment.
+        :param depth: depth of source files to include (optional).
+        :param encrypt: encrypt the values (optional).
         :returns: Source object.
         """
         # the environment was loaded from one or more sources
         if self.sources:
-            baked = self.bake(filename)
+            baked = self.bake(filename, depth=depth, encrypt=encrypt)
             return baked.sources[0]
 
         # the environment was created from scratch
@@ -634,6 +659,7 @@ def export(
     name: str = config.DEFAULT_NAMESPACE,
     shell: str = config.SHELL,
     scope: str = None,
+    encrypt: bool = False,
 ):
     """Returns shell commands that can be sourced to set environment stack
     environment variables.
@@ -641,12 +667,13 @@ def export(
     Supported shells: bash, sh, tcsh, cmd, pwsh (see config.detect_shell()).
 
     :param name: stack namespace.
-    :param shell: name of shell (default: current shell).
-    :param scope: environment scope (default: cwd).
+    :param shell: name of shell (optional).
+    :param scope: environment scope (optional).
+    :param encrypt: encrypt the values (optional).
     :returns: shell commands as string.
     """
-    resolved_env = resolve_environ(load_environ(name, scope=scope))
-    return export_env_to_shell(resolved_env, shell)
+    env = load_environ(name, scope=scope, encrypt=encrypt)
+    return export_env_to_shell(env, shell)
 
 
 def save():
@@ -747,8 +774,8 @@ def bake_environ(
         $ envstack [STACK] -o <filename>
 
     :param name: stack namespace.
-    :param scope: environment scope (default: cwd).
-    :param depth: depth of source files to incldue (default: all).
+    :param scope: environment scope (optional).
+    :param depth: depth of source files to include (optional).
     :param filename: path to save the baked environment.
     :param encrypt: encrypt the values.
     :returns: baked environment.
