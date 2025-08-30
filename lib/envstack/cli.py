@@ -246,7 +246,7 @@ def parse_args():
         "-q",
         "--quiet",
         action="store_true",
-        help="print values only",
+        help="print the value of an environment variable only (no key)",
     )
 
     args = parser.parse_args(args_before_dash)
@@ -345,7 +345,7 @@ def main():
                     else:
                         print(f"{key}={val}")
 
-        elif args.out:
+        elif args.out and args.resolve is None:
             bake_environ(
                 args.namespace,
                 filename=args.out,
@@ -354,21 +354,27 @@ def main():
             )
 
         elif args.resolve is not None:
+            if args.depth:
+                print("error: --depth is not valid with --resolve")
+                return 2
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
             )
-            keys = args.resolve or resolved.keys()
-            for key in sorted(str(k) for k in keys):
-                val = resolved.get(key)
-                if key in resolved:
-                    if args.quiet:
-                        if len(keys) > 1:
-                            print("error: --quiet requires exactly one KEY")
-                            return 2
+            if args.out:
+                resolved.write(args.out, depth=0)
+            else:
+                keys = args.resolve or resolved.keys()
+                for key in sorted(str(k) for k in keys):
+                    val = resolved.get(key)
+                    if key in resolved:
+                        if args.quiet:
+                            if len(keys) > 1:
+                                print("error: --quiet requires exactly one KEY")
+                                return 2
+                            else:
+                                print(val)
                         else:
-                            print(val)
-                    else:
-                        print(f"{key}={val}")
+                            print(f"{key}={val}")
 
         elif args.trace is not None:
             if len(args.trace) == 0:
