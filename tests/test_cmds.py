@@ -215,33 +215,36 @@ STACK=ZGVmYXVsdA==
         """Test that the AESGCM encryption works, and resolves vars since the
         encrypted values change every time."""
         os.environ[AESGCMEncryptor.KEY_VAR_NAME] = AESGCMEncryptor.generate_key()
-        expected_output = f"""DEPLOY_ROOT={self.root}/prod
-ENV=prod
-ROOT={self.root}
-"""
-        command = "%s --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
+        expected_output = f"""{self.root}/prod\n"""
+        command = "%s -e -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(
             command, shell=True, env=os.environ, universal_newlines=True
         )
         self.assertEqual(output, expected_output)
 
     def test_default_resolve(self):
-        expected_output = f"""DEPLOY_ROOT={self.root}/prod
-ENV=prod
-ROOT={self.root}
-"""
-        command = "%s --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
-        output = subprocess.check_output(command, shell=True, universal_newlines=True)
-        self.assertEqual(output, expected_output)
-
-    def test_default_command_echo(self):
-        expected_output = f"""{self.root}/prod
-"""
+        """Get and encrypt default stack values, and test they are resolved in a subprocess."""
+        expected_output = f"""{self.root}/prod\n"""
         command = "%s --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
+    def test_default_command_echo(self):
+        """Tests that the default stack works with encrypted values."""
+        expected_output = f"""{self.root}/prod\n"""
+        command = "%s --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
+    def test_hello_command_echo(self):
+        """Tests that resolved and encrypted values resolve in subprocesses."""
+        expected_output = f"""goodbye\n"""
+        command = "%s thing -r HELLO -e -- echo {HELLO}" % self.envstack_bin
+        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        self.assertEqual(output, expected_output)
+
     def test_dev(self):
+        """Tests encrypting values in the dev stack."""
         expected_output = """DEPLOY_ROOT=JHtST09UfS9kZXY=
 ENV=ZGV2
 ENVPATH=JHtST09UfS9kZXYvZW52OiR7Uk9PVH0vcHJvZC9lbnY6JHtFTlZQQVRIfQ==
@@ -256,18 +259,9 @@ STACK=ZGV2
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
-    def test_dev_resolve(self):
-        expected_output = f"""DEPLOY_ROOT={self.root}/dev
-ENV=dev
-ROOT={self.root}
-"""
-        command = "%s dev --encrypt -r ENV ROOT DEPLOY_ROOT" % self.envstack_bin
-        output = subprocess.check_output(command, shell=True, universal_newlines=True)
-        self.assertEqual(output, expected_output)
-
-    def test_dev_command_echo(self):
-        expected_output = f"""{self.root}/dev
-"""
+    def test_dev_command(self):
+        """Tests that encrypted values resolve in subprocess in the dev stack."""
+        expected_output = f"""{self.root}/dev\n"""
         command = "%s dev --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
@@ -698,7 +692,7 @@ class TestSet(unittest.TestCase):
             self.filename,
             "--set",
             "FOO:foo",
-            "BAR:\${FOO}",
+            "BAR:\${FOO}",  # not a typo, need to escape $ for shell
             "--bare",
         )
         expected_output = """#!/usr/bin/env envstack
@@ -727,7 +721,7 @@ windows:
             self.filename,
             "--set",
             "FOO:foo",
-            "BAR:\${FOO}",
+            "BAR:\${FOO}",  # not a typo, need to escape $ for shell
             "--encrypt",
             "--bare",
         )
