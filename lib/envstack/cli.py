@@ -360,8 +360,14 @@ def main():
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
             )
+            if args.encrypt:
+                resolved = encrypt_environ(resolved)
             if args.out:
-                resolved.write(args.out, depth=0)
+                if len(args.resolve) == 0:
+                    resolved.write(args.out, depth=0)
+                else:
+                    env = Env({key: resolved[key] for key in args.resolve if key in resolved})
+                    env.write(args.out, depth=0)
             else:
                 keys = args.resolve or resolved.keys()
                 for key in sorted(str(k) for k in keys):
