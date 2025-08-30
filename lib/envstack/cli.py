@@ -366,7 +366,9 @@ def main():
                 if len(args.resolve) == 0:
                     resolved.write(args.out, depth=0)
                 else:
-                    env = Env({key: resolved[key] for key in args.resolve if key in resolved})
+                    env = Env(
+                        {key: resolved[key] for key in args.resolve if key in resolved}
+                    )
                     env.write(args.out, depth=0)
             else:
                 keys = args.resolve or resolved.keys()

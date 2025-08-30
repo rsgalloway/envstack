@@ -309,13 +309,8 @@ class Env(dict):
         :param encrypt: encrypt the values (optional).
         :returns: baked environment.
         """
-        # get the sources for the given environment
         sources = self.sources
-
-        # look for encryption keys in the environment
-        os.environ.update(get_keys_from_env(self))
-
-        # create a baked source
+        os.environ.update(get_keys_from_env(self))  # for encryption
         baked = Source(filename)
 
         def get_node_class(value):
@@ -327,11 +322,10 @@ class Env(dict):
                     return EncryptedNode
             return value.__class__
 
-        # track includes from the last source
+        # track included files and seen keys
         includes = []
+        seen_keys = set()
 
-        # merge the sources into the outfile
-        seen = set()
         for source in sources[:depth]:
             for key, value in source.data.items():
                 if isinstance(value, dict):
@@ -339,9 +333,9 @@ class Env(dict):
                         if k in self:
                             v = self[k]
                         node_class = get_node_class(v)
-                        seen.add(k)
+                        seen_keys.add(k)
                 else:
-                    seen.add(key)
+                    seen_keys.add(key)
 
         current_depth = 0
         for source in sources[-depth:]:
@@ -351,20 +345,19 @@ class Env(dict):
                     continue
                 if isinstance(value, dict):
                     for k, v in value.items():
-                        # override with values from "all" in current environment
-                        if k in self and key == "all":
+                        if k in self and key == "all":  # override only in "all"
                             v = self[k]
                         node_class = get_node_class(v)
                         baked.data.setdefault(key, {})[k] = node_class(v)
-                        seen.add(k)
+                        seen_keys.add(k)
                 else:
                     baked.data[key] = get_node_class(value)(value)
-                    seen.add(key)
+                    seen_keys.add(key)
                 current_depth += 1
 
         # add/override with values from the current environment
         for key, value in self.items():
-            if key == "STACK" or key in seen:
+            if key == "STACK" or key in seen_keys:
                 continue
             baked.data["all"][key] = get_node_class(value)(value)
 
@@ -377,8 +370,6 @@ class Env(dict):
         # create the baked environment from the baked source
         baked_env = Env()
         baked_env.load_source(baked)
-
-        # write the baked environment to the file
         if filename:
             try:
                 baked.write()
