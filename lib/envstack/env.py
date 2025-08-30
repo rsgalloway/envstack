@@ -306,7 +306,7 @@ class Env(dict):
 
         :param filename: path to save the baked environment.
         :param depth: depth of source files to include (optional).
-        :param encrypt: encrypt the values.
+        :param encrypt: encrypt the values (optional).
         :returns: baked environment.
         """
         # get the sources for the given environment
@@ -387,7 +387,7 @@ class Env(dict):
 
         return baked_env
 
-    def write(self, filename: str = None, depth: int = 0, encrypt: bool = False):
+    def write(self, filename: str, depth: int = 0, encrypt: bool = False):
         """Writes the environment to an env file.
 
             >>> env = Env({"FOO": "${BAR}", "BAR": "bar"})
@@ -400,6 +400,7 @@ class Env(dict):
 
         :param filename: path to save the baked environment.
         :param depth: depth of source files to include (optional).
+        :param encrypt: encrypt the values (optional).
         :returns: Source object.
         """
         # the environment was loaded from one or more sources
