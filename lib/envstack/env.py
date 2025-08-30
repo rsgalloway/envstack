@@ -659,6 +659,7 @@ def export(
     name: str = config.DEFAULT_NAMESPACE,
     shell: str = config.SHELL,
     scope: str = None,
+    encrypt: bool = False,
 ):
     """Returns shell commands that can be sourced to set environment stack
     environment variables.
@@ -666,12 +667,13 @@ def export(
     Supported shells: bash, sh, tcsh, cmd, pwsh (see config.detect_shell()).
 
     :param name: stack namespace.
-    :param shell: name of shell (default: current shell).
-    :param scope: environment scope (default: cwd).
+    :param shell: name of shell (optional).
+    :param scope: environment scope (optional).
+    :param encrypt: encrypt the values (optional).
     :returns: shell commands as string.
     """
-    resolved_env = resolve_environ(load_environ(name, scope=scope))
-    return export_env_to_shell(resolved_env, shell)
+    env = load_environ(name, scope=scope, encrypt=encrypt)
+    return export_env_to_shell(env, shell)
 
 
 def save():

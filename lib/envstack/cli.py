@@ -289,7 +289,15 @@ def main():
                 for key, value in data.items():
                     print(f"{key}={value}")
 
-        elif args.set is not None:
+        elif args.clear:
+            from envstack.env import clear
+
+            print(clear(args.namespace, shell=config.SHELL))
+
+        elif args.export and args.resolve is None and args.set is None:
+            print(export(args.namespace, shell=config.SHELL, encrypt=args.encrypt))
+
+        elif args.set is not None and args.resolve is None:
             force_stdin = args.set == [] or args.set == ["-"]
             using_pipe = args.set == [] and not sys.stdin.isatty()
 
@@ -360,18 +368,32 @@ def main():
             resolved = resolve_environ(
                 load_environ(args.namespace, platform=args.platform)
             )
+            if args.set:
+                resolved.update(_parse_keyvals(args.set))
             if args.encrypt:
                 resolved = encrypt_environ(resolved)
             if args.out:
                 if len(args.resolve) == 0:
                     resolved.write(args.out, depth=0)
                 else:
-                    env = Env(
-                        {key: resolved[key] for key in args.resolve if key in resolved}
-                    )
+                    keys = args.resolve or resolved.keys()
+                    if args.set:
+                        keys = set(keys).union(_parse_keyvals(args.set).keys())
+                    env = Env({key: resolved[key] for key in keys})
                     env.write(args.out, depth=0)
+            elif args.export:
+                if len(args.resolve) == 0:
+                    print(export_env_to_shell(resolved, shell=config.SHELL))
+                else:
+                    keys = args.resolve or resolved.keys()
+                    if args.set:
+                        keys = set(keys).union(_parse_keyvals(args.set).keys())
+                    env = Env({key: resolved[key] for key in keys})
+                    print(export_env_to_shell(env, shell=config.SHELL))
             else:
                 keys = args.resolve or resolved.keys()
+                if args.set:
+                    keys = set(keys).union(_parse_keyvals(args.set).keys())
                 for key in sorted(str(k) for k in keys):
                     val = resolved.get(key)
                     if key in resolved:
@@ -403,14 +425,6 @@ def main():
             env = load_environ(args.namespace, platform=args.platform)
             for source in env.sources:
                 print(source.path)
-
-        elif args.clear:
-            from envstack.env import clear
-
-            print(clear(args.namespace, config.SHELL))
-
-        elif args.export:
-            print(export(args.namespace, config.SHELL))
 
         else:
             env = load_environ(
