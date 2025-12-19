@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 #
 # Copyright (c) 2024-2025, Ryan Galloway (ryan@rsgalloway.com)
 #
@@ -30,13 +30,35 @@
 #
 
 __doc__ = """
-Contains a simple executable for the envstack cli.py module.
+Contains setenv cli wrapper classes and functions.
 """
 
-import re
+import os
 import sys
-from envstack.cli import setenv
 
-if __name__ == "__main__":
-    sys.argv[0] = re.sub(r"(-script\.pyw|\.exe)?$", "", sys.argv[0])
-    sys.exit(setenv())
+from .wrapper import Wrapper
+from .logger import log
+
+
+def die(msg: str, code: int = 1) -> None:
+    print(f"Warning: {msg}", file=sys.stderr)
+    raise SystemExit(code)
+
+
+def prepend(key: str, value: str) -> None:
+    cur = os.environ.get(key, "")
+    os.environ[key] = f"{value}:{cur}" if cur else value
+
+
+class EnvshellWrapper(Wrapper):
+    """A wrapper that spawns a shell with the env stack's variables set."""
+
+    def __init__(self, *args, **kwargs):
+        super(EnvshellWrapper, self).__init__(*args, **kwargs)
+
+    def executable(self):
+        """Return the executable to run."""
+        if os.name == "nt":
+            return "cmd"
+        else:
+            return "bash --norc"

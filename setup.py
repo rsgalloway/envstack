@@ -69,7 +69,7 @@ setup(
     entry_points={
         "console_scripts": [
             "envstack=envstack.cli:main",
-            "setenv=envstack.cli:setenv",
+            "envshell=envstack.cli:envshell",
             "whichenv=envstack.cli:whichenv",
         ],
     },

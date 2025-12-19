@@ -160,6 +160,11 @@ def parse_args():
         action="store_true",
         help="create a bare environment",
     )
+    parser.add_argument(
+        "--shell",
+        action="store_true",
+        help="drop into a shell with the environment loaded",
+    )
     encrypt_group = parser.add_argument_group("encryption options")
     encrypt_group.add_argument(
         "-e",
@@ -253,16 +258,17 @@ def parse_args():
     return args, args_after_dash
 
 
-def setenv():
-    """Run a shell in the given env stack."""
-    from .setenv import SetEnvWrapper
+def envshell(namespace: list = sys.argv):
+    """Run a shell in the given environment stack."""
+    from .envshell import EnvshellWrapper
 
-    if len(sys.argv) < 2:
-        name = "default"
+    print("\U0001F680 Launching envshell... CTRL+D to exit")
+    if len(namespace) < 1:
+        name = [config.DEFAULT_NAMESPACE]
     else:
-        name = sys.argv[1:]
+        name = namespace[:]
 
-    envshell = SetEnvWrapper(name)
+    envshell = EnvshellWrapper(name)
     return envshell.launch()
 
 
@@ -287,6 +293,9 @@ def main():
     try:
         if command:
             return run_command(command, args.namespace)
+
+        elif args.shell:
+            return envshell(args.namespace)
 
         elif args.keygen:
             from envstack.encrypt import generate_keys
