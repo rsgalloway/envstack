@@ -37,6 +37,7 @@ import argparse
 import re
 import sys
 import traceback
+from typing import List
 
 from envstack import __version__, config
 from envstack.env import (
@@ -258,12 +259,14 @@ def parse_args():
     return args, args_after_dash
 
 
-def envshell(namespace: list = sys.argv):
+def envshell(namespace: List[str] = None):
     """Run a shell in the given environment stack."""
     from .envshell import EnvshellWrapper
 
     print("\U0001F680 Launching envshell... CTRL+D to exit")
-    if len(namespace) < 1:
+
+    namespace = namespace or [config.DEFAULT_NAMESPACE]
+    if not namespace:
         name = [config.DEFAULT_NAMESPACE]
     else:
         name = namespace[:]
