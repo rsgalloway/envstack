@@ -147,15 +147,14 @@ def parse_args():
         action="version",
         version=f"envstack {__version__}",
     )
-    group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument(
+    parser.add_argument(
         "namespace",
         metavar="STACK",
         nargs="*",
         default=[config.DEFAULT_NAMESPACE],
         help="the environment stacks to use",
     )
-    group.add_argument(
+    parser.add_argument(
         "-b",
         "--bare",
         action="store_true",
