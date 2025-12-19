@@ -73,7 +73,7 @@ class TestUnresolved(unittest.TestCase):
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
@@ -86,6 +86,7 @@ ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${DEPLOY_ROOT}/bin:${PATH}
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=%s
 STACK=default
@@ -104,6 +105,7 @@ ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=DEBUG
 PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
 PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
 ROOT=%s
 STACK=dev
@@ -122,6 +124,7 @@ ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=INFO
 PATH=${DEPLOY_ROOT}/bin:${PATH}
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=%s
 STACK=distman
@@ -140,6 +143,7 @@ ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
 PYEXE=/usr/bin/python
 PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
 ROOT=%s
@@ -163,6 +167,7 @@ INT=5
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 NUMBER_LIST=[1, 2, 3]
 PATH=${DEPLOY_ROOT}/bin:${PATH}
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=${HOME}/.local/pipe
 STACK=thing
@@ -182,7 +187,7 @@ class TestEncrypt(unittest.TestCase):
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
@@ -203,6 +208,7 @@ ENVPATH=JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
 HELLO=JHtIRUxMTzo9d29ybGR9
 LOG_LEVEL=JHtMT0dfTEVWRUw6PUlORk99
 PATH=JHtERVBMT1lfUk9PVH0vYmluOiR7UEFUSH0=
+PS1=XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
 PYTHONPATH=JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 ROOT=L21udC9waXBl
 STACK=ZGVmYXVsdA==
@@ -251,6 +257,7 @@ ENVPATH=JHtST09UfS9kZXYvZW52OiR7Uk9PVH0vcHJvZC9lbnY6JHtFTlZQQVRIfQ==
 HELLO=JHtIRUxMTzo9d29ybGR9
 LOG_LEVEL=REVCVUc=
 PATH=JHtST09UfS9kZXYvYmluOiR7Uk9PVH0vcHJvZC9iaW46JHtQQVRIfQ==
+PS1=XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
 PYTHONPATH=JHtST09UfS9kZXYvbGliL3B5dGhvbjoke1JPT1R9L3Byb2QvbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 ROOT=L21udC9waXBl
 STACK=ZGV2
@@ -277,7 +284,7 @@ class TestResolved(unittest.TestCase):
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
@@ -321,14 +328,14 @@ STACK=distman
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
-    def test_test(self):
-        expected_output = f"""DEPLOY_ROOT={self.root}/test
+    def test_project(self):
+        expected_output = f"""DEPLOY_ROOT={self.root}/project
 HELLO=world
 ROOT={self.root}
-STACK=test
+STACK=project
 """
         command = (
-            "ENV=blah ROOT=/var/tmp %s test -r DEPLOY_ROOT HELLO ROOT STACK"
+            "ENV=blah ROOT=/var/tmp %s project -r DEPLOY_ROOT HELLO ROOT STACK"
             % self.envstack_bin
         )
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
@@ -341,7 +348,7 @@ ROOT={self.root}
 STACK=foobar
 """
         command = (
-            "ENV=blah ROOT=/var/tmp %s test foobar -r DEPLOY_ROOT HELLO ROOT STACK"
+            "ENV=blah ROOT=/var/tmp %s project foobar -r DEPLOY_ROOT HELLO ROOT STACK"
             % self.envstack_bin
         )
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
@@ -372,7 +379,7 @@ class TestBake(unittest.TestCase):
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
@@ -401,13 +408,16 @@ all: &all
   PYTHONPATH: ${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 darwin:
   <<: *all
+  PS1: \[\e[32m\](${ENV})\[\e[0m\] \w\$ 
   ROOT: /Volumes/pipe
 linux:
   <<: *all
+  PS1: \[\e[32m\](${ENV})\[\e[0m\] \w\$ 
   ROOT: /mnt/pipe
 windows:
   <<: *all
-  ROOT: X:/pipe
+  PROMPT: $E[32m(${ENV})$E[0m $P$G
+  ROOT: //tools/pipe
 """
         output = subprocess.check_output(
             command,
@@ -418,7 +428,7 @@ windows:
 
     def test_dev(self):
         """Tests baking the dev stack."""
-        command = make_command(self.envstack_bin, self.filename, "dev", "-d 1")
+        command = make_command(self.envstack_bin, self.filename, "dev", "-d", "1")
         expected_output = """#!/usr/bin/env envstack
 include: [default]
 all: &all
@@ -489,13 +499,16 @@ all: &all
   PYTHONPATH: !encrypt JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 darwin:
   <<: *all
+  PS1: !encrypt XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
   ROOT: !encrypt L1ZvbHVtZXMvcGlwZQ==
 linux:
   <<: *all
+  PS1: !encrypt XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
   ROOT: !encrypt L21udC9waXBl
 windows:
   <<: *all
-  ROOT: !encrypt WDovcGlwZQ==
+  PROMPT: !encrypt JEVbMzJtKCR7RU5WfSkkRVswbSAkUCRH
+  ROOT: !encrypt Ly90b29scy9waXBl
 """
         output = subprocess.check_output(
             command,
@@ -568,7 +581,7 @@ class TestCommands(unittest.TestCase):
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
@@ -603,17 +616,17 @@ class TestCommands(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_test_echo_deploy_root(self):
-        """Tests the test stack with an echo command."""
-        command = "%s test -- echo {DEPLOY_ROOT}" % self.envstack_bin
-        expected_output = f"{self.root}/test\n"
+        """Tests the project stack with an echo command."""
+        command = "%s project -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        expected_output = f"{self.root}/project\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )
         self.assertEqual(output, expected_output)
 
-    def test_test_echo_deploy_root(self):
-        """Tests the test stack with an echo command."""
-        command = "%s test foobar -- echo {DEPLOY_ROOT}" % self.envstack_bin
+    def test_test_echo_deploy_root_foobar(self):
+        """Tests the project stack with an echo command."""
+        command = "%s project foobar -- echo {DEPLOY_ROOT}" % self.envstack_bin
         expected_output = f"{self.root}/foobar\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
@@ -632,7 +645,7 @@ class TestSet(unittest.TestCase):
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
@@ -799,7 +812,7 @@ class TestDistman(unittest.TestCase):
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
@@ -823,15 +836,15 @@ class TestDistman(unittest.TestCase):
         self.assertEqual(output, expected_output)
 
     def test_test_deploy_root(self):
-        command = "ENV=invalid %s test -- %s" % (self.envstack_bin, self.python_cmd)
-        expected_output = f"{self.root}/test\n"
+        command = "ENV=invalid %s project -- %s" % (self.envstack_bin, self.python_cmd)
+        expected_output = f"{self.root}/project\n"
         output = subprocess.check_output(
             command, start_new_session=True, shell=True, universal_newlines=True
         )
         self.assertEqual(output, expected_output)
 
     def test_foobar_deploy_root(self):
-        command = "ENV=invalid %s test foobar -- %s" % (
+        command = "ENV=invalid %s project foobar -- %s" % (
             self.envstack_bin,
             self.python_cmd,
         )
@@ -922,7 +935,7 @@ class TestIssues(unittest.TestCase):
         env/dev.env:
             ENVPATH: ${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 
-        env/test.env:
+        env/project.env:
             ENVPATH: ${ROOT}/${STACK}/env:${ROOT}/prod/env
         """
         from envstack.env import Env
@@ -950,11 +963,10 @@ class TestIssues(unittest.TestCase):
         )
         self.assertEqual(output, expected_output)
 
-        # test.env does use STACK in ENVPATH and should include our test env
-        command = "%s test test_issue_55 --sources" % self.envstack_bin
+        # project.env does use STACK in ENVPATH and should include our test env
+        command = "%s project test_issue_55 --sources" % self.envstack_bin
         expected_output = f"""{self.root}/prod/env/default.env
-{self.root}/prod/env/dev.env
-{self.root}/prod/env/test.env
+{self.root}/prod/env/project.env
 {self.root}/test_issue_55/env/test_issue_55.env
 """
         output = subprocess.check_output(
