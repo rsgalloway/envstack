@@ -254,9 +254,22 @@ def parse_args():
     return args, args_after_dash
 
 
+def setenv():
+    """Run a shell in the given env stack."""
+    from .setenv import SetEnvWrapper
+
+    if len(sys.argv) < 2:
+        name = "default"
+    else:
+        name = sys.argv[1:]
+
+    envshell = SetEnvWrapper(name)
+    return envshell.launch()
+
+
 def whichenv():
     """Entry point for the whichenv command line tool. Finds {VAR}s."""
-    from envstack.util import findenv
+    from .util import findenv
 
     if len(sys.argv) != 2:
         print("Usage: whichenv [VAR]")

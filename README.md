@@ -88,7 +88,9 @@ STACK=default
 If you are not seeing the above output, make sure the `default.env` stack file
 is in `${ENVPATH}` or the current working directory.
 
-> NOTE: The name of the current stack will always be stored in `${STACK}`
+> NOTE: The name of the current stack will always be stored in `${STACK}`.
+
+ENV is the tier, STACK is the namespace.
 
 Environments can be combined, or stacked, in order of priority (variables
 defined in stacks flow from higher scope to lower scope, left to right):

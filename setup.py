@@ -40,7 +40,7 @@ with open(os.path.join(here, "README.md")) as f:
 
 setup(
     name="envstack",
-    version="0.9.2",
+    version="0.9.3",
     description="Stacked environment variable management system",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -69,6 +69,7 @@ setup(
     entry_points={
         "console_scripts": [
             "envstack=envstack.cli:main",
+            "setenv=envstack.cli:setenv",
             "whichenv=envstack.cli:whichenv",
         ],
     },

@@ -30,10 +30,35 @@
 #
 
 __doc__ = """
-Stacked environment variable management system.
+Contains setenv cli wrapper classes and functions.
 """
 
-__prog__ = "envstack"
-__version__ = "0.9.3"
+import os
+import sys
 
-from envstack.env import clear, init, revert, save  # noqa: F401
+from .wrapper import Wrapper
+from .logger import log
+
+
+def die(msg: str, code: int = 1) -> None:
+    print(f"Warning: {msg}", file=sys.stderr)
+    raise SystemExit(code)
+
+
+def prepend(key: str, value: str) -> None:
+    cur = os.environ.get(key, "")
+    os.environ[key] = f"{value}:{cur}" if cur else value
+
+
+class SetEnvWrapper(Wrapper):
+    """A wrapper that spawns a shell with the env stack's variables set."""
+
+    def __init__(self, *args, **kwargs):
+        super(SetEnvWrapper, self).__init__(*args, **kwargs)
+
+    def executable(self):
+        """Return the executable to run."""
+        if os.name == "nt":
+            return "cmd"
+        else:
+            return "bash --norc"
