@@ -349,21 +349,21 @@ Then use `keys.env` to encrypt any other environment files:
 $ ./keys.env -- envstack -eo encrypted.env
 ```
 
-To decrypt, add `keys` to the env stack:
+To decrypt, run the command inside the `keys` environment again:
+
+```bash
+$ ./keys.env -- envstack encrypted -r HELLO
+HELLO=world
+```
+
+Or add `keys` to the env stack:
 
 ```bash
 $ envstack keys encrypted -r HELLO
 HELLO=world
 ```
 
-Or run the command inside the `keys` environment like this:
-
-```bash
-$ ./keys.env -- envsatck encrypted -r HELLO
-HELLO=world
-```
-
-Or include `keys` in environments to automatically decrypt:
+Or automatically include `keys`:
 
 ```yaml
 include: [keys]
