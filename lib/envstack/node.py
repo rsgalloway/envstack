@@ -328,7 +328,7 @@ class CustomDumper(yaml.SafeDumper):
                 node.style = '"%s"' % node.value
             elif node.value and node.value[-1] == ":":
                 node.style = '"%s"' % node.value
-            elif ": " in node.value:
+            elif ": " in str(node.value):
                 node.style = '"%s"' % node.value
 
     def quote_vars(self, node: yaml.Node):

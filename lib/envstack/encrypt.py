@@ -43,6 +43,7 @@ from envstack.logger import log
 
 # cryptography and _rust dependency may not be available everywhere
 # ImportError: DLL load failed while importing _rust: Module not found.
+Fernet = None
 try:
     import cryptography.exceptions
     from cryptography.fernet import Fernet, InvalidToken
@@ -50,7 +51,6 @@ try:
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 except ImportError as err:
     log.debug("cryptography module not available: %s", err)
-    Fernet = None
 
 
 class Base64Encryptor(object):
@@ -78,7 +78,7 @@ class FernetEncryptor(object):
     KEY_VAR_NAME = "ENVSTACK_FERNET_KEY"
 
     def __init__(self, key: str = None, env: dict = os.environ):
-        if key:
+        if key and Fernet:
             self.key = Fernet(key)
         else:
             self.key = self.get_key(env)
@@ -90,7 +90,8 @@ class FernetEncryptor(object):
             key = Fernet.generate_key()
             return key.decode()
         else:
-            log.error("Fernet encryption not available")
+            log.debug("Fernet encryption not available")
+        return ""
 
     def get_key(self, env: dict = os.environ):
         """Load the encryption key from the environment `env`.
@@ -99,7 +100,7 @@ class FernetEncryptor(object):
         :return: encryption key.
         """
         key = env.get(self.KEY_VAR_NAME)
-        if key:
+        if key and Fernet:
             return Fernet(key)
         return key
 

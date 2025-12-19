@@ -126,7 +126,10 @@ class Source(object):
 
     def write(self, filepath: str = None):
         """Writes the source data to the .env file."""
-        util.dump_yaml(filepath or self.path, self.data)
+        try:
+            util.dump_yaml(filepath or self.path, self.data)
+        except Exception as err:
+            logger.log.exception("Failed to write %s: %s", filepath or self.path, err)
 
 
 class EnvVar(string.Template, str):
