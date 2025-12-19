@@ -1,2 +1,2 @@
 @echo off
-python %~dp0\setenv %*
+python %~dp0\envshell %*

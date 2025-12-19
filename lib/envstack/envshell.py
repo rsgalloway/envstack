@@ -30,28 +30,16 @@
 #
 
 __doc__ = """
-Contains setenv cli wrapper classes and functions.
+Contains envshell cli wrapper classes and functions.
 """
 
 import os
-import sys
 
 from .wrapper import Wrapper
-from .logger import log
-
-
-def die(msg: str, code: int = 1) -> None:
-    print(f"Warning: {msg}", file=sys.stderr)
-    raise SystemExit(code)
-
-
-def prepend(key: str, value: str) -> None:
-    cur = os.environ.get(key, "")
-    os.environ[key] = f"{value}:{cur}" if cur else value
 
 
 class EnvshellWrapper(Wrapper):
-    """A wrapper that spawns a shell with the env stack's variables set."""
+    """A wrapper that spawns a shell with the environment set."""
 
     def __init__(self, *args, **kwargs):
         super(EnvshellWrapper, self).__init__(*args, **kwargs)
