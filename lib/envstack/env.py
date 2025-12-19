@@ -36,6 +36,7 @@ Contains functions and classes for processing scoped .env files.
 import os
 import re
 import string
+from collections import defaultdict
 from pathlib import Path
 
 import yaml  # noqa
@@ -77,7 +78,7 @@ class Source(object):
         :param path: path to .env file.
         """
         self.path = path
-        self.data = {}
+        self.data = defaultdict(dict)
 
     def __eq__(self, other):
         if not isinstance(other, Source):
