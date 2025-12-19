@@ -314,12 +314,11 @@ def generate_keys():
 
     :returns: Dictionary containing Fernet and AES-GCM keys.
     """
-    from envstack.node import Base64Node
 
     symmetric_key = AESGCMEncryptor.generate_key()
     fernet_key = FernetEncryptor.generate_key()
 
     return {
-        AESGCMEncryptor.KEY_VAR_NAME: Base64Node(symmetric_key),
-        FernetEncryptor.KEY_VAR_NAME: Base64Node(fernet_key),
+        AESGCMEncryptor.KEY_VAR_NAME: symmetric_key,
+        FernetEncryptor.KEY_VAR_NAME: fernet_key,
     }
