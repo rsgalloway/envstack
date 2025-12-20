@@ -176,7 +176,7 @@ class TestEnv(unittest.TestCase):
         env = load_environ("thing")
         baked = env.bake()
         for k, v in env.items():
-            if k == "STACK":
+            if k == "STACK" or k == "PS1":  # skip
                 continue
             self.assertEqual(baked[k], v)
 
@@ -189,7 +189,7 @@ class TestEnv(unittest.TestCase):
         env1.write(self.filename, depth=0)
         env2 = load_environ(self.filename)
         for k, v in env1.items():
-            if k == "STACK":
+            if k == "STACK" or k == "PS1":  # skip
                 continue
             self.assertEqual(env2[k], v)
 
@@ -342,8 +342,8 @@ class TestInit(unittest.TestCase):
         self.assertEqual(diffs["removed"], {})
         self.assertEqual(diffs["unchanged"], original_env)
 
-    def test_init_zzz_custom(self):
-        """Tests init with custom test stack."""
+    def test_init_zzz_project(self):
+        """Tests init with custom project stack."""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
         os.environ["HELLO"] = "goodbye"
@@ -351,7 +351,7 @@ class TestInit(unittest.TestCase):
         original_env = os.environ.copy()
         sys_path = sys.path.copy()
 
-        envstack.init("test", "custom", ignore_missing=True)
+        envstack.init("project", "custom", ignore_missing=True)
         self.assertEqual(os.getenv("ENV"), "custom")
         self.assertEqual(os.getenv("STACK"), "custom")
         self.assertEqual(os.getenv("DEPLOY_ROOT"), f"{self.root}/custom")
@@ -667,7 +667,7 @@ class TestBakeEnviron(unittest.TestCase):
 
         # compare the values
         for key, value in env.items():
-            if key == "STACK":  # skip the stack name
+            if key == "STACK" or key == "PS1":  # skip
                 continue
             self.assertEqual(baked[key], value)
 
@@ -695,7 +695,7 @@ class TestBakeEnviron(unittest.TestCase):
 
         # compare the values
         for key, value in env.items():
-            if key == "STACK":
+            if key == "STACK" or key == "PS1":  # skip
                 continue
             self.assertEqual(baked2_reloaded[key], value)
 
@@ -1062,9 +1062,9 @@ class TestIssues(unittest.TestCase):
         # FIXME: why is this necessary? (think it's caching seen stacks)
         envstack.revert()
 
-        # load our test env file by loading the "test" env first, which
+        # load our project env file by loading the "project" env first, which
         # does use STACK in ENVPATH
-        env2 = load_environ(["test", "test_issue_55"])
+        env2 = load_environ(["project", "test_issue_55"])
 
         # last env file should be our test env file
         self.assertEqual(str(env2.sources[-1].path), test_env_file)

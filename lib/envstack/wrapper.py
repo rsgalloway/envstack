@@ -128,7 +128,7 @@ class Wrapper(object):
             traceback.print_exc()
             exitcode = 1
         else:
-            stdout, stderr = process.communicate()
+            stdout, stderr = process.communicate()  # dead code, kept for reference
             while stdout and stderr:
                 self.log.info(stdout)
                 self.log.error(stderr)

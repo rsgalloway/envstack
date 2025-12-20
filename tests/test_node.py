@@ -172,7 +172,7 @@ class TestTemplate(unittest.TestCase):
 class TestCustomLoader(unittest.TestCase):
     def test_construct_mapping(self):
         """test the CustomLoader construct_mapping method"""
-        envfile = os.path.join(envpath, "test.env")
+        envfile = os.path.join(envpath, "project.env")
         loader = CustomLoader(open(envfile, "r"))
         node = yaml.MappingNode("tag", [])
         mapping = loader.construct_mapping(node)

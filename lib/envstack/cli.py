@@ -37,6 +37,7 @@ import argparse
 import re
 import sys
 import traceback
+from typing import List
 
 from envstack import __version__, config
 from envstack.env import (
@@ -147,19 +148,23 @@ def parse_args():
         action="version",
         version=f"envstack {__version__}",
     )
-    group = parser.add_mutually_exclusive_group(required=False)
-    group.add_argument(
+    parser.add_argument(
         "namespace",
         metavar="STACK",
         nargs="*",
         default=[config.DEFAULT_NAMESPACE],
         help="the environment stacks to use",
     )
-    group.add_argument(
+    parser.add_argument(
         "-b",
         "--bare",
         action="store_true",
         help="create a bare environment",
+    )
+    parser.add_argument(
+        "--shell",
+        action="store_true",
+        help="drop into a shell with the environment loaded",
     )
     encrypt_group = parser.add_argument_group("encryption options")
     encrypt_group.add_argument(
@@ -254,9 +259,20 @@ def parse_args():
     return args, args_after_dash
 
 
+def envshell(namespace: List[str] = None):
+    """Run a shell in the given environment stack."""
+    from .envshell import EnvshellWrapper
+
+    print("\U0001F680 Launching envshell... CTRL+D to exit")
+
+    name = (namespace or [config.DEFAULT_NAMESPACE])[:]
+    envshell = EnvshellWrapper(name)
+    return envshell.launch()
+
+
 def whichenv():
     """Entry point for the whichenv command line tool. Finds {VAR}s."""
-    from envstack.util import findenv
+    from .util import findenv
 
     if len(sys.argv) != 2:
         print("Usage: whichenv [VAR]")
@@ -275,6 +291,9 @@ def main():
     try:
         if command:
             return run_command(command, args.namespace)
+
+        elif args.shell:
+            return envshell(args.namespace)
 
         elif args.keygen:
             from envstack.encrypt import generate_keys

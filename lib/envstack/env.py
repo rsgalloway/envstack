@@ -36,6 +36,7 @@ Contains functions and classes for processing scoped .env files.
 import os
 import re
 import string
+from collections import defaultdict
 from pathlib import Path
 
 import yaml  # noqa
@@ -77,7 +78,7 @@ class Source(object):
         :param path: path to .env file.
         """
         self.path = path
-        self.data = {}
+        self.data = defaultdict(dict)
 
     def __eq__(self, other):
         if not isinstance(other, Source):
@@ -126,7 +127,10 @@ class Source(object):
 
     def write(self, filepath: str = None):
         """Writes the source data to the .env file."""
-        util.dump_yaml(filepath or self.path, self.data)
+        try:
+            util.dump_yaml(filepath or self.path, self.data)
+        except Exception as err:
+            logger.log.exception("Failed to write %s: %s", filepath or self.path, err)
 
 
 class EnvVar(string.Template, str):
