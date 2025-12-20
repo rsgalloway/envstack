@@ -615,7 +615,7 @@ class TestCommands(unittest.TestCase):
         )
         self.assertEqual(output, expected_output)
 
-    def test_test_echo_deploy_root(self):
+    def test_project_echo_deploy_root(self):
         """Tests the project stack with an echo command."""
         command = "%s project -- echo {DEPLOY_ROOT}" % self.envstack_bin
         expected_output = f"{self.root}/project\n"
@@ -624,7 +624,7 @@ class TestCommands(unittest.TestCase):
         )
         self.assertEqual(output, expected_output)
 
-    def test_test_echo_deploy_root_foobar(self):
+    def test_project_echo_deploy_root_foobar(self):
         """Tests the project stack with an echo command."""
         command = "%s project foobar -- echo {DEPLOY_ROOT}" % self.envstack_bin
         expected_output = f"{self.root}/foobar\n"
