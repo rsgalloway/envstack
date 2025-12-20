@@ -265,12 +265,7 @@ def envshell(namespace: List[str] = None):
 
     print("\U0001F680 Launching envshell... CTRL+D to exit")
 
-    namespace = namespace or [config.DEFAULT_NAMESPACE]
-    if not namespace:
-        name = [config.DEFAULT_NAMESPACE]
-    else:
-        name = namespace[:]
-
+    name = (namespace or [config.DEFAULT_NAMESPACE])[:]
     envshell = EnvshellWrapper(name)
     return envshell.launch()
 

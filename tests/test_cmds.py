@@ -143,7 +143,7 @@ ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
-PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
+PS1=\[\e[33m\](${STACK})\[\e[0m\] \w\$ 
 PYEXE=/usr/bin/python
 PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
 ROOT=%s
