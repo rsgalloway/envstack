@@ -222,6 +222,12 @@ def parse_args():
         help="search scope for environment stack files",
     )
     parser.add_argument(
+        "-u",
+        "--unresolved",
+        action="store_true",
+        help="dump unresolved environment variables to stdout",
+    )
+    parser.add_argument(
         "-r",
         "--resolve",
         nargs="*",
@@ -437,13 +443,15 @@ def main():
             for source in env.sources:
                 print(source.path)
 
+        elif args.unresolved:
+            env = load_environ(
+                args.namespace, platform=args.platform, encrypt=args.encrypt
+            )
+            for k, v in sorted(env.items(), key=lambda x: str(x[0])):
+                print(f"{k}={v}")
+
         else:
             return envshell(args.namespace)
-            # env = load_environ(
-            #     args.namespace, platform=args.platform, encrypt=args.encrypt
-            # )
-            # for k, v in sorted(env.items(), key=lambda x: str(x[0])):
-            #     print(f"{k}={v}")
 
     except KeyboardInterrupt:
         print("Stopping...")

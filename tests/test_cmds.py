@@ -67,9 +67,7 @@ class TestUnresolved(unittest.TestCase):
     """Tests unresolved environment variables from the cli."""
 
     def setUp(self):
-        self.envstack_bin = os.path.join(
-            os.path.dirname(__file__), "..", "bin", "envstack"
-        )
+        self.envstack_bin = "envstack -u"
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
@@ -86,15 +84,14 @@ ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${DEPLOY_ROOT}/bin:${PATH}
-PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
+PS1=\[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=%s
 STACK=default
 """
             % self.root
         )
-        command = self.envstack_bin
-        output = subprocess.check_output(command, shell=True, universal_newlines=True)
+        output = subprocess.check_output(self.envstack_bin, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_dev(self):
@@ -105,7 +102,7 @@ ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=DEBUG
 PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
-PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
+PS1=\[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
 PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
 ROOT=%s
 STACK=dev
@@ -113,25 +110,6 @@ STACK=dev
             % self.root
         )
         command = "%s dev" % self.envstack_bin
-        output = subprocess.check_output(command, shell=True, universal_newlines=True)
-        self.assertEqual(output, expected_output)
-
-    def test_distman(self):
-        expected_output = (
-            """DEPLOY_ROOT=${ROOT}/${ENV}
-ENV=${ENV:=prod}
-ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
-HELLO=${HELLO:=world}
-LOG_LEVEL=INFO
-PATH=${DEPLOY_ROOT}/bin:${PATH}
-PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
-PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
-ROOT=%s
-STACK=distman
-"""
-            % self.root
-        )
-        command = "%s distman" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -167,7 +145,7 @@ INT=5
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 NUMBER_LIST=[1, 2, 3]
 PATH=${DEPLOY_ROOT}/bin:${PATH}
-PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
+PS1=\[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=${HOME}/.local/pipe
 STACK=thing
@@ -181,9 +159,7 @@ class TestEncrypt(unittest.TestCase):
     """Tests encrypting environment variables from the cli."""
 
     def setUp(self):
-        self.envstack_bin = os.path.join(
-            os.path.dirname(__file__), "..", "bin", "envstack"
-        )
+        self.envstack_bin = "envstack -u"
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
@@ -208,7 +184,7 @@ ENVPATH=JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
 HELLO=JHtIRUxMTzo9d29ybGR9
 LOG_LEVEL=JHtMT0dfTEVWRUw6PUlORk99
 PATH=JHtERVBMT1lfUk9PVH0vYmluOiR7UEFUSH0=
-PS1=XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
+PS1=XFtcZVszMm1cXSgke0VOVjo9JHtTVEFDS319KVxbXGVbMG1cXSBcd1wkIA==
 PYTHONPATH=JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 ROOT=L21udC9waXBl
 STACK=ZGVmYXVsdA==
@@ -257,7 +233,7 @@ ENVPATH=JHtST09UfS9kZXYvZW52OiR7Uk9PVH0vcHJvZC9lbnY6JHtFTlZQQVRIfQ==
 HELLO=JHtIRUxMTzo9d29ybGR9
 LOG_LEVEL=REVCVUc=
 PATH=JHtST09UfS9kZXYvYmluOiR7Uk9PVH0vcHJvZC9iaW46JHtQQVRIfQ==
-PS1=XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
+PS1=XFtcZVszMm1cXSgke0VOVjo9JHtTVEFDS319KVxbXGVbMG1cXSBcd1wkIA==
 PYTHONPATH=JHtST09UfS9kZXYvbGliL3B5dGhvbjoke1JPT1R9L3Byb2QvbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 ROOT=L21udC9waXBl
 STACK=ZGV2
@@ -278,9 +254,7 @@ class TestResolved(unittest.TestCase):
     """Tests resolved environment variables."""
 
     def setUp(self):
-        self.envstack_bin = os.path.join(
-            os.path.dirname(__file__), "..", "bin", "envstack"
-        )
+        self.envstack_bin = "envstack"
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
@@ -307,15 +281,6 @@ ROOT={self.root}
 STACK=dev
 """
         command = "%s dev -r DEPLOY_ROOT HELLO ROOT STACK" % self.envstack_bin
-        output = subprocess.check_output(command, shell=True, universal_newlines=True)
-        self.assertEqual(output, expected_output)
-
-    def test_distman(self):
-        expected_output = f"""DEPLOY_ROOT={self.root}/{os.getenv('ENV', 'prod')}
-ROOT={self.root}
-STACK=distman
-"""
-        command = "%s distman -r DEPLOY_ROOT ROOT STACK" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -373,9 +338,7 @@ class TestBake(unittest.TestCase):
         self.filename = "baketest.env"
         if os.path.exists(self.filename):
             os.remove(self.filename)
-        self.envstack_bin = os.path.join(
-            os.path.dirname(__file__), "..", "bin", "envstack"
-        )
+        self.envstack_bin = "envstack"
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
@@ -408,15 +371,15 @@ all: &all
   PYTHONPATH: ${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 darwin:
   <<: *all
-  PS1: \[\e[32m\](${ENV})\[\e[0m\] \w\$ 
+  PS1: \[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
   ROOT: /Volumes/pipe
 linux:
   <<: *all
-  PS1: \[\e[32m\](${ENV})\[\e[0m\] \w\$ 
+  PS1: \[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
   ROOT: /mnt/pipe
 windows:
   <<: *all
-  PROMPT: $E[32m(${ENV})$E[0m $P$G
+  PROMPT: $E[32m(${ENV:=${STACK}})$E[0m $P$G
   ROOT: //tools/pipe
 """
         output = subprocess.check_output(
@@ -499,15 +462,15 @@ all: &all
   PYTHONPATH: !encrypt JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 darwin:
   <<: *all
-  PS1: !encrypt XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
+  PS1: !encrypt XFtcZVszMm1cXSgke0VOVjo9JHtTVEFDS319KVxbXGVbMG1cXSBcd1wkIA==
   ROOT: !encrypt L1ZvbHVtZXMvcGlwZQ==
 linux:
   <<: *all
-  PS1: !encrypt XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
+  PS1: !encrypt XFtcZVszMm1cXSgke0VOVjo9JHtTVEFDS319KVxbXGVbMG1cXSBcd1wkIA==
   ROOT: !encrypt L21udC9waXBl
 windows:
   <<: *all
-  PROMPT: !encrypt JEVbMzJtKCR7RU5WfSkkRVswbSAkUCRH
+  PROMPT: !encrypt JEVbMzJtKCR7RU5WOj0ke1NUQUNLfX0pJEVbMG0gJFAkRw==
   ROOT: !encrypt Ly90b29scy9waXBl
 """
         output = subprocess.check_output(
@@ -575,9 +538,7 @@ class TestCommands(unittest.TestCase):
     """Tests various envstack commands."""
 
     def setUp(self):
-        self.envstack_bin = os.path.join(
-            os.path.dirname(__file__), "..", "bin", "envstack"
-        )
+        self.envstack_bin = "envstack"
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
@@ -639,9 +600,7 @@ class TestSet(unittest.TestCase):
 
     def setUp(self):
         self.filename = "settest.env"
-        self.envstack_bin = os.path.join(
-            os.path.dirname(__file__), "..", "bin", "envstack"
-        )
+        self.envstack_bin = "envstack"
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
@@ -762,9 +721,7 @@ class TestVarFlow(unittest.TestCase):
     """Tests the flow of environment variables through stacks."""
 
     def setUp(self):
-        self.envstack_bin = os.path.join(
-            os.path.dirname(__file__), "..", "bin", "envstack"
-        )
+        self.envstack_bin = "envstack"
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
 
@@ -805,9 +762,7 @@ class TestDistman(unittest.TestCase):
     """Tests value for $DEPLOY_ROOT under various environment configurations."""
 
     def setUp(self):
-        self.envstack_bin = os.path.join(
-            os.path.dirname(__file__), "..", "bin", "envstack"
-        )
+        self.envstack_bin = "envstack"
         self.python_cmd = """python -c \"import os,envstack;envstack.init('distman');print(os.getenv('DEPLOY_ROOT'))\""""
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
@@ -858,9 +813,7 @@ class TestDistman(unittest.TestCase):
 class TestIssues(unittest.TestCase):
     def setUp(self):
         self.root = create_test_root()
-        self.envstack_bin = os.path.join(
-            os.path.dirname(__file__), "..", "bin", "envstack"
-        )
+        self.envstack_bin = "envstack"
         os.environ["ENVPATH"] = os.path.join(self.root, "prod", "env")
 
     def tearDown(self):
@@ -988,7 +941,7 @@ class TestIssues(unittest.TestCase):
         cmd = [
             "bash",
             "-lc",
-            'envstack -- "echo hello from envstack"',
+            'envstack -- echo "hello from envstack"',
         ]
 
         proc = subprocess.Popen(
