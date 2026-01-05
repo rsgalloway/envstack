@@ -72,6 +72,7 @@ class HelloWrapper(Wrapper):
 
 
 def test_wrapper_shell_true_allows_command_string(stub_env, capfd):
+    """Test that Wrapper with shell=True runs command string."""
     w = HelloWrapper("hello", ["ROOT"])
     rc = w.launch()
     out, err = capfd.readouterr()
@@ -80,6 +81,7 @@ def test_wrapper_shell_true_allows_command_string(stub_env, capfd):
 
 
 def test_commandwrapper_runs_argv_without_shell(stub_env, capfd):
+    """Test that CommandWrapper runs argv mode without shell."""
     w = CommandWrapper("hello", ["echo", "hi there"])
     rc = w.launch()
     out, err = capfd.readouterr()
@@ -88,6 +90,7 @@ def test_commandwrapper_runs_argv_without_shell(stub_env, capfd):
 
 
 def test_run_command_preserves_quoted_arg_in_argv_mode(stub_env):
+    """Test that run_command preserves quoted args when shell=False."""
     # Regression for: envstack -- bash -c "sleep 5" breaking into bash -c sleep 5
     # Here we use something observable instead of sleep.
     rc = run_command(["bash", "-c", "printf '%s\n' \"sleep 5\""], namespace="hello")
@@ -95,6 +98,7 @@ def test_run_command_preserves_quoted_arg_in_argv_mode(stub_env):
 
 
 def test_run_command_brace_expands_to_env_value(stub_env, capfd):
+    """Test that {VAR} in command args expands to env var value."""
     rc = run_command(["echo", "{ROOT}"], namespace="hello")
     out, err = capfd.readouterr()
     assert rc == 0
@@ -102,6 +106,7 @@ def test_run_command_brace_expands_to_env_value(stub_env, capfd):
 
 
 def test_run_command_two_in_series_no_stop(stub_env, capfd):
+    """Test that two commands run in series without stopping the process."""
     rc1 = run_command(["bash", "-c", "echo one"], namespace="hello")
     rc2 = run_command(["bash", "-c", "echo two"], namespace="hello")
     out, err = capfd.readouterr()
@@ -124,12 +129,10 @@ def test_run_command_two_in_series_no_stop(stub_env, capfd):
     ],
 )
 def test_interactive_env_override_parsing(stub_env, monkeypatch, override, expected):
-    # If you kept a get_interactive helper somewhere, test it.
-    # If not, feel free to delete this test.
     env = dict(os.environ)
     env["INTERACTIVE"] = override
 
-    # Example: if you implemented ShellWrapper.get_interactive(env)
+    # example: if you implemented ShellWrapper.get_interactive(env)
     ShellWrapper = getattr(wrapper_mod, "ShellWrapper", None)
     if ShellWrapper is None:
         pytest.skip("ShellWrapper not present in envstack.wrapper")
