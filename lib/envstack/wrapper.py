@@ -194,7 +194,7 @@ class ShellWrapper(Wrapper):
     def get_interactive(self, env: dict = os.environ):
         override = env.get("INTERACTIVE")
         if override is not None:
-            return override.lower() in {"1", "true", "yes", "on"}
+            return str(override).lower() in {"1", "true", "yes", "on"}
         return False  # default safe
 
     def get_subprocess_command(self, env: dict = os.environ):
