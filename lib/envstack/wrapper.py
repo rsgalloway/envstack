@@ -201,11 +201,11 @@ class ShellWrapper(CommandWrapper):
         super(ShellWrapper, self).__init__(namespace, args)
 
     def get_interactive(self, env: dict = os.environ):
-        """Returns whether to run the command in an interactive shell."""
+        """Run the command in an interactive shell (False by default)."""
         override = env.get("INTERACTIVE")
         if override is not None:
             return override.lower() in {"1", "true", "yes", "on"}
-        return sys.stdin.isatty() and sys.stdout.isatty()
+        return False  # sys.stdin.isatty() and sys.stdout.isatty()
 
     def get_subprocess_command(self, env: dict = os.environ):
         """Returns the command to be passed to the shell in a subprocess."""

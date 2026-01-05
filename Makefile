@@ -37,7 +37,8 @@ all: build
 
 # Install dryrun target to simulate installation
 test:
-	$(ENVSTACK_CMD) -- l {ROOT}
+	$(ENVSTACK_CMD) -- ls -al
+	${ENVSTACK_CMD} -- which python
 
 # Install dryrun target to simulate installation
 dryrun:
