@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2024-2025, Ryan Galloway (ryan@rsgalloway.com)
 #
@@ -161,11 +161,6 @@ def parse_args():
         action="store_true",
         help="create a bare environment",
     )
-    parser.add_argument(
-        "--shell",
-        action="store_true",
-        help="drop into a shell with the environment loaded",
-    )
     encrypt_group = parser.add_argument_group("encryption options")
     encrypt_group.add_argument(
         "-e",
@@ -227,6 +222,12 @@ def parse_args():
         help="search scope for environment stack files",
     )
     parser.add_argument(
+        "-u",
+        "--unresolved",
+        action="store_true",
+        help="dump unresolved environment variables to stdout",
+    )
+    parser.add_argument(
         "-r",
         "--resolve",
         nargs="*",
@@ -263,11 +264,11 @@ def envshell(namespace: List[str] = None):
     """Run a shell in the given environment stack."""
     from .envshell import EnvshellWrapper
 
-    print("\U0001F680 Launching envshell... CTRL+D to exit")
+    print("\U0001F680 Launching envstack shell... CTRL+D to exit")
 
     name = (namespace or [config.DEFAULT_NAMESPACE])[:]
-    envshell = EnvshellWrapper(name)
-    return envshell.launch()
+    shell = EnvshellWrapper(name)
+    return shell.launch()
 
 
 def whichenv():
@@ -291,9 +292,6 @@ def main():
     try:
         if command:
             return run_command(command, args.namespace)
-
-        elif args.shell:
-            return envshell(args.namespace)
 
         elif args.keygen:
             from envstack.encrypt import generate_keys
@@ -445,12 +443,15 @@ def main():
             for source in env.sources:
                 print(source.path)
 
-        else:
+        elif args.unresolved:
             env = load_environ(
                 args.namespace, platform=args.platform, encrypt=args.encrypt
             )
             for k, v in sorted(env.items(), key=lambda x: str(x[0])):
                 print(f"{k}={v}")
+
+        else:
+            return envshell(args.namespace)
 
     except KeyboardInterrupt:
         print("Stopping...")

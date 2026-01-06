@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2024-2025, Ryan Galloway (ryan@rsgalloway.com)
 #
@@ -122,3 +122,22 @@ class EnvshellWrapper(Wrapper):
         Override to return argv list for subprocess.Popen(..., shell=False).
         """
         return _detect_shell_argv()
+
+    def get_shell_prompt(self) -> str:
+        """
+        Return the environment variable that controls the shell prompt and its
+        desired value.
+        """
+        if os.name == "nt":
+            return ("PROMPT", "$E[32m(${ENV:=${STACK}})$E[0m $P$G ")
+        else:
+            return ("PS1", "\[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ ")
+
+    def get_subprocess_env(self):
+        """
+        Override to inject PS1/PROMPT if not already set.
+        """
+        prompt_env, prompt_value = self.get_shell_prompt()
+        if prompt_env not in self.env:
+            self.env[prompt_env] = prompt_value
+        return super().get_subprocess_env()

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Copyright (c) 2024-2025, Ryan Galloway (ryan@rsgalloway.com)
 #
@@ -37,7 +37,6 @@ import os
 import re
 import shlex
 import subprocess
-import sys
 import traceback
 
 from envstack import config, logger
@@ -93,6 +92,7 @@ class Wrapper(object):
 
         tool.log = MyLogger()
     """
+    shell: bool = False
 
     def __init__(self, namespace, args=[]):
         """Initializes the wrapper with the given namespace and args.
@@ -103,7 +103,7 @@ class Wrapper(object):
         super(Wrapper, self).__init__()
         self.args = args
         self.name = namespace
-        self.shell = True
+        self.shell = self.shell
         self.log = logger.log
         self.env = load_environ(namespace)
 
@@ -113,38 +113,34 @@ class Wrapper(object):
 
     def launch(self):
         """Launches the wrapped tool in a subprocess with env."""
-        exitcode = 0
         env = self.get_subprocess_env()
         command = self.get_subprocess_command(env)
 
         try:
-            process = subprocess.Popen(
-                args=command,
-                bufsize=0,
+            proc = subprocess.run(
+                command,
                 env=encode(env),
                 shell=self.shell,
+                check=False,
             )
+            return proc.returncode
         except Exception:
             traceback.print_exc()
-            exitcode = 1
-        else:
-            stdout, stderr = process.communicate()  # dead code, kept for reference
-            while stdout and stderr:
-                self.log.info(stdout)
-                self.log.error(stderr)
-            exitcode = process.poll()
-
-        return exitcode
+            return 1
 
     def get_subprocess_args(self, cmd):
         """Returns the arguments to be passed to the subprocess."""
         return self.args
 
     def get_subprocess_command(self, env):
-        """Returns the command to be passed to the subprocess."""
+        """Returns argv (preferred) or a command string if shell=True."""
         cmd = evaluate_modifiers(self.executable(), env)
         args = self.get_subprocess_args(cmd)
-        return " ".join([cmd] + args)
+
+        if self.shell:
+            return " ".join([cmd] + args)
+
+        return [cmd] + args
 
     def get_subprocess_env(self):
         """
@@ -173,52 +169,39 @@ class CommandWrapper(Wrapper):
         :param args: command and arguments as a list.
         """
         super(CommandWrapper, self).__init__(namespace, args)
-        self.cmd = args
+        self.cmd = list(args)
 
     def executable(self):
         """Returns the command to run."""
-        return config.SHELL
+        return self.cmd[0]
+
+    def get_subprocess_args(self, cmd):
+        return self.cmd[1:]
 
 
-class ShellWrapper(CommandWrapper):
-    """Wrapper class for running wrapped commands in bash, sh, or zsh."""
+class ShellWrapper(Wrapper):
+    """
+    Runs a *string expression* under the user's shell using -c.
+    Useful for wrapping shell expressions that need variable expansion:
 
-    def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
-        """
-        Initializes the command wrapper with the given namespace and args,
-        replacing the original command with the shell command, e.g.:
+        >>> shell = ShellWrapper('default', 'echo {HOME}')
+    """
 
-            >>> cmd = ShellWrapper(stack, ['ls', '-l'])
-            >>> print(cmd.executable())
-            bash
-            >>> print(cmd.args)
-            ['-i', '-c', 'ls -l']
-
-        :param namespace: environment stack name (default: 'default').
-        :param args: command and arguments as a list.
-        :param interactive: run the command in an interactive shell (default: True).
-        """
-        super(ShellWrapper, self).__init__(namespace, args)
+    def __init__(self, namespace=config.DEFAULT_NAMESPACE, expr: str = ""):
+        super().__init__(namespace, args=[])
+        self.expr = expr
 
     def get_interactive(self, env: dict = os.environ):
-        """Returns whether to run the command in an interactive shell."""
         override = env.get("INTERACTIVE")
         if override is not None:
-            return override.lower() in {"1", "true", "yes", "on"}
-        return sys.stdin.isatty() and sys.stdout.isatty()
+            return str(override).lower() in {"1", "true", "yes", "on"}
+        return False  # default safe
 
     def get_subprocess_command(self, env: dict = os.environ):
-        """Returns the command to be passed to the shell in a subprocess."""
         interactive = self.get_interactive(env)
-        if re.search(r"\$\w+", self.cmd):
-            if interactive:
-                return f'{config.SHELL} -i -c "{self.cmd}"'
-            return f'{config.SHELL} -c "{self.cmd}"'
-        else:
-            escaped_command = shlex.quote(self.cmd)
-            if interactive:
-                return f"{config.SHELL} -i -c {escaped_command}"
-            return f"{config.SHELL} -c {escaped_command}"
+        if interactive:
+            return [config.SHELL, "-i", "-c", self.expr]
+        return [config.SHELL, "-c", self.expr]
 
     def executable(self):
         """Returns the shell command to run the original command."""
@@ -276,12 +259,34 @@ def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
     """
     logger.setup_stream_handler()
     shellname = os.path.basename(config.SHELL)
+
+    # normalize to argv list
+    argv = list(command) if isinstance(command, (list, tuple)) else to_args(command)
+
+    needs_shell = any(re.search(r"\{(\w+)\}", a) for a in argv)
+    if needs_shell:
+        expr_argv = [re.sub(r"\{(\w+)\}", r"${\1}", a) for a in argv]
+        expr = shell_join(expr_argv)
+        return ShellWrapper(namespace, expr).launch()
+
     if shellname in ["bash", "sh", "zsh"]:
-        command = re.sub(r"\{(\w+)\}", r"${\1}", shell_join(command))
-        cmd = ShellWrapper(namespace, command)
-    elif shellname in ["cmd"]:
-        command = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(command))
-        cmd = CmdWrapper(namespace, command)
-    else:
-        cmd = CommandWrapper(namespace, command)
-    return cmd.launch()
+        # 1) if user explicitly invoked a shell (bash/sh/zsh), do not wrap again
+        if argv and os.path.basename(argv[0]) in ["bash", "sh", "zsh"]:
+            return CommandWrapper(namespace, argv).launch()
+
+        # 2) if command contains {VARS}, convert to ${VARS} and run as a shell expression
+        needs_shell = any(re.search(r"\{(\w+)\}", a) for a in argv)
+        if needs_shell:
+            expr_argv = [re.sub(r"\{(\w+)\}", r"${\1}", a) for a in argv]
+            expr = shell_join(expr_argv)
+            return ShellWrapper(namespace, expr).launch()
+
+        # 3) otherwise run direct argv (best behavior)
+        return CommandWrapper(namespace, argv).launch()
+
+    if shellname in ["cmd"]:
+        # windows behavior preserved (if you need it)
+        expr = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(argv))
+        return CmdWrapper(namespace, expr).launch()
+
+    return CommandWrapper(namespace, argv).launch()

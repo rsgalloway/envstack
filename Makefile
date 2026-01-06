@@ -35,9 +35,10 @@ build: clean
 # Combined target to build for both platforms
 all: build
 
-# Install dryrun target to simulate installation
+# Test target to verify the build
 test:
-	$(ENVSTACK_CMD) -- l {ROOT}
+	$(ENVSTACK_CMD) -- ls -al
+	${ENVSTACK_CMD} -- which python
 
 # Install dryrun target to simulate installation
 dryrun:
