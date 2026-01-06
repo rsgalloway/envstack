@@ -69,11 +69,20 @@ found in `prod`.
 
 #### Basic Usage
 
-Running the `envstack` command will show you the default, unresolved environment
+Running `envstack` will launch a new shell session with the resolved default
+environment:
+
+```shell
+$ envstack
+🚀 Launching envstack shell... CTRL+D to exit
+(prod) ~/envstack$ 
+```
+
+Using the `-u` command will show you the default, unresolved environment
 stack, defined in `default.env` files in `${ENVPATH}`:
 
 ```bash
-$ envstack
+$ envstack -u
 DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=prod
 ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
@@ -96,7 +105,7 @@ Environments can be combined, or stacked, in order of priority (variables
 defined in stacks flow from higher scope to lower scope, left to right):
 
 ```bash
-$ envstack [STACK [STACK ...]]
+$ envstack [STACK [STACK ...]] -u
 ```
 
 #### Resolving Values
@@ -300,7 +309,7 @@ If no encryption keys are found in the environment, envstack will default to
 using Base64 encoding:
 
 ```bash
-$ envstack --encrypt
+$ envstack -eu
 DEPLOY_ROOT=JHtST09UfS8ke0VOVn0=
 ENV=cHJvZA==
 ENVPATH=JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
@@ -382,7 +391,7 @@ To see the unresolved environment for one or more environment stacks (values are
 defined in the stacks from left to right):
 
 ```bash
-$ envstack [STACK [STACK ...]]
+$ envstack [STACK [STACK ...]] -u
 ```
 
 To resolve one or more environment vars for a given stack:
@@ -516,12 +525,14 @@ Here is a simple example that runs a `python -c` command in the `hello`
 environment stack that sets a value for `${PYEXE}`:
 
 #### hello.env
+
 ```yaml
 all: &all
   PYEXE: /usr/bin/python
 ```
 
 #### bin/hello
+
 ```python
 import sys
 from envstack.wrapper import Wrapper
@@ -529,6 +540,7 @@ from envstack.wrapper import Wrapper
 class HelloWrapper(Wrapper):
     def __init__(self, *args, **kwargs):
         super(HelloWrapper, self).__init__(*args, **kwargs)
+        self.shell = True
 
     def executable(self):
         """Return the command to run."""
@@ -552,7 +564,7 @@ On linux, environment stack files are also executable scripts that can be called
 directly:
 
 ```bash
-$ ./test.env
+$ ./test.env -u
 DEPLOY_ROOT=${ROOT}/${STACK}
 ENV=${STACK}
 ENVPATH=${DEPLOY_ROOT}/env:${ROOT}/prod/env
