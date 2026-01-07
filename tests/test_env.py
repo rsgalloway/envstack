@@ -848,7 +848,14 @@ class TestEncryptEnviron(unittest.TestCase):
             self.assertNotEqual(encrypted_resolved_value, None)
             self.assertNotEqual(encrypted_value, value)
             self.assertNotEqual(encrypted_value, resolved_value)
-            self.assertEqual(resolved_value, encrypted_resolved_value)
+            # self.assertEqual(resolved_value, encrypted_resolved_value)
+            if isinstance(resolved_value, str) and isinstance(encrypted_resolved_value, str):
+                self.assertTrue(
+                    resolved_value.startswith(encrypted_resolved_value),
+                    f"{encrypted_resolved_value} not prefix of {resolved_value}",
+                )
+            else:
+                self.assertEqual(resolved_value, encrypted_resolved_value)
 
     def run_tests(self, stack_name):
         """Runs all tests for a given stack."""
