@@ -227,16 +227,16 @@ class CmdWrapper(CommandWrapper):
         """
         super(CmdWrapper, self).__init__(namespace, args)
         self.args = ["/c", self.cmd]
-        self.shell = False
+        self.shell = True
 
-    def get_subprocess_args(self, cmd):
-        """Returns the arguments to be passed to the subprocess."""
-        return [cmd] + self.args
+    # def get_subprocess_args(self, cmd):
+    #     """Returns the arguments to be passed to the subprocess."""
+    #     return [cmd] + self.args
 
-    def executable(self):
-        """Returns the shell command to run the original command."""
-        self.cmd = config.SHELL
-        return self.cmd
+    # def executable(self):
+    #     """Returns the shell command to run the original command."""
+    #     self.cmd = config.SHELL
+    #     return self.cmd
 
 
 def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
@@ -286,7 +286,7 @@ def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
 
     if shellname in ["cmd"]:
         # windows behavior preserved (if you need it)
-        expr = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(argv))
-        return CmdWrapper(namespace, expr).launch()
+        # expr = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(argv))
+        return CmdWrapper(namespace, argv).launch()
 
     return CommandWrapper(namespace, argv).launch()
