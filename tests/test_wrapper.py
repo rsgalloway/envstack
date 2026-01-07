@@ -29,30 +29,32 @@
 # POSSIBILITY OF SUCH DAMAGE.
 #
 
-__doc__ = """
-Contains unit tests for running commands.
+"""
+Contains unit tests for the wrapper.py module.
 """
 
 import os
+import sys
 import pytest
 
 import envstack.wrapper as wrapper_mod
 from envstack.wrapper import Wrapper, CommandWrapper, run_command
 
 
+IS_WINDOWS = sys.platform.startswith("win")
+
+
 @pytest.fixture
 def stub_env(monkeypatch):
     """
     Make wrapper tests independent of real envstack stack files.
-
-    We monkeypatch load_environ(namespace) to return a deterministic env.
-    Adjust ROOT/ENV values as needed.
     """
     def _fake_load_environ(namespace):
-        # minimal env for tests; include PATH so subprocess can find tools
         env = dict(os.environ)
         env["ENV"] = namespace or "prod"
-        env["ROOT"] = "/tmp/envstack-root"
+        env["ROOT"] = (
+            "C:\\tmp\\envstack-root" if IS_WINDOWS else "/tmp/envstack-root"
+        )
         return env
 
     monkeypatch.setattr(wrapper_mod, "load_environ", _fake_load_environ)
@@ -61,52 +63,64 @@ def stub_env(monkeypatch):
 
 class HelloWrapper(Wrapper):
     """
-    Example wrapper that prints an env var passed as argv[0].
-    Uses shell=True because executable() returns a command-line string.
+    Wrapper that prints an env var passed as argv[0].
+    Uses shell=True with platform-safe quoting.
     """
     shell = True
 
     def executable(self):
-        # prints env var named by first arg
-        return "python3 -c 'import os,sys;print(os.getenv(sys.argv[1]))'"
+        if IS_WINDOWS:
+            return (
+                'python -c "import os,sys;print(os.getenv(sys.argv[1]))"'
+            )
+        return (
+            "python3 -c 'import os,sys;print(os.getenv(sys.argv[1]))'"
+        )
 
 
 def test_wrapper_shell_true_allows_command_string(stub_env, capfd):
-    """Test that Wrapper with shell=True runs command string."""
     w = HelloWrapper("hello", ["ROOT"])
     rc = w.launch()
     out, err = capfd.readouterr()
     assert rc == 0
-    assert out.strip() == "/tmp/envstack-root"
+    assert out.strip() == (
+        "C:\\tmp\\envstack-root" if IS_WINDOWS else "/tmp/envstack-root"
+    )
 
 
 def test_commandwrapper_runs_argv_without_shell(stub_env, capfd):
-    """Test that CommandWrapper runs argv mode without shell."""
-    w = CommandWrapper("hello", ["echo", "hi there"])
+    if IS_WINDOWS:
+        cmd = ["cmd", "/c", "echo hi there"]
+    else:
+        cmd = ["echo", "hi there"]
+
+    w = CommandWrapper("hello", cmd)
     rc = w.launch()
     out, err = capfd.readouterr()
     assert rc == 0
-    assert out.strip() == "hi there"
-
-
-def test_run_command_preserves_quoted_arg_in_argv_mode(stub_env):
-    """Test that run_command preserves quoted args when shell=False."""
-    # Regression for: envstack -- bash -c "sleep 5" breaking into bash -c sleep 5
-    # Here we use something observable instead of sleep.
-    rc = run_command(["bash", "-c", "printf '%s\n' \"sleep 5\""], namespace="hello")
-    assert rc == 0
+    assert out.strip().lower() == "hi there"
 
 
 def test_run_command_brace_expands_to_env_value(stub_env, capfd):
-    """Test that {VAR} in command args expands to env var value."""
-    rc = run_command(["echo", "{ROOT}"], namespace="hello")
+    cmd = ["cmd", "/c", "echo {ROOT}"] if IS_WINDOWS else ["echo", "{ROOT}"]
+    rc = run_command(cmd, namespace="hello")
     out, err = capfd.readouterr()
     assert rc == 0
-    assert out.strip() == "/tmp/envstack-root"
+    assert "{ROOT}" not in out
+    assert "envstack-root" in out
 
 
+@pytest.mark.skipif(IS_WINDOWS, reason="POSIX-only quoting semantics")
+def test_run_command_preserves_quoted_arg_in_argv_mode(stub_env):
+    rc = run_command(
+        ["bash", "-c", "printf '%s\n' \"sleep 5\""],
+        namespace="hello",
+    )
+    assert rc == 0
+
+
+@pytest.mark.skipif(IS_WINDOWS, reason="POSIX-only shell behavior")
 def test_run_command_two_in_series_no_stop(stub_env, capfd):
-    """Test that two commands run in series without stopping the process."""
     rc1 = run_command(["bash", "-c", "echo one"], namespace="hello")
     rc2 = run_command(["bash", "-c", "echo two"], namespace="hello")
     out, err = capfd.readouterr()
@@ -128,14 +142,15 @@ def test_run_command_two_in_series_no_stop(stub_env, capfd):
         ("off", False),
     ],
 )
-def test_interactive_env_override_parsing(stub_env, monkeypatch, override, expected):
+def test_interactive_env_override_parsing(
+    stub_env, monkeypatch, override, expected
+):
     env = dict(os.environ)
     env["INTERACTIVE"] = override
 
-    # example: if you implemented ShellWrapper.get_interactive(env)
     ShellWrapper = getattr(wrapper_mod, "ShellWrapper", None)
     if ShellWrapper is None:
-        pytest.skip("ShellWrapper not present in envstack.wrapper")
+        pytest.skip("ShellWrapper not present")
 
     sw = ShellWrapper("hello", "echo test")
     assert sw.get_interactive(env) is expected
