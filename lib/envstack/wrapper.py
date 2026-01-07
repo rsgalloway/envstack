@@ -209,34 +209,30 @@ class ShellWrapper(Wrapper):
 
 
 class CmdWrapper(CommandWrapper):
-    """Wrapper class for running wrapped commands in command prompt."""
+    """Wrapper class for running wrapped commands in Windows cmd.exe."""
 
     def __init__(self, namespace=config.DEFAULT_NAMESPACE, args=[]):
-        """
-        Initializes the command wrapper with the given namespace and args,
-        replacing the original command with the shell command, e.g.:
+        super().__init__(namespace, args)
 
-            >>> cmd = CmdWrapper(stack, ['dir'])
-            >>> print(cmd.executable())
-            cmd
-            >>> print(cmd.args)
-            ['/c', 'dir']
+        # Always run through cmd.exe explicitly
+        self.shell = False
+        self._cmd_exe = config.SHELL  # expected: "cmd" or "cmd.exe"
 
-        :param namespace: environment stack name (default: 'default').
-        :param args: command and arguments as a list.
-        """
-        super(CmdWrapper, self).__init__(namespace, args)
-        self.args = ["/c", self.cmd]
-        self.shell = True
+        # Join the intended argv into one command-line string for /c
+        cmdline = shell_join(self.cmd)
 
-    # def get_subprocess_args(self, cmd):
-    #     """Returns the arguments to be passed to the subprocess."""
-    #     return [cmd] + self.args
+        # cmd.exe /c <command>
+        self._subprocess_argv = [self._cmd_exe, "/c", cmdline]
 
-    # def executable(self):
-    #     """Returns the shell command to run the original command."""
-    #     self.cmd = config.SHELL
-    #     return self.cmd
+    def executable(self):
+        return self._cmd_exe
+
+    def get_subprocess_args(self, cmd):
+        # Not used (we override get_subprocess_command)
+        return []
+
+    def get_subprocess_command(self, env):
+        return list(self._subprocess_argv)
 
 
 def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
@@ -285,8 +281,7 @@ def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
         return CommandWrapper(namespace, argv).launch()
 
     if shellname in ["cmd"]:
-        # windows behavior preserved (if you need it)
-        # expr = re.sub(r"\{(\w+)\}", r"%\1%", " ".join(argv))
-        return CmdWrapper(namespace, argv).launch()
+        expr = [re.sub(r"\{(\w+)\}", r"%\1%", a) for a in argv]
+        return CmdWrapper(namespace, expr).launch()
 
     return CommandWrapper(namespace, argv).launch()
