@@ -254,30 +254,16 @@ def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
     :returns: command exit code
     """
     logger.setup_stream_handler()
-    shellname = os.path.basename(config.SHELL)
-
-    # normalize to argv list
+    shellname = os.path.basename(config.SHELL).lower()
     argv = list(command) if isinstance(command, (list, tuple)) else to_args(command)
 
-    needs_shell = any(re.search(r"\{(\w+)\}", a) for a in argv)
-    if needs_shell:
-        expr_argv = [re.sub(r"\{(\w+)\}", r"${\1}", a) for a in argv]
-        expr = shell_join(expr_argv)
-        return ShellWrapper(namespace, expr).launch()
-
     if shellname in ["bash", "sh", "zsh"]:
-        # 1) if user explicitly invoked a shell (bash/sh/zsh), do not wrap again
-        if argv and os.path.basename(argv[0]) in ["bash", "sh", "zsh"]:
-            return CommandWrapper(namespace, argv).launch()
-
-        # 2) if command contains {VARS}, convert to ${VARS} and run as a shell expression
         needs_shell = any(re.search(r"\{(\w+)\}", a) for a in argv)
         if needs_shell:
             expr_argv = [re.sub(r"\{(\w+)\}", r"${\1}", a) for a in argv]
             expr = shell_join(expr_argv)
             return ShellWrapper(namespace, expr).launch()
 
-        # 3) otherwise run direct argv (best behavior)
         return CommandWrapper(namespace, argv).launch()
 
     if shellname in ["cmd"]:
