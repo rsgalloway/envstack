@@ -92,6 +92,7 @@ class Wrapper(object):
 
         tool.log = MyLogger()
     """
+
     shell: bool = False
 
     def __init__(self, namespace, args=[]):
