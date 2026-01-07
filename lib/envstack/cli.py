@@ -262,20 +262,21 @@ def parse_args():
     return args, args_after_dash
 
 
-def envshell(namespace: List[str] = None):
+def envshell(namespace: List[str] = None, quiet: bool = False):
     """Run a shell in the given environment stack."""
 
-    shell_name = os.path.basename(config.SHELL).lower()
+    if not quiet:
+        shell_name = os.path.basename(config.SHELL).lower()
 
-    if shell_name in ("cmd", "cmd.exe"):
-        exit_hint = 'type "exit" to quit'
-    elif shell_name in ("powershell", "pwsh"):
-        exit_hint = 'type "exit" to quit'
-    else:
-        # bash, zsh, sh, etc.
-        exit_hint = 'CTRL+D or "exit" to quit'
+        if shell_name in ("cmd", "cmd.exe"):
+            exit_hint = 'type "exit" to quit'
+        elif shell_name in ("powershell", "pwsh"):
+            exit_hint = 'type "exit" to quit'
+        else:
+            # bash, zsh, sh, etc.
+            exit_hint = 'CTRL+D or "exit" to quit'
 
-    print(f"\U0001F680 Launching envstack shell... ({exit_hint})")
+        print(f"\U0001F680 Launching envstack shell... ({exit_hint})")
 
     name = (namespace or [config.DEFAULT_NAMESPACE])[:]
     shell = EnvshellWrapper(name)
@@ -462,7 +463,7 @@ def main():
                 print(f"{k}={v}")
 
         else:
-            return envshell(args.namespace)
+            return envshell(args.namespace, quiet=args.quiet)
 
     except KeyboardInterrupt:
         print("Stopping...")
