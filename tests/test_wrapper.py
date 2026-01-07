@@ -102,8 +102,7 @@ def test_commandwrapper_runs_argv_without_shell(stub_env, capfd):
 
 
 def test_run_command_brace_expands_to_env_value(stub_env, capfd):
-    cmd = ["cmd", "/c", "echo {ROOT}"] if IS_WINDOWS else ["echo", "{ROOT}"]
-    rc = run_command(cmd, namespace="hello")
+    rc = run_command(["echo", "{ROOT}"], namespace="hello")
     out, err = capfd.readouterr()
     assert rc == 0
     assert "{ROOT}" not in out
