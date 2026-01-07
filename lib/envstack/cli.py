@@ -34,6 +34,7 @@ Command line interface for envstack: stacked environment variable management.
 """
 
 import argparse
+import os
 import re
 import sys
 import traceback
@@ -50,6 +51,7 @@ from envstack.env import (
     resolve_environ,
     trace_var,
 )
+from envstack.envshell import EnvshellWrapper
 from envstack.logger import setup_stream_handler
 from envstack.wrapper import run_command
 
@@ -262,9 +264,18 @@ def parse_args():
 
 def envshell(namespace: List[str] = None):
     """Run a shell in the given environment stack."""
-    from .envshell import EnvshellWrapper
 
-    print("\U0001F680 Launching envstack shell... CTRL+D to exit")
+    shell_name = os.path.basename(config.SHELL).lower()
+
+    if shell_name in ("cmd", "cmd.exe"):
+        exit_hint = 'type "exit" to quit'
+    elif shell_name in ("powershell", "pwsh"):
+        exit_hint = 'type "exit" to quit'
+    else:
+        # bash, zsh, sh, etc.
+        exit_hint = 'CTRL+D or "exit" to quit'
+
+    print(f"\U0001F680 Launching envstack shell... ({exit_hint})")
 
     name = (namespace or [config.DEFAULT_NAMESPACE])[:]
     shell = EnvshellWrapper(name)
