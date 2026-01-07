@@ -57,7 +57,7 @@ def create_test_root():
     for env in ("prod", "dev"):
         shutil.copytree(env_path, os.path.join(root, env, "env"))
 
-    return root.replace("\\", "/")  # normalize path for windows
+    return root
 
 
 def update_env_file(file_path: str, key: str, value: str):
