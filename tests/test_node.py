@@ -242,7 +242,7 @@ class TestSecretsEnv(unittest.TestCase):
         testfile2 = os.path.join(self.root, "test2.env")
         root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
 

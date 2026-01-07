@@ -582,9 +582,9 @@ class TestDedupePaths(unittest.TestCase):
         )
 
         # mixed paths
-        path = "X:/pipe/prod/env;X:/pipe/prod/env;/home/user/envstack/env"
+        path = "//tools/pipe/prod/env;//tools/pipe/prod/env;/home/user/envstack/env"
         result = dedupe_paths(path, platform="windows")
-        self.assertEqual(result, "X:/pipe/prod/env;/home/user/envstack/env")
+        self.assertEqual(result, "//tools/pipe/prod/env;/home/user/envstack/env")
 
         # mixed paths with duplicate
         path = (

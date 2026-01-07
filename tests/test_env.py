@@ -125,7 +125,7 @@ class TestEnv(unittest.TestCase):
         envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
         os.environ["ENVPATH"] = envpath
@@ -277,7 +277,7 @@ class TestInit(unittest.TestCase):
     def setUp(self):
         self.root = {
             "linux": "/mnt/pipe",
-            "win32": "X:/pipe",
+            "win32": "//tools/pipe",
             "darwin": "/Volumes/pipe",
         }.get(sys.platform)
 
