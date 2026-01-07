@@ -40,7 +40,7 @@ with open(os.path.join(here, "README.md")) as f:
 
 setup(
     name="envstack",
-    version="0.9.4",
+    version="0.9.5",
     description="Stacked environment variable management system",
     long_description=long_description,
     long_description_content_type="text/markdown",
