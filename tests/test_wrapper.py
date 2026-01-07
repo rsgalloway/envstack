@@ -109,6 +109,12 @@ def test_run_command_brace_expands_to_env_value(stub_env, capfd):
     assert "envstack-root" in out
 
 
+@pytest.mark.skipif(not IS_WINDOWS, reason="Windows only")
+def test_windows_cmd_echo_root():
+    rc = run_command(["echo", "{ROOT}"], namespace="hello")
+    assert rc == 0
+
+
 @pytest.mark.skipif(IS_WINDOWS, reason="POSIX-only quoting semantics")
 def test_run_command_preserves_quoted_arg_in_argv_mode(stub_env):
     rc = run_command(
