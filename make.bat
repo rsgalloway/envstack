@@ -66,11 +66,11 @@ exit /b 0
 :test
 echo [test] Running envstack checks...
 rem Use a one-liner so ENVPATH applies to the envstack process.
-set "CMD=set ENVPATH=%ENVPATH% ^&^& %ENVSTACK_CMD% -- ls -al"
+set "CMD=set ENVPATH=%ENVPATH% ^&^& %ENVSTACK_CMD% -- dir"
 cmd /c "%CMD%"
 if errorlevel 1 exit /b 1
 
-set "CMD=set ENVPATH=%ENVPATH% ^&^& %ENVSTACK_CMD% -- which python"
+set "CMD=set ENVPATH=%ENVPATH% ^&^& %ENVSTACK_CMD% -- where python"
 cmd /c "%CMD%"
 if errorlevel 1 exit /b 1
 

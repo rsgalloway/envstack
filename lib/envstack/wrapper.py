@@ -251,7 +251,6 @@ def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
 
     :param command: command to run as a list of arguments.
     :param namespace: environment stack name (default: 'default').
-    :param interactive: run the command in an interactive shell (default: True).
     :returns: command exit code
     """
     logger.setup_stream_handler()
