@@ -69,13 +69,20 @@ found in `prod`.
 
 #### Basic Usage
 
-Running `envstack` will launch a new shell session with the resolved default
-environment:
+Running `envstack` will launch a new shell session with a resolved environment:
 
 ```shell
 $ envstack
-🚀 Launching envstack shell... CTRL+D to exit
+🚀 Launching envstack shell... (CTRL+D or "exit" to quit)
 (prod) ~/envstack$ 
+```
+
+Loading the `dev` environment (as defined in the `dev.env` file):
+
+```shell
+$ envstack dev
+🚀 Launching envstack shell... (CTRL+D or "exit" to quit)
+(dev) ~/dev/envstack$ 
 ```
 
 Using the `-u` command will show you the default, unresolved environment
@@ -614,5 +621,5 @@ Make sure you don't have any local .env files that may intefere with the unit
 tests.
 
 ```bash
-$ pytest tests -s
+$ pytest tests -v
 ```
