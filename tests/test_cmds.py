@@ -89,7 +89,7 @@ ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${DEPLOY_ROOT}/bin:${PATH}
-PS1=\[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=%s
 STACK=default
@@ -107,7 +107,7 @@ ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=DEBUG
 PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
-PS1=\[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
 PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
 ROOT=%s
 STACK=dev
@@ -150,7 +150,7 @@ INT=5
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 NUMBER_LIST=[1, 2, 3]
 PATH=${DEPLOY_ROOT}/bin:${PATH}
-PS1=\[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=${HOME}/.local/pipe
 STACK=thing
@@ -189,7 +189,7 @@ ENVPATH=JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
 HELLO=JHtIRUxMTzo9d29ybGR9
 LOG_LEVEL=JHtMT0dfTEVWRUw6PUlORk99
 PATH=JHtERVBMT1lfUk9PVH0vYmluOiR7UEFUSH0=
-PS1=XFtcZVszMm1cXSgke0VOVjo9JHtTVEFDS319KVxbXGVbMG1cXSBcd1wkIA==
+PS1=XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
 PYTHONPATH=JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 ROOT=L21udC9waXBl
 STACK=ZGVmYXVsdA==
@@ -238,7 +238,7 @@ ENVPATH=JHtST09UfS9kZXYvZW52OiR7Uk9PVH0vcHJvZC9lbnY6JHtFTlZQQVRIfQ==
 HELLO=JHtIRUxMTzo9d29ybGR9
 LOG_LEVEL=REVCVUc=
 PATH=JHtST09UfS9kZXYvYmluOiR7Uk9PVH0vcHJvZC9iaW46JHtQQVRIfQ==
-PS1=XFtcZVszMm1cXSgke0VOVjo9JHtTVEFDS319KVxbXGVbMG1cXSBcd1wkIA==
+PS1=XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
 PYTHONPATH=JHtST09UfS9kZXYvbGliL3B5dGhvbjoke1JPT1R9L3Byb2QvbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 ROOT=L21udC9waXBl
 STACK=ZGV2
@@ -376,15 +376,15 @@ all: &all
   PYTHONPATH: ${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 darwin:
   <<: *all
-  PS1: \[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
+  PS1: \[\e[32m\](${ENV})\[\e[0m\] \w\$ 
   ROOT: /Volumes/pipe
 linux:
   <<: *all
-  PS1: \[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ 
+  PS1: \[\e[32m\](${ENV})\[\e[0m\] \w\$ 
   ROOT: /mnt/pipe
 windows:
   <<: *all
-  PROMPT: $E[32m(${ENV:=${STACK}})$E[0m $P$G
+  PROMPT: $E[32m(${ENV})$E[0m $P$G
   ROOT: //tools/pipe
 """
         output = subprocess.check_output(
@@ -467,15 +467,15 @@ all: &all
   PYTHONPATH: !encrypt JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 darwin:
   <<: *all
-  PS1: !encrypt XFtcZVszMm1cXSgke0VOVjo9JHtTVEFDS319KVxbXGVbMG1cXSBcd1wkIA==
+  PS1: !encrypt XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
   ROOT: !encrypt L1ZvbHVtZXMvcGlwZQ==
 linux:
   <<: *all
-  PS1: !encrypt XFtcZVszMm1cXSgke0VOVjo9JHtTVEFDS319KVxbXGVbMG1cXSBcd1wkIA==
+  PS1: !encrypt XFtcZVszMm1cXSgke0VOVn0pXFtcZVswbVxdIFx3XCQg
   ROOT: !encrypt L21udC9waXBl
 windows:
   <<: *all
-  PROMPT: !encrypt JEVbMzJtKCR7RU5WOj0ke1NUQUNLfX0pJEVbMG0gJFAkRw==
+  PROMPT: !encrypt JEVbMzJtKCR7RU5WfSkkRVswbSAkUCRH
   ROOT: !encrypt Ly90b29scy9waXBl
 """
         output = subprocess.check_output(

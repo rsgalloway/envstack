@@ -18,15 +18,15 @@ and processes.
 The easiest way to install:
 
 ```bash
-$ pip install -U envstack
+pip install -U envstack
 ```
 
 Alternatively,
 
 ```bash
-$ git clone https://github.com/rsgalloway/envstack
-$ cd envstack
-$ python setup.py install
+git clone https://github.com/rsgalloway/envstack
+cd envstack
+python setup.py install
 ```
 
 #### distman
@@ -36,8 +36,8 @@ If installing from source to a network location, you can use
 install envstack using the provided `dist.json` file:
 
 ```bash
-$ pip install -U distman
-$ ENVPATH=./env dist [-d]
+pip install -U distman
+ENVPATH=./env dist [-d]
 ```
 
 Using distman will deploy the targets defined in the `dist.json` file to the
@@ -48,21 +48,21 @@ root folder defined by `${DEPLOY_ROOT}` (defined in `env/default.env`).
 Start by getting the latest `default.env` environment stack file:
 
 ```bash
-$ curl -o default.env https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
+curl -o default.env https://raw.githubusercontent.com/rsgalloway/envstack/master/env/default.env
 ```
 
 Alternatively, set `${ENVPATH}` to the directory containing your environment
 stack files:
 
 ```bash
-$ export ENVPATH=/path/to/env/files
+export ENVPATH=/path/to/env/files
 ```
 
 Define as many paths as you want, and envstack will search for stack files in
 order from left to right, for example:
 
 ```bash
-$ export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
+export ENVPATH=/mnt/pipe/dev/env:/mnt/pipe/prod/env
 ```
 
 In the examples above, stack files in `dev` will take precedence over those
@@ -75,15 +75,17 @@ Running `envstack` will launch a new shell session with a resolved environment:
 ```shell
 $ envstack
 🚀 Launching envstack shell... (CTRL+D or "exit" to quit)
-(prod) ~/envstack$ 
+(prod) ~$ echo $ENV
+prod
 ```
 
-Loading the `dev` environment (as defined in the `dev.env` file):
+Loading the example `dev` environment:
 
 ```shell
-$ envstack dev
-🚀 Launching envstack shell... (CTRL+D or "exit" to quit)
-(dev) ~/dev/envstack$ 
+$ curl -o dev.env https://raw.githubusercontent.com/rsgalloway/envstack/master/env/dev.env
+$ envstack dev --quiet
+(dev) ~$ echo $DEPLOY_ROOT
+/mnt/pipe/dev
 ```
 
 Using the `-u` command will show you the default, unresolved environment
@@ -97,6 +99,7 @@ ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${DEPLOY_ROOT}/bin:${PATH}
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=/mnt/pipe
 STACK=default
@@ -105,9 +108,8 @@ STACK=default
 If you are not seeing the above output, make sure the `default.env` stack file
 is in `${ENVPATH}` or the current working directory.
 
-> NOTE: The name of the current stack will always be stored in `${STACK}`.
-
-ENV is the tier, STACK is the namespace.
+> NOTE: The name of the current stack will always be stored in `${STACK}`. ENV
+is the tier, STACK is the namespace.
 
 Environments can be combined, or stacked, in order of priority (variables
 defined in stacks flow from higher scope to lower scope, left to right):
@@ -236,6 +238,24 @@ Get the resolved values back:
 $ ./out.env -r
 BAR=bar
 FOO=bar
+```
+
+#### Executing Scripts
+
+In bash, envstack files are also executable scripts that can be called directly:
+
+```bash
+$ envstack test -s FOO=bar -o test.env
+$ ./test.env -- echo {FOO}
+bar
+```
+
+Or exported:
+
+```bash
+$ ./test.env --export
+export FOO=bar
+export STACK=test
 ```
 
 #### More Details
@@ -565,43 +585,6 @@ $ hello HELLO
 world
 ```
 
-#### Executing Scripts
-
-On linux, environment stack files are also executable scripts that can be called
-directly:
-
-```bash
-$ ./test.env -u
-DEPLOY_ROOT=${ROOT}/${STACK}
-ENV=${STACK}
-ENVPATH=${DEPLOY_ROOT}/env:${ROOT}/prod/env
-HELLO=${HELLO:=world}
-LOG_LEVEL=DEBUG
-PATH=${DEPLOY_ROOT}/bin:${ROOT}/prod/bin:${PATH}
-PYTHONPATH=${DEPLOY_ROOT}/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
-ROOT=/mnt/pipe
-STACK=test
-```
-
-Run commands inside a specific environment stack file:
-
-```bash
-$ ./test.env -- [COMMAND]
-```
-
-For example:
-
-```bash
-$ ./hello.env -- echo {HELLO}
-world
-```
-
-Export a specific environment stack file:
-
-```bash
-$ ./hello.env --export
-```
-
 ## Config
 
 The following environment variables are used to help manage functionality:
@@ -619,5 +602,5 @@ The following environment variables are used to help manage functionality:
 Unit tests can be run using pytest:
 
 ```bash
-$ pytest tests -v
+pytest tests -v
 ```
