@@ -1,7 +1,8 @@
 envstack
 ========
 
-Environment variable management system.
+Environment variable composition. Envstack is a configuration layer for tools
+and processes.
 
 [Installation](#installation) |
 [Quickstart](#quickstart) |
@@ -120,8 +121,8 @@ $ envstack [STACK [STACK ...]] -u
 To resolve an environment stack or a variable use `--resolve/-r [VAR]`. 
 
 ```bash
-$ envstack -r HELLO
-HELLO=world
+$ envstack -r ENV
+ENV=prod
 $ envstack -r DEPLOY_ROOT
 DEPLOY_ROOT=/mnt/pipe/prod
 ```
@@ -183,7 +184,7 @@ $ envstack --set HELLO=world
 HELLO=world
 ```
 
-We can also encrypt the values automatically (base64 by default):
+We can also Base64 encode or encrypt values automatically:
 
 ```bash
 $ envstack -s HELLO=world -e
@@ -235,7 +236,6 @@ Get the resolved values back:
 $ ./out.env -r
 BAR=bar
 FOO=bar
-STACK=out
 ```
 
 #### More Details
@@ -611,14 +611,12 @@ The following environment variables are used to help manage functionality:
 | DEFAULT_ENV_STACK | Name of the default environment stack (default) |
 | ENVPATH | Colon-separated paths to search for stack files |
 | IGNORE_MISSING | Ignore missing stack files when resolving environments |
-| INTERACTIVE | Run one-off commands in an interactive shell |
+| INTERACTIVE | Force shells to run in interactive mode |
 | STACK | Stores the name of the current environment stack |
 
 # Tests
 
-Unit tests can be run using pytest (note: some tests fail on win32 currently).
-Make sure you don't have any local .env files that may intefere with the unit
-tests.
+Unit tests can be run using pytest:
 
 ```bash
 $ pytest tests -v
