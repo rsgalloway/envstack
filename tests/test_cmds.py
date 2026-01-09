@@ -35,6 +35,7 @@ Contains unit tests for running commands.
 
 import os
 import platform
+import pytest
 import shutil
 import subprocess
 import sys
@@ -46,6 +47,10 @@ from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
 
 from test_env import create_test_root, update_env_file
 
+pytestmark = pytest.mark.skipif(
+    sys.platform != "linux",
+    reason="Linux-only shell integration tests (bash/ls/PS1, paths, env layout)",
+)
 
 def make_command(envstack_bin: str, filename: str, *args: str):
     """
