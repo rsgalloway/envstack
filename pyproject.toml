@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "envstack"
 version = "0.9.6"
-description = "Environment variable composition. Envstack is a configuration layer for tools and processes."
+description = "Environment variable composition layer for tools and processes."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.6"
 license = { text = "BSD 3-Clause License" }
@@ -42,7 +42,11 @@ keywords = [
 ]
 
 [project.urls]
-Homepage = "http://github.com/rsgalloway/envstack"
+Homepage = "https://github.com/rsgalloway/envstack"
+Repository = "https://github.com/rsgalloway/envstack"
+Issues = "https://github.com/rsgalloway/envstack/issues"
+Changelog = "https://github.com/rsgalloway/envstack/blob/master/CHANGELOG.md"
+Documentation = "https://github.com/rsgalloway/envstack/tree/master/docs"
 
 [project.scripts]
 envstack = "envstack.cli:main"

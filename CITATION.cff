@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use envstack in your work, please cite it as below."
+type: software
+
+title: "envstack"
+abstract: "Stacked environment variable management system."
+license: "BSD-3-Clause"
+
+authors:
+  - family-names: "Galloway"
+    given-names: "Ryan"
+    email: "ryan@rsgalloway.com"
+
+repository-code: "http://github.com/rsgalloway/envstack"
+url: "http://github.com/rsgalloway/envstack"
+
+keywords:
+  - environment
+  - env
+  - dotenv
+  - configuration
+  - environment-variables
+  - cli
+  - devops
+  - pipeline
+  - vfx
+  - tooling

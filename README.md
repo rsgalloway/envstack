@@ -1,8 +1,7 @@
 envstack
 ========
 
-Environment variable composition. Envstack is a configuration layer for tools
-and processes.
+Environment variable composition layer for tools and processes.
 
 [Installation](#installation) |
 [Quickstart](#quickstart) |
