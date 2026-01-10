@@ -26,6 +26,20 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
 ]
+keywords = [
+  "environment",
+  "env",
+  "dotenv",
+  "configuration",
+  "config",
+  "environment-variables",
+  "cli",
+  "deployment",
+  "devops",
+  "pipeline",
+  "vfx",
+  "tooling",
+]
 
 [project.urls]
 Homepage = "http://github.com/rsgalloway/envstack"
