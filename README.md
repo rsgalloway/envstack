@@ -25,7 +25,7 @@ Alternatively,
 ```bash
 git clone https://github.com/rsgalloway/envstack
 cd envstack
-python setup.py install
+pip install .
 ```
 
 #### distman

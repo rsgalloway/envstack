@@ -73,7 +73,27 @@ envstack is commonly used for:
 
 ## A simple example
 
-```env
-ROOT=/mnt/pipe
-ENV=${ENV:=prod}
-DEPLOY_ROOT=${ROOT}/${ENV}
+```yaml
+ROOT: /mnt/pipe
+ENV: ${ENV:=prod}
+DEPLOY_ROOT: ${ROOT}/${ENV}
+```
+
+```bash
+$ envstack -r DEPLOY_ROOT
+DEPLOY_ROOT=/mnt/pipe/prod
+```
+```bash
+$ envstack -- echo {DEPLOY_ROOT}
+/mnt/pipe/prod
+```
+
+## Philosophy
+
+"You want envstack. It’s what .env files wish they were when they grew up."
+
+envstack is intentionally opinionated:
+
+- Explicit over implicit
+- Layered over flat
+- Inspectable over magical
