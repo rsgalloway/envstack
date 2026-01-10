@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "envstack"
+version = "0.9.6"
+description = "Environment variable composition. Envstack is a configuration layer for tools and processes."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.6"
+license = { text = "BSD 3-Clause License" }
+authors = [{ name = "Ryan Galloway", email = "ryan@rsgalloway.com" }]
+dependencies = [
+  "PyYAML>=5.1.2",
+  "cryptography>=43.0.1",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.6",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+
+[project.urls]
+Homepage = "http://github.com/rsgalloway/envstack"
+
+[project.scripts]
+envstack = "envstack.cli:main"
+whichenv = "envstack.cli:whichenv"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["lib"]
