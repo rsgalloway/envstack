@@ -944,9 +944,9 @@ def load_environ(
             env.load_source(source, platform=platform)
             seen_paths.append(source.path)
 
-            # add the stack name to the environment
-            if not env.get("STACK"):
-                env["STACK"] = util.get_stack_name(name)
+        # add the stack name to the environment
+        if not env.get("STACK"):
+            env["STACK"] = util.get_stack_name(name)
 
         # resolve ${ENVPATH} (don't let it be None)
         # TODO: use expandvars() instead of resolve_environ()
