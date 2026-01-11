@@ -14,7 +14,6 @@ tmp/
 *.spec
 venv*/
 .vscode/
-keys.env
 encrypted.env
 baketest.env
 out.env

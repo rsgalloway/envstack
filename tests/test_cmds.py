@@ -52,6 +52,10 @@ pytestmark = pytest.mark.skipif(
     reason="Linux-only shell integration tests (bash/ls/PS1, paths, env layout)",
 )
 
+# define envpath for tests
+envpath = os.path.join(os.path.dirname(__file__), "fixtures", "env")
+
+
 def make_command(envstack_bin: str, filename: str, *args: str):
     """
     Build a cross-platform shell command that runs envstack (with args)
@@ -73,7 +77,6 @@ class TestUnresolved(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack -u"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -165,7 +168,6 @@ class TestEncrypt(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack -u"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -260,7 +262,6 @@ class TestResolved(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -344,7 +345,6 @@ class TestBake(unittest.TestCase):
         if os.path.exists(self.filename):
             os.remove(self.filename)
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -544,7 +544,6 @@ class TestCommands(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -606,7 +605,6 @@ class TestSet(unittest.TestCase):
     def setUp(self):
         self.filename = "settest.env"
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -727,7 +725,6 @@ class TestVarFlow(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
 
     def test_default_hello(self):
@@ -769,7 +766,6 @@ class TestDistman(unittest.TestCase):
     def setUp(self):
         self.envstack_bin = "envstack"
         self.python_cmd = """python -c \"import os,envstack;envstack.init('distman');print(os.getenv('DEPLOY_ROOT'))\""""
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
