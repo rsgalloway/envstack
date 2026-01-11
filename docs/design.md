@@ -61,7 +61,6 @@ because a later layer overrides it.
 
 This makes environment behavior predictable and debuggable.
 
-
 ## Hierarchy and inheritance
 
 envstack environments are typically arranged hierarchically:
@@ -127,6 +126,36 @@ It can be layered on top of:
 
 envstack does not require a specific packaging or deployment model. It assumes
 only that environments can be described declaratively.
+
+## Early binding vs late binding environments
+
+envstack uses a **late-binding environment model**.
+
+Environments are resolved at **activation time**, not at install time, build
+time, or package-resolution time.
+
+This means:
+- Environments are not frozen snapshots
+- Shared environments can evolve
+- Tools intentionally pick up updates on next invocation
+- Version changes propagate by policy, not rebuilds
+
+This model contrasts with:
+- Virtual environments or conda, which bind dependencies early
+- Containers, which freeze environments at image build time
+- Solver-driven systems, which bind environments during resolution
+
+envstack treats environments as **live configuration**, composed explicitly
+each time they are activated.
+
+Late binding is a deliberate design choice. It favors:
+- Shared, network-deployed environments
+- Centralized updates
+- Policy-driven overrides
+- Reduced duplication of runtimes
+
+envstack provides policy-defined isolation rather than runtime-enforced
+isolation, relying on explicit configuration and directory layout.
 
 ## Opinionated by design
 
