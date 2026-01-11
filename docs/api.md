@@ -56,7 +56,7 @@ The following environment variables are used to help manage functionality:
 | Name | Description |
 |------|-------------|
 | DEFAULT_ENV_STACK | Name of the default environment stack (default) |
-| ENVPATH | Colon-separated paths to search for stack files |
+| ENVPATH | Colon-separated paths to search for environment files |
 | IGNORE_MISSING | Ignore missing stack files when resolving environments |
 | INTERACTIVE | Force shells to run in interactive mode |
 | STACK | Stores the name of the current environment stack |

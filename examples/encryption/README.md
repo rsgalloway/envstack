@@ -45,13 +45,13 @@ $ source <(envstack --keygen --export)
 Once the keys are in the environment, you can encrypt the env stack:
 
 ```bash
-$ envstack -o encrypted.env --encrypt
+$ envstack -o secrets.env --encrypt
 ```
 
 Encrypted variables will resolve as long as the key is in the environment:
 
 ```bash
-$ envstack encrypted -r HELLO
+$ envstack secrets -r HELLO
 HELLO=world
 ```
 
@@ -67,20 +67,20 @@ $ envstack --keygen -o keys.env
 Then use `keys.env` to encrypt any other environment files:
 
 ```bash
-$ ./keys.env -- envstack -eo encrypted.env
+$ ./keys.env -- envstack -eo secrets.env
 ```
 
 To decrypt, run the command inside the `keys` environment again:
 
 ```bash
-$ ./keys.env -- envstack encrypted -r HELLO
+$ ./keys.env -- envstack secrets -r HELLO
 HELLO=world
 ```
 
 Or add `keys` to the env stack:
 
 ```bash
-$ envstack keys encrypted -r HELLO
+$ envstack keys secrets -r HELLO
 HELLO=world
 ```
 
@@ -93,6 +93,6 @@ include: [keys]
 Variables will automatically decrypt when resolved:
 
 ```bash
-$ ./encrypted.env -r HELLO
+$ ./secrets.env -r HELLO
 HELLO=world
 ```

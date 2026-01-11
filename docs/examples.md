@@ -43,8 +43,7 @@ Common use cases:
 - Developer workstations vs CI
 
 **Example:**  
-`examples/dev/`  
-`examples/prod/`
+`examples/default/`
 
 ## Project-level environments
 

@@ -65,6 +65,17 @@ $ envstack -r DEPLOY_ROOT
 DEPLOY_ROOT=/mnt/pipe/prod
 ```
 
+## How envstack finds environments
+
+envstack discovers environment definitions via the `ENVPATH` environment variable.
+`ENVPATH` is to envstack what `PATH` is to executables:
+
+```bash
+ENVPATH=/path/to/dev/env:/path/to/prod/env
+```
+In this case, environments in dev override or layer on top of environments in
+prod.
+
 ## Running Commands
 
 To run any command line executable inside of an environment stack, where

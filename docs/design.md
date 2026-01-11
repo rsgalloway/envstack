@@ -73,6 +73,27 @@ envstack environments are typically arranged hierarchically:
 Downstream environments inherit upstream configuration and apply targeted
 overrides. This avoids duplication while preserving clarity.
 
+# ENVPATH
+
+envstack discovers environment definitions using the `ENVPATH` environment
+variable.
+
+`ENVPATH` is an ordered, colon-separated list of directories that envstack
+searches when resolving environment names.
+
+Resolution follows these rules:
+- Directories are searched left to right
+- Later entries override earlier ones
+- Filesystem layout defines hierarchy and scope
+- Changes take effect at activation time
+
+`ENVPATH` is intentionally simple and filesystem-backed. It allows:
+- Shared, network-deployed environments
+- Hierarchical overrides (e.g. prod → dev → project)
+- Late binding of configuration without rebuilds
+
+`ENVPATH` plays the same role for envstack that `PATH` plays for executables.
+
 ## Includes
 
 Environment definitions may include other environments explicitly.
