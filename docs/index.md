@@ -56,7 +56,7 @@ to be set. Resolution is explicit and inspectable before execution.
 **envstack is not:**
 - A dependency resolver
 - A package manager
-- A runtime isolation tool
+- A runtime isolation tool by default
 
 envstack focuses on **how environments are composed and activated**, not how
 dependencies are installed.

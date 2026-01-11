@@ -73,6 +73,9 @@ envstack focuses on:
 It answers:
 > “How is this environment defined and layered?”
 
+It can be used to activate versioned, shared environments when dependencies are
+curated rather than dynamically resolved.
+
 envstack does **not**:
 - Solve dependency graphs
 - Install packages

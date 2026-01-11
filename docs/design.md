@@ -103,10 +103,9 @@ This makes configuration errors visible early.
 ## What envstack does not do (non-goals)
 
 envstack intentionally does **not**:
-
 - Install dependencies
 - Resolve version constraints
-- Create isolated runtimes
+- Enforce isolated runtimes automatically
 - Manage interpreters or binaries
 - Guess user intent
 

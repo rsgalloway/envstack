@@ -181,8 +181,8 @@ It prioritizes:
 - Policy-driven updates
 - Runtime activation over frozen snapshots
 
-envstack intentionally does not provide hard runtime isolation or dependency
-freezing. Environments are resolved at activation time, allowing shared
+envstack intentionally does not enforce hard runtime isolation or automatic
+dependency freezing. Environments are resolved at activation time, allowing shared
 environments to evolve and tools to pick up updates intentionally.
 
 If you value explicit control, clarity, and shared configuration over
