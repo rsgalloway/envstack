@@ -76,7 +76,7 @@ ENVPATH=/path/to/dev/env:/path/to/prod/env
 In this case, environments in dev override or layer on top of environments in
 prod.
 
-# Converting `.env` files
+## Converting `.env` files
 
 Convert existing `.env` files to envstack by piping them into envstack:
 
