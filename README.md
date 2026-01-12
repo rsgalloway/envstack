@@ -51,7 +51,6 @@ $ envstack -u
 DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=prod
 ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
-HELLO=${HELLO:=world}
 LOG_LEVEL=${LOG_LEVEL:=INFO}
 PATH=${DEPLOY_ROOT}/bin:${PATH}
 PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
