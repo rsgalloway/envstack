@@ -7,6 +7,7 @@ rem make.bat - Windows-friendly Makefile target runner
 rem
 rem Usage:
 rem   make.bat                -> build
+rem   make.bat build          -> build (clean + install-to-build + prune)
 rem   make.bat clean          -> remove build artifacts
 rem   make.bat test           -> run basic envstack shell checks
 rem   make.bat dryrun         -> simulate installation (dist --dryrun)
@@ -36,7 +37,7 @@ goto :help
 
 :help
 echo Targets:
-echo   build    - Build artifacts (pip install -r requirements.txt -t %BUILD_DIR%)
+echo   build    - Build artifacts (pip install . -t %BUILD_DIR%)
 echo   clean    - Remove build artifacts (%BUILD_DIR%)
 echo   test     - Basic envstack command checks
 echo   dryrun   - Simulate installation (dist --dryrun) via envstack
@@ -57,11 +58,29 @@ if exist "%BUILD_DIR%" (
 exit /b 0
 
 :build
-call :clean || exit /b 1
-echo [build] Installing requirements into "%BUILD_DIR%" ...
-python -m pip install -r requirements.txt -t "%BUILD_DIR%"
-if errorlevel 1 exit /b 1
-exit /b 0
+call "%~f0" clean
+if errorlevel 1 exit /b %errorlevel%
+
+rem Ensure build dir exists
+if not exist build mkdir build
+
+rem Install this project + its runtime deps into .\build (per pyproject.toml)
+python -m pip install --upgrade pip setuptools wheel >NUL
+echo Installing envstack into .\build ...
+python -m pip install . -t build
+if errorlevel 1 exit /b %errorlevel%
+
+rem Prune items that are not intended to ship (match Makefile)
+for %%D in (build\bin build\lib build\envstack build\__pycache__) do (
+  if exist "%%D" rmdir /s /q "%%D"
+)
+
+rem Remove bdist-style dirs under build (build\bdist*)
+for /d %%D in ("build\bdist*") do (
+  if exist "%%D" rmdir /s /q "%%D"
+)
+
+goto :eof
 
 :test
 echo [test] Running envstack checks...

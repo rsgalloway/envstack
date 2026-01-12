@@ -1,6 +1,6 @@
 # =============================================================================
 # Project: EnvStack - Environment Variable Management
-# Makefile for building project executables on Linux and Windows (using Wine)
+# Makefile for building project executables on Linux
 #
 # Usage:
 #   make           - Builds targets
@@ -16,7 +16,7 @@
 
 # Define the installation command
 BUILD_DIR := build
-BUILD_CMD := pip install -r requirements.txt -t $(BUILD_DIR)
+BUILD_CMD := python -m pip install . -t $(BUILD_DIR)
 
 # envstack command uses ./env for ENVPATH
 ENVSTACK_CMD := ENVPATH=$(CURDIR)/env \
@@ -31,6 +31,7 @@ clean:
 # Target to build for Linux
 build: clean
 	$(BUILD_CMD)
+	rm -rf build/bin build/lib build/envstack build/bdist* build/__pycache__
 
 # Combined target to build for both platforms
 all: build
