@@ -13,31 +13,9 @@ often work best together.
 | Tool                  | Per-user envs | Shared envs | Portable | Network-friendly | Complexity |
 | --------------------- | - | - | - | - | - |
 | **virtualenv / venv** | ✅ Yes | ❌ No | ❌ No | ❌ No | ✅ Low|
-| **conda**             | ✅ Mostly | ⚠️ Not really | ⚠️ Weak | ⚠️ Mixed | ⚠️ Medium |
+| **conda**             | ✅ Yes | ⚠️ Not really | ⚠️ Weak | ⚠️ Mixed | ⚠️ Medium |
 | **rez**               | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | ⚠️ Heavy |
 | **envstack**          | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Yes | ✅ Low |
-
----
-
-## A note on *shared* environments
-
-This distinction is important, especially in studio or facility-scale workflows.
-
-### virtualenv / venv
-`virtualenv` (and Python’s built-in `venv`) are designed for **per-user,
-per-machine isolation**.
-
-Characteristics:
-- Hard-coded paths to a specific Python interpreter
-- Environments are mutable and stateful
-- Not relocatable
-- No concurrency or read-only consumption model
-
-While it is technically possible to place a virtualenv on a shared filesystem,
-this is not a supported or intended workflow.
-
-**virtualenv answers:**  
-> “How do *I* isolate dependencies on *my* machine?”
 
 ---
 
