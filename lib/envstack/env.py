@@ -238,8 +238,8 @@ class EnvVar(string.Template, str):
         return []
 
     def value(self):
-        """Returns EnvVar value."""
-        return self.template  # util.safe_eval(self.template)
+        """Returns value."""
+        return self.template
 
     def vars(self):
         """Returns a list of embedded, named variables, e.g.: ::

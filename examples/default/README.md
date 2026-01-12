@@ -1,201 +1,106 @@
-## Usage
+# Default Example
 
-To see the unresolved environment for one or more environment stacks (values are
-defined in the stacks from left to right):
+Start by downloading some example files:
 
-```bash
-$ envstack [STACK [STACK ...]] -u
+```shell
+curl -o \
+default.env \
+https://raw.githubusercontent.com/rsgalloway/envstack/master/examples/default/default.env
+```
+```shell
+curl -o \
+dev.env \
+https://raw.githubusercontent.com/rsgalloway/envstack/master/examples/default/dev.env
+```
+```shell
+curl -o \
+data.env \
+https://raw.githubusercontent.com/rsgalloway/envstack/master/examples/default/data.env
 ```
 
-To resolve one or more environment vars for a given stack:
+See the unresolved environment variable values for the `default.env` environment:
 
-```bash
-$ envstack [STACK] -r [VAR [VAR ...]]
-```
-
-To trace where one or more environment vars is being set:
-
-```bash
-$ envstack [STACK] -t [VAR [VAR ...]]
-```
-
-To run commands in an environment stack:
-
-```bash
-$ envstack [STACK] -- [COMMAND]
-```
-
-To get the list of source files for a given stack:
-
-```bash
-$ envstack [STACK] --sources
-```
-
-## Running Commands
-
-To run any command line executable inside of an environment stack, where
-`[COMMAND]` is the command to run:
-
-```bash
-$ envstack [STACK] -- [COMMAND]
-```
-
-For example:
-
-```bash 
-$ envstack -- echo {HELLO}
-world
-```
-
-Running a node command:
-
-```bash
-$ echo "console.log('Hello ' + process.env.HELLO)" > index.js
-$ node index.js 
-Hello undefined
-$ envstack hello -- node index.js 
-Hello world
-```
-
-Running Python commands in the default stack:
-
-```bash
-$ envstack -- python -c "import os; print(os.environ['HELLO'])"
-world
-```
-
-Overriding values in the stack:
-
-```bash
-$ HELLO=goodbye envstack -- python -c "import os; print(os.environ['HELLO'])"
-goodbye
-```
-
-Same command but using the "thing" stack"
-
-```bash
-$ envstack thing -- python -c "import os; print(os.environ['FOO'])"
-bar
-```
-
-## Resolving Values
-
-To resolve an environment stack or a variable use `--resolve/-r [VAR]`. 
-
-```bash
-$ envstack -r ENV
+```shell
+$ envstack -u
+DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=prod
-$ envstack -r DEPLOY_ROOT
-DEPLOY_ROOT=/mnt/pipe/prod
+ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
+LOG_LEVEL=${LOG_LEVEL:=INFO}
+PATH=${DEPLOY_ROOT}/bin:${PATH}
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
+PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
+STACK=default
 ```
 
-## Setting Values
+Running `envstack` will launch a new shell session with the resolved environment:
 
-envstack uses bash-like variable expansion modifiers. Setting `$VAR` to a fixed
-value means `$VAR` will always use that value. Using an expansion modifier
-allows you to override the value:
-
-| Value | Description |
-|---------------------|-------------|
-| value |  'value' |
-| ${VAR:=default} | VAR = VAR or 'default' |
-| ${VAR:-default} | os.environ.get('VAR', 'default') |
-| ${VAR:?error message} | if not VAR: raise ValueError() |
-
-Without the expansion modifier, values are set and do not change (but can be
-overridden by lower scope stacks, i.e. a lower scope stack file may override
-a higher one). 
-
-If we define `${HELLO}` like this:
-
-```yaml
-HELLO: world
+```shell
+$ envstack
+🚀 Launching envstack shell... (CTRL+D or "exit" to quit)
+(prod) ~$ echo $ROOT
+/mnt/pipe
 ```
 
-Then the value is set and cannot be modified (except by lower scope stacks):
+## Loading Environments With Inheritance
 
-```bash
-$ envstack -- echo {HELLO}
-world
-$ HELLO=goodbye envstack -- echo {HELLO}
-world
+Load the `dev.env` environment's unresolved values:
+
+```shell
+$ envstack dev -u
+DEPLOY_ROOT=${ROOT}/dev
+ENV=dev
+ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
+LOG_LEVEL=DEBUG
+PATH=${ROOT}/dev/bin:${ROOT}/prod/bin:${PATH}
+PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$ 
+PYTHONPATH=${ROOT}/dev/lib/python:${ROOT}/prod/lib/python:${PYTHONPATH}
+ROOT=/mnt/pipe
+STACK=dev
 ```
 
-With an expansion modifier, variables have a default value and can also be
-overridden in the environment, or by higher scope stacks:
+Note how `ROOT` is undefined in `dev.env`, and inherited from `default.env`.
+The `dev.env` environment also overrides some of the values in `default.env`,
+including `PYTHONPATH`, and `PATH`. Here, we explicitly give dev paths precedence
+over prod paths:
 
-```yaml
-HELLO: ${HELLO:=world}
+```shell
+$ envstack dev
+🚀 Launching envstack shell... (CTRL+D or "exit" to quit)
+(dev) $ echo $PATH
+/mnt/pipe/dev/bin:/mnt/pipe/prod/bin:
 ```
 
-Here we show the default value, and how we can override it in the environment:
+## Storing Data Types
 
-```bash
-$ envstack -- echo {HELLO}
-world
-$ HELLO=goodbye envstack -- echo {HELLO}
-goodbye
-```
+You can store complex data types in envstack, including `dict` and `list` types.
+Values can be other `VARS`, for example:
 
-## Using the command-line
-
-Here we can set values using the `envstack` command:
-
-```bash
-$ envstack --set HELLO=world
+```shell
+$ envstack data -u
+CHAR_LIST=['a', 'b', 'c', '${HELLO}']
+DICT={'a': 1, 'b': 2, 'c': '${INT}'}
+FLOAT=1.0
 HELLO=world
+INT=5
+LOG_LEVEL=${LOG_LEVEL:=INFO}
+NUMBER_LIST=[1, 2, 3]
+STACK=data
+```
+```shell
+$ envstack data -r CHAR_LIST
+CHAR_LIST=['a', 'b', 'c', 'world']
 ```
 
-We can also Base64 encode or encrypt values automatically:
-
-```bash
-$ envstack -s HELLO=world -e
-HELLO=d29ybGQ=
-```
-
-Add more variables (note that `$` needs to be escaped in bash or else it will
-be evaluated immediately):
-
-```bash
-$ envstack -s HELLO=world VAR=\${HELLO}
-HELLO=world
-VAR=${HELLO}
-```
-
-To write out the results to an env file, use the `-o` option:
-
-```bash
-$ envstack -s HELLO=world -o hello.env
-```
-
-You can convert existing `.env` files to envstack by piping them into envstack:
-
-```bash
-$ cat .env | envstack --set -o out.env
-```
-
-## Creating Environments
-
-Several example or starter stacks are available in the [env folder of the
-envstack repo](https://github.com/rsgalloway/envstack/tree/master/env).
-
-To create a new environment file, use `--set` to declare some variables:
-
-```bash
-$ envstack -s FOO=bar BAR=\${FOO} -o out.env
-```
-
-Using Python:
+Data types are also automatically converted using `safe_eval` when loading
+environments using Python:
 
 ```python
->>> env = Env({"FOO": "bar", "BAR": "${FOO}"})
->>> env.write("out.env")
-```
-
-Get the resolved values back:
-
-```bash
-$ ./out.env -r
-BAR=bar
-FOO=bar
+>>> import envstack
+>>> env = envstack.load_environ("data")
+>>> env.get("DICT")
+{'a': 1, 'b': 2, 'c': '${INT}'}
+>>> resolved = envstack.resolve_environ(env)
+>>> resolved.get("DICT")
+{'a': '1', 'b': '2', 'c': '5'}
 ```

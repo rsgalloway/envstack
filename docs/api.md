@@ -33,6 +33,21 @@ Creating and resolving environments:
 {'BAR': 'foo', 'FOO': 'foo'}
 ```
 
+Authoring environments using Python:
+
+```python
+>>> env = Env({"FOO": "bar", "BAR": "${FOO}"})
+>>> env.write("out.env")
+```
+
+Get the resolved values back:
+
+```bash
+$ ./out.env -r
+BAR=bar
+FOO=bar
+```
+
 Create an encrypted environment:
 
 ```python

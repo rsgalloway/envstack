@@ -76,6 +76,14 @@ ENVPATH=/path/to/dev/env:/path/to/prod/env
 In this case, environments in dev override or layer on top of environments in
 prod.
 
+# Convertiong `.env` files
+
+Convert existing `.env` files to envstack by piping them into envstack:
+
+```bash
+cat .env | envstack --set -o out.env
+```
+
 ## Running Commands
 
 To run any command line executable inside of an environment stack, where
