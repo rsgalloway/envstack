@@ -25,11 +25,11 @@ So any stack name in the `envstack` command is given precedence:
 
 ```shell
 $ envstack project test -q
-(test) ~$ exit
+(test) ~$ 
 ```
 ```shell
 $ envstack project foobar -q
-(foobar) ~$ exit
+(foobar) ~$ 
 ```
 
 The advantage of this is that tools can be disted, for example using distman,
