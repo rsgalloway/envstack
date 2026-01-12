@@ -1,11 +1,13 @@
 ## Encryption
 
 Supported encryption algorithms include
-[AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode),
-[Fernet](https://github.com/fernet/spec/),
+[AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode)
 and
-[Base64](https://en.wikipedia.org/wiki/Base64). This allows
+[Fernet](https://github.com/fernet/spec/). These algorithms allow
 you to securely encrypt and decrypt sensitive environment variables.
+
+[Base64](https://en.wikipedia.org/wiki/Base64) encoding is also supported as a
+convenience for encoding data in Base64 (but is not a security encryption).
 
 To use AES-GCM or Fernet, and encryption key must be found somewhere in the
 environment. No key is required for Base64 encryption (the default). Encrypted
@@ -13,7 +15,7 @@ nodes look for keys in the following order, favoring AES-GCM over Fernet:
 
 | Algorithm | Key |
 |---------|-------------|
-| Base64 | (no key required) |
+| Base64 | (no key required, not encrypted) |
 | AES-GCM | ${ENVSTACK_SYMMETRIC_KEY} |
 | Fernet | ${ENVSTACK_FERNET_KEY} |
 
