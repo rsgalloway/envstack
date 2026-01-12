@@ -44,6 +44,9 @@ from envstack.env import Env, EnvVar, Scope, Source
 from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
 from envstack.util import dict_diff
 
+# path to the env directory
+envpath = os.path.join(os.path.dirname(__file__), "fixtures", "env")
+
 
 def create_test_root():
     """Creates a temporary directory with the contents of the "env" folder."""
@@ -51,11 +54,8 @@ def create_test_root():
     # create a temporary directory
     root = tempfile.mkdtemp()
 
-    # copy the contents of the "env" folder to the temp dir
-    env_path = os.path.join(os.path.dirname(__file__), "..", "env")
-
     for env in ("prod", "dev"):
-        shutil.copytree(env_path, os.path.join(root, env, "env"))
+        shutil.copytree(envpath, os.path.join(root, env, "env"))
 
     return root
 
@@ -122,7 +122,6 @@ class TestEnvVar(unittest.TestCase):
 class TestEnv(unittest.TestCase):
     def setUp(self):
         self.filename = "testenv.env"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -286,7 +285,6 @@ class TestInit(unittest.TestCase):
 
     def test_init_default(self):
         """Tests init with default stack."""
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
         os.environ["ROOT"] = "/var/tmp"  # cannot override ROOT
         os.environ["ENV"] = "foobar"  # cannot override ENV
@@ -317,7 +315,6 @@ class TestInit(unittest.TestCase):
 
     def test_init_dev(self):
         """Tests init with dev stack."""
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
         os.environ["HELLO"] = "goodbye"
         os.environ["LOG_LEVEL"] = "DEBUG"
@@ -344,7 +341,6 @@ class TestInit(unittest.TestCase):
 
     def test_init_zzz_project(self):
         """Tests init with custom project stack."""
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
         os.environ["HELLO"] = "goodbye"
         os.environ["ENV"] = "foobar"  # cannot override ENV
@@ -989,7 +985,6 @@ class TestIssues(unittest.TestCase):
 
     def test_issue_36(self):
         """Tests issue #36 with init and yaml import."""
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
 
         # clear sys path to simulate no yaml module

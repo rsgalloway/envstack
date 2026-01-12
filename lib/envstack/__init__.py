@@ -34,6 +34,7 @@ Stacked environment variable management system.
 """
 
 __prog__ = "envstack"
-__version__ = "0.9.5"
+__version__ = "0.9.6"
 
 from envstack.env import clear, init, revert, save  # noqa: F401
+from envstack.env import load_environ, resolve_environ  # noqa: F401

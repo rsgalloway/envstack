@@ -238,8 +238,8 @@ class EnvVar(string.Template, str):
         return []
 
     def value(self):
-        """Returns EnvVar value."""
-        return self.template  # util.safe_eval(self.template)
+        """Returns value."""
+        return self.template
 
     def vars(self):
         """Returns a list of embedded, named variables, e.g.: ::
@@ -944,9 +944,9 @@ def load_environ(
             env.load_source(source, platform=platform)
             seen_paths.append(source.path)
 
-            # add the stack name to the environment
-            if not env.get("STACK"):
-                env["STACK"] = util.get_stack_name(name)
+        # add the stack name to the environment
+        if not env.get("STACK"):
+            env["STACK"] = util.get_stack_name(name)
 
         # resolve ${ENVPATH} (don't let it be None)
         # TODO: use expandvars() instead of resolve_environ()

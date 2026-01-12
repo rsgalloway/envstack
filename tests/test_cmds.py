@@ -52,6 +52,10 @@ pytestmark = pytest.mark.skipif(
     reason="Linux-only shell integration tests (bash/ls/PS1, paths, env layout)",
 )
 
+# define envpath for tests
+envpath = os.path.join(os.path.dirname(__file__), "fixtures", "env")
+
+
 def make_command(envstack_bin: str, filename: str, *args: str):
     """
     Build a cross-platform shell command that runs envstack (with args)
@@ -73,7 +77,6 @@ class TestUnresolved(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack -u"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -83,7 +86,7 @@ class TestUnresolved(unittest.TestCase):
 
     def test_default(self):
         expected_output = (
-            """DEPLOY_ROOT=${ROOT}/${ENV}
+            r"""DEPLOY_ROOT=${ROOT}/${ENV}
 ENV=prod
 ENVPATH=${DEPLOY_ROOT}/env:${ENVPATH}
 HELLO=${HELLO:=world}
@@ -101,7 +104,7 @@ STACK=default
 
     def test_dev(self):
         expected_output = (
-            """DEPLOY_ROOT=${ROOT}/dev
+            r"""DEPLOY_ROOT=${ROOT}/dev
 ENV=dev
 ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
@@ -120,7 +123,7 @@ STACK=dev
 
     def test_hello(self):
         expected_output = (
-            """DEPLOY_ROOT=${ROOT}/dev
+            r"""DEPLOY_ROOT=${ROOT}/dev
 ENV=dev
 ENVPATH=${ROOT}/dev/env:${ROOT}/prod/env:${ENVPATH}
 HELLO=${HELLO:=world}
@@ -139,7 +142,7 @@ STACK=hello
         self.assertEqual(output, expected_output)
 
     def test_thing(self):
-        expected_output = """CHAR_LIST=['a', 'b', 'c', '${HELLO}']
+        expected_output = r"""CHAR_LIST=['a', 'b', 'c', '${HELLO}']
 DEPLOY_ROOT=${ROOT}/${ENV}
 DICT={'a': 1, 'b': 2, 'c': '${INT}'}
 ENV=prod
@@ -165,7 +168,6 @@ class TestEncrypt(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack -u"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -183,7 +185,7 @@ class TestEncrypt(unittest.TestCase):
         envstack.revert()
 
     def test_default(self):
-        expected_output = """DEPLOY_ROOT=JHtST09UfS8ke0VOVn0=
+        expected_output = r"""DEPLOY_ROOT=JHtST09UfS8ke0VOVn0=
 ENV=cHJvZA==
 ENVPATH=JHtERVBMT1lfUk9PVH0vZW52OiR7RU5WUEFUSH0=
 HELLO=JHtIRUxMTzo9d29ybGR9
@@ -232,7 +234,7 @@ STACK=ZGVmYXVsdA==
 
     def test_dev(self):
         """Tests encrypting values in the dev stack."""
-        expected_output = """DEPLOY_ROOT=JHtST09UfS9kZXY=
+        expected_output = r"""DEPLOY_ROOT=JHtST09UfS9kZXY=
 ENV=ZGV2
 ENVPATH=JHtST09UfS9kZXYvZW52OiR7Uk9PVH0vcHJvZC9lbnY6JHtFTlZQQVRIfQ==
 HELLO=JHtIRUxMTzo9d29ybGR9
@@ -260,7 +262,6 @@ class TestResolved(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -344,7 +345,6 @@ class TestBake(unittest.TestCase):
         if os.path.exists(self.filename):
             os.remove(self.filename)
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -364,7 +364,7 @@ class TestBake(unittest.TestCase):
     def test_default(self):
         """Tests baking the default stack."""
         command = make_command(self.envstack_bin, self.filename)
-        expected_output = """#!/usr/bin/env envstack
+        expected_output = r"""#!/usr/bin/env envstack
 include: []
 all: &all
   DEPLOY_ROOT: ${ROOT}/${ENV}
@@ -397,7 +397,7 @@ windows:
     def test_dev(self):
         """Tests baking the dev stack."""
         command = make_command(self.envstack_bin, self.filename, "dev", "-d", "1")
-        expected_output = """#!/usr/bin/env envstack
+        expected_output = r"""#!/usr/bin/env envstack
 include: [default]
 all: &all
   DEPLOY_ROOT: ${ROOT}/dev
@@ -425,7 +425,7 @@ windows:
         command = make_command(
             self.envstack_bin, self.filename, "thing", "--depth", "1"
         )
-        expected_output = """#!/usr/bin/env envstack
+        expected_output = r"""#!/usr/bin/env envstack
 include: [default]
 all: &all
   CHAR_LIST: [a, b, c, "${HELLO}"]
@@ -455,7 +455,7 @@ windows:
     def test_default_encrypted(self):
         """Tests baking the default stack encrypted with base64."""
         command = make_command(self.envstack_bin, self.filename, "--encrypt")
-        expected_output = """#!/usr/bin/env envstack
+        expected_output = r"""#!/usr/bin/env envstack
 include: []
 all: &all
   DEPLOY_ROOT: !encrypt JHtST09UfS8ke0VOVn0=
@@ -490,7 +490,7 @@ windows:
         command = make_command(
             self.envstack_bin, self.filename, "thing", "--encrypt", "--depth", "1"
         )
-        expected_output = """#!/usr/bin/env envstack
+        expected_output = r"""#!/usr/bin/env envstack
 include: [default]
 all: &all
   CHAR_LIST: !encrypt WydhJywgJ2InLCAnYycsICcke0hFTExPfSdd
@@ -544,7 +544,6 @@ class TestCommands(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -606,7 +605,6 @@ class TestSet(unittest.TestCase):
     def setUp(self):
         self.filename = "settest.env"
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -669,10 +667,10 @@ class TestSet(unittest.TestCase):
             self.filename,
             "--set",
             "FOO:foo",
-            "BAR:\${FOO}",  # not a typo, need to escape $ for shell
+            r"BAR:\${FOO}",  # not a typo, need to escape $ for shell
             "--bare",
         )
-        expected_output = """#!/usr/bin/env envstack
+        expected_output = r"""#!/usr/bin/env envstack
 include: []
 all: &all
   BAR: ${FOO}
@@ -698,11 +696,11 @@ windows:
             self.filename,
             "--set",
             "FOO:foo",
-            "BAR:\${FOO}",  # not a typo, need to escape $ for shell
+            r"BAR:\${FOO}",  # not a typo, need to escape $ for shell
             "--encrypt",
             "--bare",
         )
-        expected_output = """#!/usr/bin/env envstack
+        expected_output = r"""#!/usr/bin/env envstack
 include: []
 all: &all
   BAR: !encrypt JHtGT099
@@ -727,7 +725,6 @@ class TestVarFlow(unittest.TestCase):
 
     def setUp(self):
         self.envstack_bin = "envstack"
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         os.environ["ENVPATH"] = envpath
 
     def test_default_hello(self):
@@ -769,7 +766,6 @@ class TestDistman(unittest.TestCase):
     def setUp(self):
         self.envstack_bin = "envstack"
         self.python_cmd = """python -c \"import os,envstack;envstack.init('distman');print(os.getenv('DEPLOY_ROOT'))\""""
-        envpath = os.path.join(os.path.dirname(__file__), "..", "env")
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",

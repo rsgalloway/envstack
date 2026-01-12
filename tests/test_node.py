@@ -56,7 +56,7 @@ from envstack.node import (
 )
 
 # path to env stack file directory
-envpath = os.path.join(os.path.dirname(__file__), "..", "env")
+envpath = os.path.join(os.path.dirname(__file__), "fixtures", "env")
 
 
 class TestBase64Node(unittest.TestCase):
