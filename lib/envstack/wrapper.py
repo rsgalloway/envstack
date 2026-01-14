@@ -277,6 +277,7 @@ def capture_output(command: str, namespace: str = config.DEFAULT_NAMESPACE):
             check=False,
             capture_output=True,
             text=True,
+            timeout=config.COMMAND_TIMEOUT,
         )
         return proc.returncode, proc.stdout, proc.stderr
     except FileNotFoundError as e:
