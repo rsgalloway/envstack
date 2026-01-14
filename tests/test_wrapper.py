@@ -36,6 +36,7 @@ Contains unit tests for the wrapper.py module.
 import os
 import sys
 import pytest
+from types import SimpleNamespace
 
 import envstack.wrapper as wrapper_mod
 from envstack.wrapper import Wrapper, CommandWrapper, run_command
@@ -159,3 +160,111 @@ def test_interactive_env_override_parsing(
 
     sw = ShellWrapper("hello", "echo test")
     assert sw.get_interactive(env) is expected
+
+
+def test_capture_output_success(monkeypatch):
+    import envstack.wrapper as w
+
+    # Make env plumbing deterministic
+    monkeypatch.setattr(w, "load_environ", lambda ns: {"A": "1"})
+    monkeypatch.setattr(w, "resolve_environ", lambda env: env)
+    monkeypatch.setattr(w, "encode", lambda env: env)
+    monkeypatch.setattr(w.config, "SHELL", "/bin/bash")
+
+    calls = {}
+
+    def fake_run(cmd, env=None, shell=None, check=None, capture_output=None, text=None, timeout=None):
+        calls["cmd"] = cmd
+        calls["env"] = env
+        calls["shell"] = shell
+        calls["check"] = check
+        calls["capture_output"] = capture_output
+        calls["text"] = text
+        calls["timeout"] = timeout
+        return SimpleNamespace(returncode=0, stdout="Python 3.8.17\n", stderr="")
+
+    monkeypatch.setattr(w.subprocess, "run", fake_run)
+
+    rc, out, err = w.capture_output("python --version", namespace="test")
+
+    assert rc == 0
+    assert out == "Python 3.8.17\n"
+    assert err == ""
+
+    # Ensure argv mode (safer default)
+    assert isinstance(calls["cmd"], list)
+    assert calls["cmd"][0] == "python"
+    assert calls["shell"] is False
+    assert calls["check"] is False
+    assert calls["capture_output"] is True
+    assert calls["text"] is True
+
+    # Ensure env passed through
+    assert calls["env"]["A"] == "1"
+
+
+def test_capture_output_nonzero_exit_preserves_stdout_stderr(monkeypatch):
+    import envstack.wrapper as w
+
+    monkeypatch.setattr(w, "load_environ", lambda ns: {})
+    monkeypatch.setattr(w, "resolve_environ", lambda env: env)
+    monkeypatch.setattr(w, "encode", lambda env: env)
+    monkeypatch.setattr(w.config, "SHELL", "/bin/bash")
+
+    def fake_run(*args, **kwargs):
+        return SimpleNamespace(returncode=2, stdout="", stderr="boom\n")
+
+    monkeypatch.setattr(w.subprocess, "run", fake_run)
+
+    rc, out, err = w.capture_output("somecmd --flag", namespace="test")
+    assert rc == 2
+    assert out == ""
+    assert err == "boom\n"
+
+
+def test_capture_output_command_not_found_returns_127_and_stderr(monkeypatch):
+    import envstack.wrapper as w
+
+    monkeypatch.setattr(w, "load_environ", lambda ns: {})
+    monkeypatch.setattr(w, "resolve_environ", lambda env: env)
+    monkeypatch.setattr(w, "encode", lambda env: env)
+    monkeypatch.setattr(w.config, "SHELL", "/bin/bash")
+
+    def fake_run(cmd, **kwargs):
+        # Emulate what subprocess.run does when executable doesn't exist
+        raise FileNotFoundError(2, "No such file or directory", cmd[0])
+
+    monkeypatch.setattr(w.subprocess, "run", fake_run)
+
+    rc, out, err = w.capture_output("python4 --version", namespace="test")
+
+    assert rc == 127
+    assert out == ""
+    # don’t over-specify text; just ensure it’s useful
+    assert "python4" in err.lower()
+    assert "not found" in err.lower() or "no such file" in err.lower()
+
+
+def test_capture_output_preserves_spaces_in_command(monkeypatch):
+    """
+    Guardrail: ensure command parsing doesn't drop arguments.
+    """
+    import envstack.wrapper as w
+
+    monkeypatch.setattr(w, "load_environ", lambda ns: {})
+    monkeypatch.setattr(w, "resolve_environ", lambda env: env)
+    monkeypatch.setattr(w, "encode", lambda env: env)
+    monkeypatch.setattr(w.config, "SHELL", "/bin/bash")
+
+    seen = {}
+
+    def fake_run(cmd, **kwargs):
+        seen["cmd"] = cmd
+        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(w.subprocess, "run", fake_run)
+
+    w.capture_output("python -c 'print(123)'", namespace="test")
+
+    assert seen["cmd"][0] == "python"
+    assert "-c" in seen["cmd"]

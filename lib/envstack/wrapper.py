@@ -236,7 +236,11 @@ class CmdWrapper(CommandWrapper):
         return list(self._subprocess_argv)
 
 
-def capture_output(command: str, namespace: str = config.DEFAULT_NAMESPACE):
+def capture_output(
+    command: str,
+    namespace: str = config.DEFAULT_NAMESPACE,
+    timeout: int = config.COMMAND_TIMEOUT,
+):
     """
     Runs a command (string or argv) with the given stack namespace and captures stdout/stderr.
 
@@ -277,7 +281,7 @@ def capture_output(command: str, namespace: str = config.DEFAULT_NAMESPACE):
             check=False,
             capture_output=True,
             text=True,
-            timeout=config.COMMAND_TIMEOUT,
+            timeout=timeout,
         )
         return proc.returncode, proc.stdout, proc.stderr
     except FileNotFoundError as e:

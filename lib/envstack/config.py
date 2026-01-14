@@ -56,6 +56,7 @@ def detect_shell():
         else:
             return "/usr/bin/bash"
 
+
 # debug mode
 DEBUG = os.getenv("DEBUG")
 
