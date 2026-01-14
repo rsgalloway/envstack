@@ -61,6 +61,9 @@ variable_pattern = re.compile(
     r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([-=?])((?:\$\{[^}]+\}|[^}])*))?\}"
 )
 
+# regular expression pattern for command substitution
+cmdsub_pattern = re.compile(r"^\s*\$\((?P<cmd>.*)\)\s*$", re.DOTALL)
+
 
 def cache(func):
     """Function decorator to memoize return data."""
