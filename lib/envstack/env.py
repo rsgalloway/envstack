@@ -876,18 +876,7 @@ def resolve_environ(env: Env):
     # resolve environment variables after decrypting custom nodes
     for key, value in list(env_copy.items()):
         value = util.evaluate_modifiers(value, environ=env_copy, parent=included)
-        resolved_value = util.safe_eval(value)
-        if config.ALLOW_COMMANDS and isinstance(resolved_value, str):
-            from envstack.wrapper import capture_output
-
-            cmd = util.cmdsub_pattern.match(str(resolved_value))
-            if cmd:
-                exit_code, out, err = capture_output(cmd.group(1))
-                if exit_code == 0:
-                    resolved_value = out.strip()
-                else:
-                    resolved_value = err.strip() or ""
-        resolved[key] = resolved_value
+        resolved[key] = util.safe_eval(value)
 
     return resolved
 

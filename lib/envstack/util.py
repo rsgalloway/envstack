@@ -496,7 +496,21 @@ def evaluate_modifiers(
         else:
             result = expression
 
-    return sanitize_value(result)
+    resolved_value = sanitize_value(result)
+
+    # command substitution
+    if config.ALLOW_COMMANDS and isinstance(resolved_value, str):
+        from envstack.wrapper import capture_output
+
+        cmd = cmdsub_pattern.match(str(resolved_value))
+        if cmd:
+            exit_code, out, err = capture_output(cmd.group(1))
+            if exit_code == 0:
+                resolved_value = out.strip()
+            else:
+                resolved_value = err.strip() or ""
+
+    return resolved_value
 
 
 def load_sys_path(
