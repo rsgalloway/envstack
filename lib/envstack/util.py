@@ -512,23 +512,23 @@ def evaluate_command(command: str):
     """
     Evaluates command substitution in the given string.
 
+        PYVERSION: $(python --version)
+
     :param command: The command string to evaluate.
-    :returns: The evaluated command output or original string if no command found.
+    :returns: The command output or original string if no command found.
     """
 
     from envstack.wrapper import capture_output
 
-    resolved_value = command
-
-    cmd = cmdsub_pattern.match(str(resolved_value))
-    if cmd:
-        exit_code, out, err = capture_output(cmd.group(1))
+    match = cmdsub_pattern.match(command)
+    if match:
+        exit_code, out, err = capture_output(match.group(1))
         if exit_code == 0:
-            resolved_value = out.strip()
+            return out.strip()
         else:
-            resolved_value = err.strip() or null
+            return err.strip() or null
 
-    return resolved_value
+    return command
 
 
 def load_sys_path(
