@@ -500,15 +500,30 @@ def evaluate_modifiers(
 
     # command substitution
     if config.ALLOW_COMMANDS and isinstance(resolved_value, str):
-        from envstack.wrapper import capture_output
+        resolved_value = evaluate_command(resolved_value)
 
-        cmd = cmdsub_pattern.match(str(resolved_value))
-        if cmd:
-            exit_code, out, err = capture_output(cmd.group(1))
-            if exit_code == 0:
-                resolved_value = out.strip()
-            else:
-                resolved_value = err.strip() or ""
+    return resolved_value
+
+
+def evaluate_command(command: str):
+    """
+    Evaluates command substitution in the given string.
+
+    :param command: The command string to evaluate.
+    :returns: The evaluated command output or original string if no command found.
+    """
+
+    from envstack.wrapper import capture_output
+
+    resolved_value = command
+
+    cmd = cmdsub_pattern.match(str(resolved_value))
+    if cmd:
+        exit_code, out, err = capture_output(cmd.group(1))
+        if exit_code == 0:
+            resolved_value = out.strip()
+        else:
+            resolved_value = err.strip() or null
 
     return resolved_value
 
