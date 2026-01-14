@@ -447,6 +447,9 @@ def evaluate_modifiers(
                 )
 
             elif operator is None:
+                # check for command substitution
+                if config.ALLOW_COMMANDS and cmdsub_pattern.match(str(current)):
+                    return str(evaluate_command(current))
                 if is_literal(current):
                     return current  # file literal wins
                 if is_template(current):
