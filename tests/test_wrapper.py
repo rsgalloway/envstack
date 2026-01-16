@@ -268,3 +268,44 @@ def test_capture_output_preserves_spaces_in_command(monkeypatch):
 
     assert seen["cmd"][0] == "python"
     assert "-c" in seen["cmd"]
+
+
+@pytest.mark.integration
+def test_capture_output_integration_python_stdout():
+    import envstack.wrapper as w
+
+    # Use the current interpreter for maximum reliability
+    cmd = f'"{sys.executable}" -c "print(12345)"'
+
+    rc, out, err = w.capture_output(cmd)
+
+    assert rc == 0
+    assert out.strip() == "12345"
+    assert err.strip() == ""
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(os.name != "nt", reason="Windows CMD-specific behavior")
+def test_capture_output_integration_windows_cmd_quoting():
+    import envstack.wrapper as w
+
+    # This contains nested quotes and spaces that often break if you re-shell-join badly.
+    cmd = f'"{sys.executable}" -c "import sys; print(sys.version_info[0])"'
+
+    rc, out, err = w.capture_output(cmd)
+
+    assert rc == 0
+    assert out.strip().isdigit()
+    assert err.strip() == ""
+
+
+@pytest.mark.integration
+def test_capture_output_integration_command_not_found():
+    import envstack.wrapper as w
+
+    rc, out, err = w.capture_output("definitely_not_a_real_command_12345")
+
+    assert rc != 0
+    assert out.strip() == ""
+    # err message varies widely; just ensure something was produced
+    assert err.strip() != ""

@@ -266,9 +266,10 @@ def capture_output(
             cmd = argv
 
     elif shellname in ["cmd"]:
-        expr = [re.sub(r"\{(\w+)\}", r"%\1%", a) for a in argv]
-        cmdline = shell_join(expr)
-        cmd = [config.SHELL, "/c", cmdline]
+        # expr = [re.sub(r"\{(\w+)\}", r"%\1%", a) for a in argv]
+        # cmdline = shell_join(expr)
+        # cmd = [config.SHELL, "/c", cmdline]
+        cmd = command
 
     else:
         cmd = argv
