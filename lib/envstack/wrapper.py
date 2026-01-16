@@ -251,11 +251,11 @@ def capture_output(
     shellname = os.path.basename(config.SHELL).lower()
     argv = list(command) if isinstance(command, (list, tuple)) else to_args(command)
 
-    # Build env exactly like Wrapper.launch()
+    # build env exactly like Wrapper.launch()
     env = os.environ.copy()
     env.update(resolve_environ(load_environ(namespace)))
 
-    # Prefer argv execution where possible
+    # prefer argv execution where possible
     if shellname in ["bash", "sh", "zsh"]:
         needs_shell = any(re.search(r"\{(\w+)\}", a) for a in argv)
         if needs_shell:
@@ -265,10 +265,8 @@ def capture_output(
         else:
             cmd = argv
 
+    # for cmd always use original command string
     elif shellname in ["cmd"]:
-        # expr = [re.sub(r"\{(\w+)\}", r"%\1%", a) for a in argv]
-        # cmdline = shell_join(expr)
-        # cmd = [config.SHELL, "/c", cmdline]
         cmd = command
 
     else:
@@ -286,7 +284,7 @@ def capture_output(
         )
         return proc.returncode, proc.stdout, proc.stderr
     except FileNotFoundError as e:
-        # No process ran; synthesize a bash-like error and code
+        # no process ran; synthesize a bash-like error and code
         # 127 is the conventional "command not found" code in shells
         missing = e.filename or (
             cmd[0] if isinstance(cmd, list) and cmd else str(command)
