@@ -124,6 +124,50 @@ class TestEvaluateModifiers(unittest.TestCase):
         result = evaluate_modifiers(expression, environ)
         self.assertEqual(result, f"/usr/local/lib/env{os.pathsep}/mnt/env")
 
+    def test_tokenized_value_single(self):
+        """Test tokenized value with a single token."""
+        expression = "${ROOT}/{foo}"
+        environ = {
+            "ROOT": "/var/tmp",
+        }
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(
+            result, r"/var/tmp/{foo}"
+        )
+
+    def test_tokenized_value_trailing_slash(self):
+        """Test tokenized value with a single token and trailing slash."""
+        expression = "${ROOT}/{foo}/"
+        environ = {
+            "ROOT": "/var/tmp",
+        }
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(
+            result, r"/var/tmp/{foo}/"
+        )
+
+    def test_tokenized_value_two_tokens(self):
+        """Test tokenized value with two tokens."""
+        expression = "${ROOT}/{foo}/{bar}"
+        environ = {
+            "ROOT": "/var/tmp",
+        }
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(
+            result, r"/var/tmp/{foo}/{bar}"
+        )
+
+    def test_tokenized_value_three_tokens(self):
+        """Test tokenized value with three tokens."""
+        expression = "${ROOT}/{foo}/{bar}/{baz}"
+        environ = {
+            "ROOT": "/var/tmp",
+        }
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(
+            result, r"/var/tmp/{foo}/{bar}/{baz}"
+        )
+
     def test_default_value_with_default_args(self):
         """Test default value with default args."""
         expression = "${HELLO:=world}"

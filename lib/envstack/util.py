@@ -361,7 +361,7 @@ def evaluate_modifiers(
             and value.endswith("}")
             and not value.startswith("${")
         ):
-            return value.rstrip("}")
+            return value.rstrip("}") if value.count("}") == 1 else value
         elif isinstance(value, str) and detect_path(value):
             return dedupe_paths(value)
         return value
