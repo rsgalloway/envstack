@@ -290,11 +290,12 @@ def capture_output(
             cmd[0] if isinstance(cmd, list) and cmd else str(command)
         )
         return 127, "", f"{missing}: command not found"
-
     except OSError as e:
         # Other OS-level execution errors (permission, exec format, etc.)
         rc = 126 if getattr(e, "errno", None) in (errno.EACCES,) else 1
         return rc, "", str(e)
+    except subprocess.TimeoutExpired as e:
+        return 124, "", f"Command timed out after {timeout} seconds"
 
 
 def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
