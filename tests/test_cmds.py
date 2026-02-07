@@ -159,6 +159,8 @@ PS1=\[\e[32m\](${ENV})\[\e[0m\] \w\$
 PYTHONPATH=${DEPLOY_ROOT}/lib/python:${PYTHONPATH}
 ROOT=${HOME}/.local/pipe
 STACK=thing
+TRUE=1
+YES=1
 """
         command = "%s thing" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
@@ -437,6 +439,8 @@ all: &all
   INT: 5
   LOG_LEVEL: ${LOG_LEVEL:=INFO}
   NUMBER_LIST: [1, 2, 3]
+  TRUE: 1
+  YES: 1
 darwin:
   <<: *all
   ROOT: ${HOME}/Library/Application Support/pipe
@@ -502,6 +506,8 @@ all: &all
   INT: !encrypt NQ==
   LOG_LEVEL: !encrypt JHtMT0dfTEVWRUw6PUlORk99
   NUMBER_LIST: !encrypt WzEsIDIsIDNd
+  TRUE: !encrypt MQ==
+  YES: !encrypt MQ==
 darwin:
   <<: *all
   ROOT: !encrypt JHtIT01FfS9MaWJyYXJ5L0FwcGxpY2F0aW9uIFN1cHBvcnQvcGlwZQ==
