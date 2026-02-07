@@ -99,7 +99,9 @@ STACK=default
 """
             % self.root
         )
-        output = subprocess.check_output(self.envstack_bin, shell=True, universal_newlines=True)
+        output = subprocess.check_output(
+            self.envstack_bin, shell=True, universal_newlines=True
+        )
         self.assertEqual(output, expected_output)
 
     def test_dev(self):
@@ -605,7 +607,11 @@ class TestCommands(unittest.TestCase):
         env = os.environ.copy()
         env["ALLOW_COMMANDS"] = "1"
         output = subprocess.check_output(
-            command, start_new_session=True, env=env, shell=True, universal_newlines=True
+            command,
+            start_new_session=True,
+            env=env,
+            shell=True,
+            universal_newlines=True,
         )
         self.assertEqual(output, expected_output)
 

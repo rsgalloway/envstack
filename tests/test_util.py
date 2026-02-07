@@ -747,8 +747,12 @@ class TestEvaluateCommand(unittest.TestCase):
     def test_success_returns_stripped_stdout(self):
         import envstack.util as util
 
-        with patch("envstack.wrapper.capture_output", return_value=(0, "Python 3.8.17\n", "")) as cap:
-            self.assertEqual(util.evaluate_command("$(python --version)"), "Python 3.8.17")
+        with patch(
+            "envstack.wrapper.capture_output", return_value=(0, "Python 3.8.17\n", "")
+        ) as cap:
+            self.assertEqual(
+                util.evaluate_command("$(python --version)"), "Python 3.8.17"
+            )
             cap.assert_called_once_with("python --version")
 
     def test_failure_returns_stripped_stderr(self):
@@ -758,7 +762,10 @@ class TestEvaluateCommand(unittest.TestCase):
             "envstack.wrapper.capture_output",
             return_value=(127, "", "python4: command not found\n"),
         ) as cap:
-            self.assertEqual(util.evaluate_command("$(python4 --version)"), "python4: command not found")
+            self.assertEqual(
+                util.evaluate_command("$(python4 --version)"),
+                "python4: command not found",
+            )
             cap.assert_called_once_with("python4 --version")
 
     def test_failure_returns_null_when_no_stderr(self):
