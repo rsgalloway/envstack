@@ -362,7 +362,7 @@ def get_template(
     stack: str = config.DEFAULT_NAMESPACE,
     platform: str = config.PLATFORM,
     scope: str = None,
-    expand_envvars: bool = True,
+    expand: bool = True,
 ):
     """
     Returns a Template instance for a given template name located in `stack`.
@@ -376,7 +376,7 @@ def get_template(
     :param stack: envstack stack to load (e.g. 'fps')
     :param platform: platform name
     :param scope: scope (default: cwd via load_environ)
-    :param expand_envvars: whether to expand $VARS in the template string
+    :param expand: whether to expand $VARS in the template string
     """
     env = _load_resolved_stack(stack, platform=platform, scope=scope)
 
@@ -384,10 +384,10 @@ def get_template(
     if not template:
         raise TemplateNotFound(name)  # noqa
 
-    if not expand_envvars:
-        template = _escape_env_vars(template)
-    else:
+    if expand:
         template = _expand_env_vars(template, env)
+    else:
+        template = _escape_env_vars(template)
 
     return Template(template)
 
@@ -398,7 +398,7 @@ def match_template(
     stack: str = config.DEFAULT_NAMESPACE,
     platform: str = config.PLATFORM,
     scope: str = None,
-    expand_envvars: bool = True,
+    expand: bool = True,
 ):
     """
     Returns a Template that matches a given `path`.
@@ -409,6 +409,11 @@ def match_template(
     - Returns first matching template, or raises ValueError if the path matches
       multiple templates of the same depth.
 
+    :param path: path to match against templates
+    :param stack: envstack stack to load (e.g. 'fps')
+    :param platform: platform name
+    :param scope: scope (default: cwd via load_environ)
+    :param expand: whether to expand $VARS in the template strings before matching
     :raises: ValueError if `path` matches multiple templates at the same depth
     :returns: matching Template or None
     """
@@ -422,7 +427,7 @@ def match_template(
 
     for name, path_format in items:
         try:
-            if expand_envvars:
+            if expand:
                 path_format_expanded = _expand_env_vars(path_format, env)
             else:
                 path_format_expanded = path_format

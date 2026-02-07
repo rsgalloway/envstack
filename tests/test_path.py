@@ -101,13 +101,13 @@ class TestGetTemplate(unittest.TestCase):
 
     def test_get_template_can_disable_envvar_expansion(self):
         """Ensures get_template can return a template with unexpanded envvars
-        when expand_envvars=False."""
+        when expand=False."""
         env = _fake_env(
             ROOT="/mnt/pipe",
             SEQDIR="${ROOT}/projects/{seq}",
         )
         with patch("envstack.path._load_resolved_stack", return_value=env):
-            t = get_template("SEQDIR", stack="fps", scope="/tmp", expand_envvars=False)
+            t = get_template("SEQDIR", stack="fps", scope="/tmp", expand=False)
             # should preserve ${ROOT} literally
             p = t.apply_fields(seq="aa")
             self.assertEqual(str(p), "${ROOT}/projects/aa")
@@ -135,7 +135,7 @@ class TestMatchTemplate(unittest.TestCase):
         )
         with patch("envstack.path._load_resolved_stack", return_value=env):
             t = match_template(
-                "${ROOT}/projects/aa", stack="fps", scope="/tmp", expand_envvars=False
+                "${ROOT}/projects/aa", stack="fps", scope="/tmp", expand=False
             )
             self.assertIsNotNone(t)
             self.assertEqual(str(t), "${ROOT}/projects/{seq}")
