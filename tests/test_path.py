@@ -47,20 +47,28 @@ def _fake_env(**kvs):
 
 class TestTemplate(unittest.TestCase):
     def test_get_keywords(self):
+        """Ensures get_keywords returns the correct list of keywords from the
+        template string."""
         t = Template("/mnt/projects/{show}/{seq}/{shot}")
         self.assertEqual(t.get_keywords(), ["show", "seq", "shot"])
 
     def test_apply_fields_success(self):
+        """Ensures apply_fields can successfully apply all required fields to
+        produce a"""
         t = Template("/mnt/projects/{show}/{seq}/{shot}")
         p = t.apply_fields(show="demo", seq="aa", shot="010")
         self.assertEqual(str(p), "/mnt/projects/demo/aa/010")
 
     def test_apply_fields_missing_raises(self):
+        """Ensures apply_fields raises MissingFieldError if any keywords in the
+        template"""
         t = Template("/mnt/projects/{show}/{seq}/{shot}")
         with self.assertRaises(MissingFieldError):
             t.apply_fields(show="demo", seq="aa")  # missing shot
 
     def test_get_fields_success(self):
+        """Ensures get_fields can extract fields from a path that matches the
+        template."""
         t = Template("/mnt/projects/{show}/{seq}/{shot}")
         fields = t.get_fields("/mnt/projects/demo/aa/010")
         self.assertEqual(fields, {"show": "demo", "seq": "aa", "shot": "010"})
@@ -68,9 +76,8 @@ class TestTemplate(unittest.TestCase):
 
 class TestGetTemplate(unittest.TestCase):
     def test_get_template_expands_envvars_then_fields(self):
-        """
-        Ensures ${ROOT} is expanded from the resolved env before applying {seq}/{shot}.
-        """
+        """Ensures ${ROOT} is expanded from the resolved env before applying
+        {seq}/{shot}."""
         env = _fake_env(
             ROOT="/mnt/pipe",
             NUKESCRIPT="${ROOT}/projects/{seq}/{shot}/comp/{seq}_{shot}.{version}.nk",
@@ -85,12 +92,16 @@ class TestGetTemplate(unittest.TestCase):
             )
 
     def test_get_template_missing_raises(self):
+        """Ensures get_template raises TemplateNotFound if the template name is
+        not found in the resolved env."""
         env = _fake_env(ROOT="/mnt/pipe")
         with patch("envstack.path._load_resolved_stack", return_value=env):
             with self.assertRaises(TemplateNotFound):
                 get_template("DOES_NOT_EXIST", stack="fps", scope="/tmp")
 
     def test_get_template_can_disable_envvar_expansion(self):
+        """Ensures get_template can return a template with unexpanded envvars
+        when expand_envvars=False."""
         env = _fake_env(
             ROOT="/mnt/pipe",
             SEQDIR="${ROOT}/projects/{seq}",
@@ -104,11 +115,11 @@ class TestGetTemplate(unittest.TestCase):
 
 class TestMatchTemplate(unittest.TestCase):
     def test_match_template_picks_most_specific(self):
+        """Ensures that if multiple templates match a path, the one with more
+        keywords is preferred."""
         env = _fake_env(
             ROOT="/mnt/pipe",
-            # less specific
             SEQDIR="${ROOT}/projects/{seq}",
-            # more specific
             SHOTDIR="${ROOT}/projects/{seq}/{shot}",
         )
         with patch("envstack.path._load_resolved_stack", return_value=env):
@@ -116,7 +127,21 @@ class TestMatchTemplate(unittest.TestCase):
             self.assertIsNotNone(t)
             self.assertEqual(str(t), "/mnt/pipe/projects/{seq}/{shot}")
 
+    def test_match_template_picks_no_expansion(self):
+        """Ensures match_template can match against templates with unexpanded envvars."""
+        env = _fake_env(
+            ROOT="/mnt/pipe",
+            SEQDIR="${ROOT}/projects/{seq}",
+        )
+        with patch("envstack.path._load_resolved_stack", return_value=env):
+            t = match_template(
+                "${ROOT}/projects/aa", stack="fps", scope="/tmp", expand_envvars=False
+            )
+            self.assertIsNotNone(t)
+            self.assertEqual(str(t), "${ROOT}/projects/{seq}")
+
     def test_match_template_none_when_no_match(self):
+        """Ensures match_template returns None if no templates match the path."""
         env = _fake_env(
             ROOT="/mnt/pipe",
             SEQDIR="${ROOT}/projects/{seq}",
