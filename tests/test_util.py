@@ -35,12 +35,13 @@ Contains unit tests for the util.py module.
 
 import os
 import unittest
+from unittest.mock import patch
 
-from envstack import config
-from envstack.exceptions import CyclicalReference
+from envstack import config, util
 from envstack.util import (
     null,
     encode,
+    evaluate_command,
     evaluate_modifiers,
     dedupe_list,
     dedupe_paths,
@@ -731,6 +732,39 @@ class TestPartitionPlatformData(unittest.TestCase):
 
         result = partition_platform_data(data)
         self.assertEqual(result, expected_result)
+
+
+class TestEvaluateCommand(unittest.TestCase):
+    """Tests for evaluate_command function."""
+
+    def test_no_match_returns_original_and_does_not_call_capture(self):
+        with patch("envstack.wrapper.capture_output") as cap:
+            s = "PYVERSION=${PYVERSION:=default}"
+            self.assertEqual(evaluate_command(s), s)
+            cap.assert_not_called()
+
+    def test_success_returns_stripped_stdout(self):
+        with patch(
+            "envstack.wrapper.capture_output", return_value=(0, "Python 3.8.17\n", "")
+        ) as cap:
+            self.assertEqual(evaluate_command("$(python --version)"), "Python 3.8.17")
+            cap.assert_called_once_with("python --version")
+
+    def test_failure_returns_stripped_stderr(self):
+        with patch(
+            "envstack.wrapper.capture_output",
+            return_value=(127, "", "python4: command not found\n"),
+        ) as cap:
+            self.assertEqual(
+                evaluate_command("$(python4 --version)"),
+                "python4: command not found",
+            )
+            cap.assert_called_once_with("python4 --version")
+
+    def test_failure_returns_null_when_no_stderr(self):
+        with patch("envstack.wrapper.capture_output", return_value=(1, "", "")) as cap:
+            self.assertEqual(evaluate_command("$(somecmd)"), util.null)
+            cap.assert_called_once_with("somecmd")
 
 
 class TestIssue18(unittest.TestCase):

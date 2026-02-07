@@ -61,6 +61,9 @@ variable_pattern = re.compile(
     r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([-=?])((?:\$\{[^}]+\}|[^}])*))?\}"
 )
 
+# regular expression pattern for command substitution
+cmdsub_pattern = re.compile(r"^\s*\$\((?P<cmd>.*)\)\s*$", re.DOTALL)
+
 
 def cache(func):
     """Function decorator to memoize return data."""
@@ -444,6 +447,9 @@ def evaluate_modifiers(
                 )
 
             elif operator is None:
+                # check for command substitution
+                if config.ALLOW_COMMANDS and cmdsub_pattern.match(str(current)):
+                    return str(evaluate_command(current))
                 if is_literal(current):
                     return current  # file literal wins
                 if is_template(current):
@@ -493,7 +499,36 @@ def evaluate_modifiers(
         else:
             result = expression
 
-    return sanitize_value(result)
+    resolved_value = sanitize_value(result)
+
+    # command substitution
+    if config.ALLOW_COMMANDS and isinstance(resolved_value, str):
+        resolved_value = evaluate_command(resolved_value)
+
+    return resolved_value
+
+
+def evaluate_command(command: str):
+    """
+    Evaluates command substitution in the given string.
+
+        PYVERSION: $(python --version)
+
+    :param command: The command string to evaluate.
+    :returns: The command output or original string if no command found.
+    """
+
+    from envstack.wrapper import capture_output
+
+    match = cmdsub_pattern.match(command)
+    if match:
+        exit_code, out, err = capture_output(match.group(1))
+        if exit_code == 0:
+            return out.strip()
+        else:
+            return err.strip() or null
+
+    return command
 
 
 def load_sys_path(

@@ -99,7 +99,9 @@ STACK=default
 """
             % self.root
         )
-        output = subprocess.check_output(self.envstack_bin, shell=True, universal_newlines=True)
+        output = subprocess.check_output(
+            self.envstack_bin, shell=True, universal_newlines=True
+        )
         self.assertEqual(output, expected_output)
 
     def test_dev(self):
@@ -598,6 +600,21 @@ class TestCommands(unittest.TestCase):
         )
         self.assertEqual(output, expected_output)
 
+    def test_test_echo_pyversion(self):
+        """Tests the test stack with an echo command."""
+        command = "%s test -- echo {PYVERSION}" % self.envstack_bin
+        expected_output = f"{sys.version_info[0]}.{sys.version_info[1]}\n"
+        env = os.environ.copy()
+        env["ALLOW_COMMANDS"] = "1"
+        output = subprocess.check_output(
+            command,
+            start_new_session=True,
+            env=env,
+            shell=True,
+            universal_newlines=True,
+        )
+        self.assertEqual(output, expected_output)
+
 
 class TestSet(unittest.TestCase):
     """Tests various envstack set commands."""
@@ -791,7 +808,7 @@ class TestDistman(unittest.TestCase):
         )
         self.assertEqual(output, expected_output)
 
-    def test_test_deploy_root(self):
+    def test_project_deploy_root(self):
         command = "ENV=invalid %s project -- %s" % (self.envstack_bin, self.python_cmd)
         expected_output = f"{self.root}/project\n"
         output = subprocess.check_output(
@@ -799,7 +816,7 @@ class TestDistman(unittest.TestCase):
         )
         self.assertEqual(output, expected_output)
 
-    def test_foobar_deploy_root(self):
+    def test_project_foobar_deploy_root(self):
         command = "ENV=invalid %s project foobar -- %s" % (
             self.envstack_bin,
             self.python_cmd,

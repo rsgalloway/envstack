@@ -236,6 +236,68 @@ class CmdWrapper(CommandWrapper):
         return list(self._subprocess_argv)
 
 
+def capture_output(
+    command: str,
+    namespace: str = config.DEFAULT_NAMESPACE,
+    timeout: int = config.COMMAND_TIMEOUT,
+):
+    """
+    Runs a command (string or argv) with the given stack namespace and captures stdout/stderr.
+
+    Returns: (returncode, stdout, stderr)
+    """
+    import errno
+
+    shellname = os.path.basename(config.SHELL).lower()
+    argv = list(command) if isinstance(command, (list, tuple)) else to_args(command)
+
+    # build env exactly like Wrapper.launch()
+    env = os.environ.copy()
+    env.update(resolve_environ(load_environ(namespace)))
+
+    # prefer argv execution where possible
+    if shellname in ["bash", "sh", "zsh"]:
+        needs_shell = any(re.search(r"\{(\w+)\}", a) for a in argv)
+        if needs_shell:
+            expr_argv = [re.sub(r"\{(\w+)\}", r"${\1}", a) for a in argv]
+            expr = shell_join(expr_argv)
+            cmd = [config.SHELL, "-c", expr]
+        else:
+            cmd = argv
+
+    # for cmd always use original command string
+    elif shellname in ["cmd"]:
+        cmd = command
+
+    else:
+        cmd = argv
+
+    try:
+        proc = subprocess.run(
+            cmd,
+            env=encode(env),
+            shell=False,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        return proc.returncode, proc.stdout, proc.stderr
+    except FileNotFoundError as e:
+        # no process ran; synthesize a bash-like error and code
+        # 127 is the conventional "command not found" code in shells
+        missing = e.filename or (
+            cmd[0] if isinstance(cmd, list) and cmd else str(command)
+        )
+        return 127, "", f"{missing}: command not found"
+    except OSError as e:
+        # Other OS-level execution errors (permission, exec format, etc.)
+        rc = 126 if getattr(e, "errno", None) in (errno.EACCES,) else 1
+        return rc, "", str(e)
+    except subprocess.TimeoutExpired as e:
+        return 124, "", f"Command timed out after {timeout} seconds"
+
+
 def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
     """
     Runs a given command with the given stack namespace.

@@ -805,7 +805,10 @@ class TestEncryptEnviron(unittest.TestCase):
             if key == "STACK":  # skip the stack name
                 continue
             encrypted_value = encrypted[key]
-            self.assertTrue(isinstance(encrypted_value, EncryptedNode), f"type is {type(encrypted_value)}")
+            self.assertTrue(
+                isinstance(encrypted_value, EncryptedNode),
+                f"type is {type(encrypted_value)}",
+            )
             self.assertEqual(encrypted_value.original_value, None)
             # self.assertNotEqual(encrypted_value.original_value, value)  # from_yaml only
             self.assertEqual(encrypted_value.value, value)
@@ -845,7 +848,9 @@ class TestEncryptEnviron(unittest.TestCase):
             self.assertNotEqual(encrypted_value, value)
             self.assertNotEqual(encrypted_value, resolved_value)
             # self.assertEqual(resolved_value, encrypted_resolved_value)
-            if isinstance(resolved_value, str) and isinstance(encrypted_resolved_value, str):
+            if isinstance(resolved_value, str) and isinstance(
+                encrypted_resolved_value, str
+            ):
                 self.assertTrue(
                     resolved_value.startswith(encrypted_resolved_value),
                     f"{encrypted_resolved_value} not prefix of {resolved_value}",
