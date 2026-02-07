@@ -41,6 +41,9 @@ from envstack import config, logger
 from envstack.exceptions import *  # noqa
 
 
+# env var regex: matches $VAR or ${VAR}
+env_var_re = re.compile(r"\$\{[^}]+\}|\$\w+")
+
 # template path field regex: extracts bracketed {keys}
 keyword_re = re.compile(r"{(\w*)(?::\d*d)?(?::\d*\.\d*f)?}")
 
@@ -54,7 +57,22 @@ field_re = re.compile(r"\(\?P\<(.*?)\>\[\^,;\\\/]\*\)")
 directory_re = re.compile(r"[^\\/]+|[\\/]")
 
 
+def _escape_env_vars(s: str) -> str:
+    """Convert ${VAR} -> ${{VAR}} so str.format ignores it, while leaving {token}
+    intact."""
+
+    def repl(m: re.Match) -> str:
+        tok = m.group(0)
+        if tok.startswith("${"):
+            inner = tok[2:-1]
+            return "${{" + inner + "}}"
+        return tok
+
+    return env_var_re.sub(repl, s)
+
+
 def _numdirs(p: str) -> int:
+    """Returns the number of directory levels in a path string, used for template"""
     return str(p).replace("\\", "/").count("/")
 
 
@@ -64,12 +82,8 @@ def _load_resolved_stack(
     platform: str = config.PLATFORM,
     scope: Optional[str] = None,
 ):
-    """
-    Load + resolve an envstack environment stack.
-
-    NOTE: This intentionally uses envstack's own resolution model rather than
-    os.environ as the primary source of truth.
-    """
+    """Load + resolve an envstack environment stack. Intentionally uses envstack's
+    own resolution model rather than os.environ as the primary source of truth."""
     from .env import load_environ, resolve_environ
 
     raw = load_environ(stack, platform=platform, scope=scope)
@@ -127,6 +141,11 @@ class Path(str):
     def __init__(self, path, platform: str = config.PLATFORM):
         self.path = path
         self.platform = platform
+
+    def __new__(cls, path, platform: str = config.PLATFORM):
+        obj = super().__new__(cls, path)
+        obj.platform = platform
+        return obj
 
     def __repr__(self):
         return "<{0} '{1}'>".format(self.__class__.__name__, self.path)
@@ -368,7 +387,9 @@ def get_template(
     if not template:
         raise TemplateNotFound(name)  # noqa
 
-    if expand_envvars:
+    if not expand_envvars:
+        template = _escape_env_vars(template)
+    else:
         template = _expand_dollar_vars(template, env)
 
     return Template(template)
