@@ -64,7 +64,7 @@ DEBUG = os.getenv("DEBUG")
 DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "default")
 
 # allow embedded commands
-ALLOW_COMMANDS = bool(os.getenv("ALLOW_COMMANDS", 0))
+ALLOW_COMMANDS = os.getenv("ALLOW_COMMANDS", "0") in ("1", "true", "True", "TRUE")
 
 # embedded command timeout in seconds
 COMMAND_TIMEOUT = int(os.getenv("COMMAND_TIMEOUT", 5))
@@ -72,8 +72,14 @@ COMMAND_TIMEOUT = int(os.getenv("COMMAND_TIMEOUT", 5))
 # default environment variables
 ENV = os.getenv("ENV", "prod")
 HOME = os.getenv("HOME")
-IGNORE_MISSING = bool(os.getenv("IGNORE_MISSING", 1))
+
+# Ignore missing stack files when resolving environments
+IGNORE_MISSING = os.getenv("IGNORE_MISSING", "1") in ("1", "true", "True", "TRUE")
+
+# logging level
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
+
+# platform and shell info
 ON_POSIX = "posix" in sys.builtin_module_names
 PLATFORM = platform.system().lower()
 PYTHON_VERSION = sys.version_info[0]
