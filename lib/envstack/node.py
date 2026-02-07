@@ -250,12 +250,14 @@ class FernetNode(BaseNode):
 
 
 class CustomLoader(yaml.SafeLoader):
+    """Custom Loader class to preserve order of keys and ensure required
+    keys are first in the mapping."""
+
     required_keys = {"include", "all", "darwin", "linux", "windows"}
 
-    def _wrap_templates(self, obj):
-        return obj
-
     def construct_mapping(self, node: yaml.Node, deep: bool = False):
+        """Construct a mapping from a YAML node, preserving the order of keys
+        and ensuring"""
         # keep YAML merge keys (<<) working
         self.flatten_mapping(node)
 
@@ -271,11 +273,11 @@ class CustomLoader(yaml.SafeLoader):
             value = self.construct_object(value_node, deep=deep)
             mapping[key] = value
 
-        # Apply Template wrapping only where appropriate
+        # preserve order of keys and ensure required keys are first in the mapping
         for key, value in list(mapping.items()):
             if key in self.required_keys:
                 continue
-            mapping[key] = self._wrap_templates(value)
+            mapping[key] = value
 
         return mapping
 
