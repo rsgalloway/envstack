@@ -67,7 +67,10 @@ DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "default")
 ALLOW_COMMANDS = os.getenv("ALLOW_COMMANDS", "0") in ("1", "true", "True", "TRUE")
 
 # embedded command timeout in seconds
-COMMAND_TIMEOUT = int(os.getenv("COMMAND_TIMEOUT", 5))
+try:
+    COMMAND_TIMEOUT = int(os.getenv("COMMAND_TIMEOUT", 5))
+except ValueError:
+    COMMAND_TIMEOUT = 5
 
 # default environment variables
 ENV = os.getenv("ENV", "prod")
