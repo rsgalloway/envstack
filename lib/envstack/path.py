@@ -30,14 +30,18 @@
 #
 
 __doc__ = """
-Contains pathing classes and functions.
+Contains template path classes and functions.
 """
 
 import os
 import re
+from typing import Iterable, Optional, Tuple
 
 from envstack import config, logger
 from envstack.exceptions import *  # noqa
+
+# env var regex: matches $VAR or ${VAR}
+env_var_re = re.compile(r"\$\{[^}]+\}|\$\w+")
 
 # template path field regex: extracts bracketed {keys}
 keyword_re = re.compile(r"{(\w*)(?::\d*d)?(?::\d*\.\d*f)?}")
@@ -51,35 +55,94 @@ field_re = re.compile(r"\(\?P\<(.*?)\>\[\^,;\\\/]\*\)")
 # template path directory delimiter regex
 directory_re = re.compile(r"[^\\/]+|[\\/]")
 
-# name of the path templates environment
-TEMPLATES_ENV_NAME = "templates"
 
-# environment variable that defines platform root
-TEMPLATES_ENV_ROOT = "ROOT"
+def _escape_env_vars(s: str) -> str:
+    """Convert ${VAR} -> ${{VAR}} so str.format ignores it, while leaving {token}
+    intact."""
+
+    def repl(m: re.Match) -> str:
+        tok = m.group(0)
+        if tok.startswith("${"):
+            inner = tok[2:-1]
+            return "${{" + inner + "}}"
+        return tok
+
+    return env_var_re.sub(repl, s)
+
+
+def _numdirs(p: str) -> int:
+    """Returns the number of directory levels in a path string, used for template"""
+    return str(p).replace("\\", "/").count("/")
+
+
+def _load_resolved_stack(
+    stack: str,
+    *,
+    platform: str = config.PLATFORM,
+    scope: Optional[str] = None,
+):
+    """Load + resolve an envstack environment stack. Intentionally uses envstack's
+    own resolution model rather than os.environ as the primary source of truth."""
+    from .env import load_environ, resolve_environ
+
+    raw = load_environ(stack, platform=platform, scope=scope)
+    return resolve_environ(raw)
+
+
+def _expand_env_vars(template: str, env: dict) -> str:
+    """
+    Expand $VARS / ${VARS} in `template` using the provided `env` mapping.
+    Uses EnvVar (string.Template-based).
+    """
+    from .env import EnvVar
+
+    # EnvVar.expand() returns either EnvVar, list, or dict depending on input
+    expanded = EnvVar(template).expand(env, recursive=True)
+
+    if isinstance(expanded, list) or isinstance(expanded, dict):
+        raise InvalidSyntax(
+            f"Path template expansion must resolve to a string, got {type(expanded)}"
+        )
+
+    # expanded may already be a string-like EnvVar
+    return str(expanded)
+
+
+def _iter_template_items(env: dict) -> Iterable[Tuple[str, str]]:
+    """
+    Heuristic filter for "likely path templates" inside an environment.
+
+    We avoid assuming a special namespace and instead scan the stack for values
+    that look like templates.
+    """
+    for k, v in env.items():
+        if not isinstance(v, str) or not v:
+            continue
+
+        # must contain at least one format field; otherwise it's not a template
+        if "{" not in v or "}" not in v:
+            continue
+
+        # most path templates contain a separator; kept loose
+        if "/" not in v and "\\" not in v:
+            continue
+
+        yield k, v
 
 
 class Path(str):
-    """Subclass of `str` with some platform agnostic pathing support.
-
-    For example, getting a named template, applying fields and converting to
-    a platform specific path, where 'NUKESCRIPT' and 'windows' are defined in
-    the TEMPLATES_ENV_NAME env: ::
-
-        >>> t = get_template('NUKESCRIPT')
-        >>> p = t.apply_fields(show='bunny',
-                               sequence='abc',
-                               shot='0100',
-                               ask='comp',
-                               version=1)
-        >>> p.toPlatform('windows')
-        '//projects/bunny/abc/0100/comp/nuke/bunny_abc_0100_comp.1.nk'
-    """
+    """Subclass of `str` with some platform agnostic pathing support."""
 
     SEPARATORS = ["/", "\\"]
 
     def __init__(self, path, platform: str = config.PLATFORM):
         self.path = path
         self.platform = platform
+
+    def __new__(cls, path, platform: str = config.PLATFORM):
+        obj = super().__new__(cls, path)
+        obj.platform = platform
+        return obj
 
     def __repr__(self):
         return "<{0} '{1}'>".format(self.__class__.__name__, self.path)
@@ -100,22 +163,49 @@ class Path(str):
         tokens = directory_re.findall(self.path)
         return [t for t in tokens if t not in self.SEPARATORS]
 
-    def toPlatform(self, platform: str = config.PLATFORM):
-        """Converts path to platform.
+    def to_platform(
+        self,
+        platform: str = config.PLATFORM,
+        *,
+        stack: str = config.DEFAULT_NAMESPACE,
+        scope: Optional[str] = None,
+        root_var: str = "ROOT",
+    ):
+        """
+        Converts path root from this Path.platform to `platform` using ROOT values
+        from the resolved envstack environment for each platform.
 
-        :param platform: name of platform to convert to.
-        :returns: converted path.
+        :param platform: target platform name
+        :param stack: envstack stack to load for ROOT values (e.g. 'fps')
+        :param scope: scope to resolve stack from (defaults to dirname of this path)
+        :param root_var: env var name to treat as platform root (default: ROOT)
+        :returns: converted path string
         """
         if platform == self.platform:
             return str(self)
-        fromRoot = get_template_environ(self.platform).get(TEMPLATES_ENV_ROOT)
-        toRoot = get_template_environ(platform).get(TEMPLATES_ENV_ROOT)
-        if not fromRoot or not toRoot:
-            print("root value undefined for platform {}".format(platform))
-            return
-        return re.sub(r"^{}".format(fromRoot), toRoot, self.path)
 
-    def toString(self):
+        scope = scope or self.scope()
+        try:
+            from_env = _load_resolved_stack(stack, platform=self.platform, scope=scope)
+            to_env = _load_resolved_stack(stack, platform=platform, scope=scope)
+        except Exception as err:
+            raise InvalidPath(
+                f"Failed to load stack '{stack}' for platform conversion: {err}"
+            )
+
+        from_root = from_env.get(root_var)
+        to_root = to_env.get(root_var)
+
+        if not from_root or not to_root:
+            raise TemplateNotFound(
+                f"{root_var} undefined for platform conversion ({self.platform} -> {platform}) "
+                f"in stack '{stack}'"
+            )
+
+        # use regex escape in case roots contain special chars
+        return re.sub(r"^{}".format(re.escape(from_root)), to_root, self.path)
+
+    def to_str(self):
         """Returns this path as a string."""
         return str(self)
 
@@ -125,32 +215,14 @@ class Path(str):
 
 
 class Template(object):
-    """Path Template class. ::
-
-        >>> t = Template('/projects/{show}/{sequence}/{shot}/{task}')
-        >>> p = t.apply_fields(show='bunny',
-                               sequence='abc',
-                               shot='010',
-                               task='comp')
-        >>> p.path
-        '/projects/bunny/abc/010/comp'
-        >>> t.get_fields('/projects/test/xyz/020/lighting')
-        {'task': 'lighting', 'sequence': 'xyz', 'shot': '020', 'show': 'test'}
-
-    With padded version numbers: ::
-
-        >>> t = Template('/show/{show}/pub/{asset}/v{version:03d}')
-        >>> p = t.apply_fields(show='foo', asset='bar', version=3)
-        >>> p.path
-        '/show/foo/pub/bar/v003'
-    """
+    """Path Template class."""
 
     def __init__(self, path: str):
         assert path, "Template path format cannot be empty"
         self.path_format = str(path)
 
     def __repr__(self):
-        return "<Template '{}'>".format(self.path_format)
+        return f"<Template '{self.path_format}'>"
 
     def __str__(self):
         return self.path_format
@@ -168,7 +240,7 @@ class Template(object):
         Applies key/value pairs matching template format.
 
         :param fields: key/values to apply to template.
-        :returns: resolved path as string.
+        :returns: resolved path as Path.
         :raises: MissingFieldError.
         """
         formats = self.get_formats()
@@ -180,14 +252,12 @@ class Template(object):
             except ValueError:
                 raise Exception("{0} must be {1}".format(k, fmt.__name__))
 
-        # reclass values based on field format in template
         formatted = dict((k, cast(k, v)) for k, v in fields.items())
 
         try:
             return Path(self.path_format.format(**formatted))
-
         except KeyError as err:
-            raise MissingFieldError(err)  # noqa F405
+            raise MissingFieldError(err)  # noqa
 
     def get_keywords(self):
         """Returns a list of required keywords."""
@@ -209,12 +279,7 @@ class Template(object):
         return results
 
     def get_fields(self, path: str):
-        """Gets key/value pairs from path that map to template path.
-
-        :param path: file system path as string.
-        :returns: dict of key/value pairs.
-        """
-        # conform path and template slashes
+        """Gets key/value pairs from path that map to template path."""
         path = path.replace("\\", "/")
         path_format = self.path_format.replace("\\", "/")
 
@@ -232,23 +297,16 @@ class Template(object):
                 back_ref = "(?P={name})".format(name=name)
                 try:
                     while True:
-                        index = tokens[i + 1 :].index(tokens[i])  # noqa F405
+                        index = tokens[i + 1 :].index(tokens[i])  # noqa
                         tokens[i + 1 + index] = back_ref
                 except ValueError:
                     pass
 
         pattern = "".join(tokens)
         matches = re.match(pattern, path)
-        # TODO: log/print info about what makes the path invalid
-        # for example, {show} appears twice in template, but has
-        # two different values in the path:
-        # template: /projects/{show}/{shot}/{show}_{desc}.ext
-        # filepath: /projects/bunny/tst001/bigbuck_cam.ext
-        #                     ^^^^^        ^^^^^^^
         if not matches:
-            raise InvalidPath(path)  # noqa F405
+            raise InvalidPath(path)  # noqa
 
-        # reclass values based on field format in template
         formats = self.get_formats()
 
         def cast(k, v):
@@ -257,119 +315,134 @@ class Template(object):
         return {k: cast(k, matches.group(k)) for k in keywords}
 
 
-def extract_fields(filepath: str, template: Template):
-    """Convenience function that extracts template fields from
-    a given filepath for a given template name. For example: ::
+def extract_fields(
+    filepath: str,
+    template: Template,
+    *,
+    stack: str = config.DEFAULT_NAMESPACE,
+    platform: str = config.PLATFORM,
+):
+    """
+    Convenience function that extracts template fields from a given filepath for
+    a given template instance or template name.
 
-        >>> envstack.extract_fields('/projects/bunny/vsr/vsr0100/comp/test.nk',
-                                'TASKDIR')
-        {'task': 'comp', 'sequence': 'vsr', 'shot': 'vsr0100', 'show': 'bunny'}
-
-    :param filepath: path to file.
-    :param template: Template instance, or name of template.
-    :returns: dictionary of template fields.
+    :param filepath: path to file
+    :param template: Template instance or name of template in `stack`
+    :param stack: stack namespace to load templates from (default: config.DEFAULT_NAMESPACE)
+    :param platform: optional platform name
+    :returns: dictionary of template fields
     """
     try:
-        p = Path(filepath)
+        p = Path(filepath, platform=platform)
         if isinstance(template, str):
-            template = get_template(template, scope=p.scope())
+            template = get_template(
+                template, stack=stack, platform=platform, scope=p.scope()
+            )
         return template.get_fields(filepath)
 
-    # path does not match template format
-    except InvalidPath:  # noqa F405
+    except InvalidPath:  # noqa
         logger.log.debug(
             "path does not match template: {0} {1}".format(template, filepath)
         )
         return {}
 
-    # unhandled errors
     except Exception as err:
         logger.log.debug("error extracting fields: {}".format(err))
         return {}
 
 
 def get_scope(filepath: str):
-    """Convenience function that returns the scope of a given filepath.
-
-    :param filepath: filepath.
-    :returns: scope of the filepath.
-    """
+    """Convenience function that returns the scope of a given filepath."""
     return Path(filepath).scope()
 
 
-def get_template_environ(platform: str = config.PLATFORM, scope: str = None):
-    """Returns default template Env instance defined by the value
-    config.TEMPLATES_ENV_NAME.
-
-    :param platform: optional platform name.
-    :param scope: environment scope (default: cwd).
-    :returns: Env instance.
+def get_template(
+    name: str,
+    *,
+    stack: str = config.DEFAULT_NAMESPACE,
+    platform: str = config.PLATFORM,
+    scope: str = None,
+    expand: bool = True,
+):
     """
-    from .env import load_environ
+    Returns a Template instance for a given template name located in `stack`.
 
-    return load_environ(TEMPLATES_ENV_NAME, platform=platform, scope=scope)
+    - Loads + resolves the envstack environment for `stack`
+    - Fetches template string from resolved env
+    - Expands $VARS / ${VARS} inside the template string using the resolved env
+    - Returns Template(expanded_string)
 
-
-def get_template(name: str, platform: str = config.PLATFORM, scope: str = None):
-    """Returns a Template instance for a given name. Template paths are
-    defined by default in the env file set on config.TEMPLATES_ENV_NAME.
-
-    For example, using 'NUKESCRIPT' as defined: ::
-
-        >>> t = get_template('NUKESCRIPT')
-        >>> t.apply_fields(show='bunny',
-                           sequence='abc',
-                           shot='0100',
-                           task='comp',
-                           version=1)
-        <Path '/projects/bunny/abc/0100/comp/nuke/bunny_abc_0100_comp.1.nk'>
-
-    :param name: name of template.
-    :param platform: optional platform name.
-    :param scope: environment scope (default: cwd).
-    :returns: Template instance.
+    :param name: template variable name
+    :param stack: envstack stack to load (e.g. 'fps')
+    :param platform: platform name
+    :param scope: scope (default: cwd via load_environ)
+    :param expand: whether to expand $VARS in the template string
     """
-    env = get_template_environ(platform, scope=scope)
+    env = _load_resolved_stack(stack, platform=platform, scope=scope)
+
     template = env.get(name)
     if not template:
-        raise TemplateNotFound(name)  # noqa F405
+        raise TemplateNotFound(name)  # noqa
+
+    if expand:
+        template = _expand_env_vars(template, env)
+    else:
+        template = _escape_env_vars(template)
+
     return Template(template)
 
 
-def match_template(path: str, platform: str = config.PLATFORM, scope: str = None):
-    """Returns a Template that matches a given `path`.
-
-    :path: path to match Template.
-    :param platform: optional platform name.
-    :param scope: environment scope (default: cwd).
-    :raises: ValueError if `path` matches multiple templates.
-    :returns: matching Template or None.
+def match_template(
+    path: str,
+    *,
+    stack: str = config.DEFAULT_NAMESPACE,
+    platform: str = config.PLATFORM,
+    scope: str = None,
+    expand: bool = True,
+):
     """
-    env = get_template_environ(platform, scope=scope)
+    Returns a Template that matches a given `path`.
 
-    # returns number of folders in a path
-    numdirs = lambda p: str(p).replace("\\", "/").count("/")  # noqa E731
+    - Loads + resolves `stack`
+    - Considers values that look like path templates
+    - Orders templates by directory depth (more specific first)
+    - Returns first matching template, or raises ValueError if the path matches
+      multiple templates of the same depth.
 
-    # sort templates by number of folders
-    ordered = sorted(env, key=lambda k: numdirs(env[k]), reverse=True)
+    :param path: path to match against templates
+    :param stack: envstack stack to load (e.g. 'fps')
+    :param platform: platform name
+    :param scope: scope (default: cwd via load_environ)
+    :param expand: whether to expand $VARS in the template strings before matching
+    :raises: ValueError if `path` matches multiple templates at the same depth
+    :returns: matching Template or None
+    """
+    env = _load_resolved_stack(stack, platform=platform, scope=scope)
 
-    # stores the return value
-    template = None
+    items = list(_iter_template_items(env))
+    items.sort(key=lambda kv: _numdirs(kv[1]), reverse=True)
 
-    # return first matching template or raise ValueError
-    for name in ordered:
+    matched = None
+    matched_depth = None
+
+    for name, path_format in items:
         try:
-            path_format = env[name]
-            template_test = Template(path_format)
+            if expand:
+                path_format_expanded = _expand_env_vars(path_format, env)
+            else:
+                path_format_expanded = path_format
+
+            template_test = Template(path_format_expanded)
 
             if template_test.get_fields(path):
-                if template is None:
-                    template = template_test
-
-                elif numdirs(path_format) == numdirs(template.path_format):
+                depth = _numdirs(template_test.path_format)
+                if matched is None:
+                    matched = template_test
+                    matched_depth = depth
+                elif depth == matched_depth:
                     raise ValueError("path matches more than one template")
 
-        except InvalidPath:  # noqa F405
+        except InvalidPath:  # noqa
             continue
 
-    return template
+    return matched
