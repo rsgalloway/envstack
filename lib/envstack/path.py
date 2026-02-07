@@ -30,7 +30,7 @@
 #
 
 __doc__ = """
-Contains pathing classes and functions.
+Contains template path classes and functions.
 """
 
 import os
@@ -39,7 +39,6 @@ from typing import Iterable, Optional, Tuple
 
 from envstack import config, logger
 from envstack.exceptions import *  # noqa
-
 
 # env var regex: matches $VAR or ${VAR}
 env_var_re = re.compile(r"\$\{[^}]+\}|\$\w+")
@@ -93,13 +92,11 @@ def _load_resolved_stack(
 def _expand_env_vars(template: str, env: dict) -> str:
     """
     Expand $VARS / ${VARS} in `template` using the provided `env` mapping.
-
-    Uses envstack.env.EnvVar (string.Template-based) so behavior matches the rest
-    of envstack.
+    Uses EnvVar (string.Template-based).
     """
     from .env import EnvVar
 
-    # EnvVar.expand() returns either EnvVar, list, or dict depending on input.
+    # EnvVar.expand() returns either EnvVar, list, or dict depending on input
     expanded = EnvVar(template).expand(env, recursive=True)
 
     if isinstance(expanded, list) or isinstance(expanded, dict):
@@ -122,11 +119,11 @@ def _iter_template_items(env: dict) -> Iterable[Tuple[str, str]]:
         if not isinstance(v, str) or not v:
             continue
 
-        # Must contain at least one format field; otherwise it's not a template.
+        # must contain at least one format field; otherwise it's not a template
         if "{" not in v or "}" not in v:
             continue
 
-        # Most path templates contain a separator; keep this loose.
+        # most path templates contain a separator; kept loose
         if "/" not in v and "\\" not in v:
             continue
 
@@ -205,10 +202,10 @@ class Path(str):
                 f"in stack '{stack}'"
             )
 
-        # Use regex escape in case roots contain special chars (e.g. backslashes)
+        # use regex escape in case roots contain special chars
         return re.sub(r"^{}".format(re.escape(from_root)), to_root, self.path)
 
-    def toString(self):
+    def to_str(self):
         """Returns this path as a string."""
         return str(self)
 
@@ -225,7 +222,7 @@ class Template(object):
         self.path_format = str(path)
 
     def __repr__(self):
-        return "<Template '{}'>".format(self.path_format)
+        return f"<Template '{self.path_format}'>"
 
     def __str__(self):
         return self.path_format
