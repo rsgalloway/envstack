@@ -90,7 +90,7 @@ def _load_resolved_stack(
     return resolve_environ(raw)
 
 
-def _expand_dollar_vars(template: str, env: dict) -> str:
+def _expand_env_vars(template: str, env: dict) -> str:
     """
     Expand $VARS / ${VARS} in `template` using the provided `env` mapping.
 
@@ -390,7 +390,7 @@ def get_template(
     if not expand_envvars:
         template = _escape_env_vars(template)
     else:
-        template = _expand_dollar_vars(template, env)
+        template = _expand_env_vars(template, env)
 
     return Template(template)
 
@@ -426,7 +426,7 @@ def match_template(
     for name, path_format in items:
         try:
             if expand_envvars:
-                path_format_expanded = _expand_dollar_vars(path_format, env)
+                path_format_expanded = _expand_env_vars(path_format, env)
             else:
                 path_format_expanded = path_format
 
