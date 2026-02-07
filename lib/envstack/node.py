@@ -250,30 +250,35 @@ class FernetNode(BaseNode):
 
 
 class CustomLoader(yaml.SafeLoader):
+    """Custom Loader class to preserve order of keys and ensure required
+    keys are first in the mapping."""
+
     required_keys = {"include", "all", "darwin", "linux", "windows"}
 
     def construct_mapping(self, node: yaml.Node, deep: bool = False):
-        mapping = super().construct_mapping(node, deep=deep)
-        for key, value in mapping.items():
+        """Construct a mapping from a YAML node, preserving the order of keys
+        and ensuring"""
+        # keep YAML merge keys (<<) working
+        self.flatten_mapping(node)
+
+        mapping = {}
+
+        for key_node, value_node in node.value:
+            # never implicit-resolve scalar KEYS (YES/NO/ON/OFF/null/date/etc)
+            if isinstance(key_node, yaml.ScalarNode):
+                key = key_node.value
+            else:
+                key = self.construct_object(key_node, deep=deep)
+
+            value = self.construct_object(value_node, deep=deep)
+            mapping[key] = value
+
+        # preserve order of keys and ensure required keys are first in the mapping
+        for key, value in list(mapping.items()):
             if key in self.required_keys:
                 continue
-            try:
-                if node.tag == Base64Node.yaml_tag:
-                    mapping[key] = Base64Node(value)
-                elif node.tag == EncryptedNode.yaml_tag:
-                    mapping[key] = EncryptedNode(value)
-                elif node.tag == AESGCMNode.yaml_tag:
-                    mapping[key] = AESGCMNode(value)
-                elif node.tag == FernetNode.yaml_tag:
-                    mapping[key] = FernetNode(value)
-                elif node.tag == MD5Node.yaml_tag:
-                    mapping[key] = MD5Node(value)
-                else:
-                    mapping[key] = Template(value)
-            except Exception as e:
-                raise yaml.constructor.ConstructorError(
-                    None, None, f"Error parsing template: {e}", node.start_mark
-                )
+            mapping[key] = value
+
         return mapping
 
 

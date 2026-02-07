@@ -170,6 +170,11 @@ class TestTemplate(unittest.TestCase):
 
 
 class TestCustomLoader(unittest.TestCase):
+    """Test the CustomLoader class"""
+
+    def load(self, s: str):
+        return yaml.load(s, Loader=CustomLoader)
+
     def test_construct_mapping(self):
         """test the CustomLoader construct_mapping method"""
         envfile = os.path.join(envpath, "project.env")
@@ -178,8 +183,56 @@ class TestCustomLoader(unittest.TestCase):
         mapping = loader.construct_mapping(node)
         self.assertIsInstance(mapping, dict)
 
+    def test_keys_stay_strings_booleanish(self):
+        """test that keys that look like booleans are not converted to bools
+        by the resolver"""
+        data = self.load("YES: 1\nNO: 2\nON: 3\nOFF: 4\ntrue: 5\nFalse: 6\n")
+        assert "YES" in data and data["YES"] == 1
+        assert "NO" in data and data["NO"] == 2
+        assert "ON" in data and data["ON"] == 3
+        assert "OFF" in data and data["OFF"] == 4
+        assert "true" in data and data["true"] == 5
+        assert "False" in data and data["False"] == 6
+        # ensure the resolver didn't produce bool keys
+        assert True not in data
+        assert False not in data
+
+    def test_keys_stay_strings_nullish(self):
+        """test that keys that look like nulls are not converted to None by
+        the resolver"""
+        data = self.load("NULL: 1\nNull: 2\nnull: 3\n~: 4\n")
+        assert data["NULL"] == 1
+        assert data["Null"] == 2
+        assert data["null"] == 3
+        assert "~" in data and data["~"] == 4
+        assert None not in data
+
+    def test_keys_stay_strings_timestampish(self):
+        """test that keys that look like timestamps are not converted to
+        datetime objects"""
+        # YAML 1.1 can infer timestamps
+        data = self.load("2024-01-02: 1\n2024-01-02T03:04:05Z: 2\n")
+        assert data["2024-01-02"] == 1
+        assert data["2024-01-02T03:04:05Z"] == 2
+
+    def test_yaml_merge_key_works(self):
+        """test that the YAML merge key (<<) works correctly with anchors and
+        aliases"""
+        s = """
+all: &all
+  A: 1
+dev:
+  <<: *all
+  B: 2
+"""
+        data = self.load(s)
+        assert data["dev"]["A"] == 1
+        assert data["dev"]["B"] == 2
+
 
 class TestCustomDumper(unittest.TestCase):
+    """Test the CustomDumper class"""
+
     def test_init(self):
         """test the CustomDumper __init__ method"""
         dumper = CustomDumper(None)
