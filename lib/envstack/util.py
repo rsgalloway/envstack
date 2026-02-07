@@ -355,13 +355,15 @@ def evaluate_modifiers(
         resolving = set()
 
     def sanitize_value(value):
-        # sanitize the value to ensure it is a string or a path
         if (
             isinstance(value, str)
             and value.endswith("}")
             and not value.startswith("${")
         ):
-            return value.rstrip("}") if value.count("}") == 1 else value
+            # trim a dangling '}' when there's no matching '{'
+            if value.count("{") == 0 and value.count("}") == 1:
+                return value.rstrip("}")
+            return value
         elif isinstance(value, str) and detect_path(value):
             return dedupe_paths(value)
         return value

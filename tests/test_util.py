@@ -168,6 +168,17 @@ class TestEvaluateModifiers(unittest.TestCase):
             result, r"/var/tmp/{foo}/{bar}/{baz}"
         )
 
+    def test_tokenized_value_three_tokens_slash(self):
+        """Test tokenized value with three tokens and a trailing slash."""
+        expression = "${ROOT}/{foo}/{bar}/{baz}/"
+        environ = {
+            "ROOT": "/var/tmp",
+        }
+        result = evaluate_modifiers(expression, environ)
+        self.assertEqual(
+            result, r"/var/tmp/{foo}/{bar}/{baz}/"
+        )
+
     def test_default_value_with_default_args(self):
         """Test default value with default args."""
         expression = "${HELLO:=world}"
