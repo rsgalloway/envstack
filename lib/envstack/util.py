@@ -45,7 +45,13 @@ from collections import OrderedDict
 import yaml
 
 from envstack import config
-from envstack.node import AESGCMNode, Base64Node, EncryptedNode, FernetNode
+from envstack.node import (
+    AESGCMNode,
+    Base64Node,
+    EncryptedNode,
+    FernetNode,
+    CustomLoader,
+)
 
 # default memoization cache timeout in seconds
 CACHE_TIMEOUT = 5
@@ -643,8 +649,7 @@ def validate_yaml(file_path: str):
     """
     try:
         with open(file_path, "r") as stream:
-            data = yaml.safe_load(stream.read())
-            # data = yaml.load(stream.read(), Loader=CustomLoader)
+            data = yaml.load(stream.read(), Loader=CustomLoader)
         if not isinstance(data, dict):
             raise yaml.YAMLError("invalid data structure")
         return data
