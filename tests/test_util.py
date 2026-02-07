@@ -131,9 +131,7 @@ class TestEvaluateModifiers(unittest.TestCase):
             "ROOT": "/var/tmp",
         }
         result = evaluate_modifiers(expression, environ)
-        self.assertEqual(
-            result, r"/var/tmp/{foo}"
-        )
+        self.assertEqual(result, r"/var/tmp/{foo}")
 
     def test_tokenized_value_trailing_slash(self):
         """Test tokenized value with a single token and trailing slash."""
@@ -142,9 +140,7 @@ class TestEvaluateModifiers(unittest.TestCase):
             "ROOT": "/var/tmp",
         }
         result = evaluate_modifiers(expression, environ)
-        self.assertEqual(
-            result, r"/var/tmp/{foo}/"
-        )
+        self.assertEqual(result, r"/var/tmp/{foo}/")
 
     def test_tokenized_value_two_tokens(self):
         """Test tokenized value with two tokens."""
@@ -153,9 +149,7 @@ class TestEvaluateModifiers(unittest.TestCase):
             "ROOT": "/var/tmp",
         }
         result = evaluate_modifiers(expression, environ)
-        self.assertEqual(
-            result, r"/var/tmp/{foo}/{bar}"
-        )
+        self.assertEqual(result, r"/var/tmp/{foo}/{bar}")
 
     def test_tokenized_value_three_tokens(self):
         """Test tokenized value with three tokens."""
@@ -164,9 +158,7 @@ class TestEvaluateModifiers(unittest.TestCase):
             "ROOT": "/var/tmp",
         }
         result = evaluate_modifiers(expression, environ)
-        self.assertEqual(
-            result, r"/var/tmp/{foo}/{bar}/{baz}"
-        )
+        self.assertEqual(result, r"/var/tmp/{foo}/{bar}/{baz}")
 
     def test_tokenized_value_three_tokens_slash(self):
         """Test tokenized value with three tokens and a trailing slash."""
@@ -175,9 +167,7 @@ class TestEvaluateModifiers(unittest.TestCase):
             "ROOT": "/var/tmp",
         }
         result = evaluate_modifiers(expression, environ)
-        self.assertEqual(
-            result, r"/var/tmp/{foo}/{bar}/{baz}/"
-        )
+        self.assertEqual(result, r"/var/tmp/{foo}/{bar}/{baz}/")
 
     def test_default_value_with_default_args(self):
         """Test default value with default args."""
