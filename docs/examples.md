@@ -45,7 +45,7 @@ flowchart LR
 ```
 
 Typical characteristics:
-- A base environment defines common paths and defaults
+- A default base environment defines common paths and defaults
 - Environment tiers override a small number of variables
 - The active environment is explicit
 
