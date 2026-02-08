@@ -12,6 +12,11 @@ document every feature.
 
 This is the simplest envstack use case and a direct evolution of a `.env` file.
 
+```mermaid
+flowchart LR
+  base[default.env] --> local[local.env]
+```
+
 Typical characteristics:
 - One base environment
 - A small number of variables
@@ -31,6 +36,13 @@ Common use cases:
 
 A common pattern is to define a shared base environment and layer environment
 tiers on top (e.g. dev, prod, CI).
+
+```mermaid
+flowchart TD
+  base[default.env] --> prod[prod.env]
+  prod --> dev[dev.env]
+  prod --> test[test.env]
+```
 
 Typical characteristics:
 - A base environment defines common paths and defaults
@@ -52,8 +64,14 @@ Common use cases:
 Projects often share infrastructure but differ in paths, naming, or behavior.
 envstack models this naturally through inheritance and layering.
 
+```mermaid
+flowchart LR
+  base[default.env] --> prod[prod.env]
+  prod -. include .-> project[project.env]
+```
+
 Typical characteristics:
-- Facility or global base environment
+- Facility or global default environment
 - Project environment that includes the base
 - Minimal duplication of shared configuration
 
@@ -71,6 +89,11 @@ Common use cases:
 
 This pattern combines multiple layers into a single stack, with each layer
 responsible for a specific concern.
+
+```mermaid
+flowchart LR
+  default --> env --> project --> task
+```
 
 Typical characteristics:
 - Clear separation of responsibility per layer

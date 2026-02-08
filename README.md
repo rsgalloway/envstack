@@ -15,6 +15,16 @@ Environment variable composition and activation layer for tools and processes.
 
 envstack focuses on **configuration and activation**, not dependency resolution.
 
+```mermaid
+flowchart TD
+  default[default.env] --> prod[prod.env]
+  prod --> dev[dev.env]
+  prod --> test[test.env]
+```
+
+Later layers override earlier ones. Use envstack -t VAR to trace where a value
+comes from.
+
 For the core concepts, see `docs/index.md`.
 
 ## Installation

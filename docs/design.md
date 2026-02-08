@@ -48,6 +48,19 @@ Stacks may be composed by:
 
 Variables flow through the stack according to precedence rules.
 
+```mermaid
+flowchart TD
+  base[base.env]
+  prod[prod.env]
+  project[project.env]
+  task[task.env]
+  keys[keys.env]
+
+  base --> prod --> project --> task
+  keys -. include .-> prod
+  keys -. include .-> project
+```
+
 ## Precedence and overrides
 
 Precedence in envstack is **explicit and ordered**.
@@ -80,6 +93,13 @@ variable.
 
 `ENVPATH` is an ordered, colon-separated list of directories that envstack
 searches when resolving environment names.
+
+envstack searches `ENVPATH` left-to-right; earlier entries win when the same env
+name exists in multiple locations:
+
+```bash
+ENVPATH=/mnt/tools/dev/env:/mnt/tools/prod/env
+```
 
 Resolution follows these rules:
 - Directories are searched left to right
