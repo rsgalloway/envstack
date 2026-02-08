@@ -269,8 +269,8 @@ cat .env | envstack --set -o out.env
 
 ## Creating Environments
 
-Several example or starter stacks are available in the [env folder of the
-envstack repo](https://github.com/rsgalloway/envstack/tree/master/env).
+Several examples or starter stacks are available in the
+[examples](https://github.com/rsgalloway/envstack/tree/master/examples) folder.
 
 To create a new environment file, use `--set` to declare some variables:
 

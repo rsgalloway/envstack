@@ -27,7 +27,8 @@ Later layers override earlier ones. Use envstack -t VAR to trace where a value
 comes from. envstack focuses on **configuration and activation**, not dependency
 resolution.
 
-For the core concepts, see [docs/index.md](docs/index.md).
+For the core concepts, see
+[docs/index.md](https://github.com/rsgalloway/envstack/blob/master/docs/index.md).
 
 ## Installation
 
@@ -39,7 +40,9 @@ pip install -U envstack
 
 ## Quickstart
 
-Start by getting the latest [default.env](examples/default/default.env) example file:
+Start by getting the latest
+[default.env](https://github.com/rsgalloway/envstack/blob/master/examples/default/default.env) 
+example file:
 
 ```bash
 curl -o \
@@ -130,13 +133,13 @@ committed, or distributed.
 Encryption protects values **at rest** and integrates with environment stacks and
 includes. envstack does not attempt to be a full secret management system.
 
-See [docs/secrets.md](docs/secrets.md) for details.
+See [docs/secrets.md](https://github.com/rsgalloway/envstack/blob/master/docs/secrets.md) for details.
 
 ## Documentation
 
-- [Design & philosophy](docs/design.md)
-- [Examples & patterns](docs/examples.md)
-- [Tool comparisons](docs/comparison.md)
-- [Secrets and encryption](docs/secrets.md)
-- [FAQ & gotchas](docs/faq.md)
-- [API docs](docs/api.md)
+- [Design & philosophy](https://github.com/rsgalloway/envstack/blob/master/docs/design.md)
+- [Examples & patterns](https://github.com/rsgalloway/envstack/blob/master/docs/examples.md)
+- [Tool comparisons](https://github.com/rsgalloway/envstack/blob/master/docs/comparison.md)
+- [Secrets and encryption](https://github.com/rsgalloway/envstack/blob/master/docs/secrets.md)
+- [FAQ & gotchas](https://github.com/rsgalloway/envstack/blob/master/docs/faq.md)
+- [API docs](https://github.com/rsgalloway/envstack/blob/master/docs/api.md)
