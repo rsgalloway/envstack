@@ -14,11 +14,11 @@ This is the simplest envstack use case and a direct evolution of a `.env` file.
 
 ```mermaid
 flowchart LR
-  base[default.env] --> local[local.env]
+  default[default.env] --> local[local.env]
 ```
 
 Typical characteristics:
-- One base environment
+- One default base environment
 - A small number of variables
 - Defaults that can be overridden externally
 
@@ -38,8 +38,8 @@ A common pattern is to define a shared base environment and layer environment
 tiers on top (e.g. dev, prod, CI).
 
 ```mermaid
-flowchart TD
-  base[default.env] --> prod[prod.env]
+flowchart LR
+  default[default.env] --> prod[prod.env]
   prod --> dev[dev.env]
   prod --> test[test.env]
 ```
@@ -66,7 +66,7 @@ envstack models this naturally through inheritance and layering.
 
 ```mermaid
 flowchart LR
-  base[default.env] --> prod[prod.env]
+  default[default.env] --> prod[prod.env]
   prod -. include .-> project[project.env]
 ```
 

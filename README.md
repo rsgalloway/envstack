@@ -13,17 +13,19 @@ Environment variable composition and activation layer for tools and processes.
 - Shared, policy-driven environments
 - Inspectable and deterministic behavior
 
-envstack focuses on **configuration and activation**, not dependency resolution.
+envstack environments are layered hierarchically, with later layers inheriting
+from and overriding earlier ones.
 
 ```mermaid
-flowchart TD
+flowchart LR
   default[default.env] --> prod[prod.env]
   prod --> dev[dev.env]
   prod --> test[test.env]
 ```
 
 Later layers override earlier ones. Use envstack -t VAR to trace where a value
-comes from.
+comes from. envstack focuses on **configuration and activation**, not dependency
+resolution.
 
 For the core concepts, see `docs/index.md`.
 
