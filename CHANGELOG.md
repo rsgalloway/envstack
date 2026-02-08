@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.0] - 2026-02-08
+
+### Added
+- Support for using command output as environment variable values
+- Inference rules for resolving and validating environment values
+
+### Changed
+- Improved path template handling and resolution behavior
+
+### Fixed
+- Regression that caused trailing braces to be incorrectly trimmed in some values
+
+### Notes
+- This release marks the first stable 1.0 version of envstack.
+- CLI behavior, configuration semantics, and resolution rules are now considered stable.
+
+---
+
 ## [0.9.6] - 2026-01-11
 
 ### Added

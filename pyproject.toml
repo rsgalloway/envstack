@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "envstack"
-version = "0.9.6"
+version = "1.0.0"
 description = "Environment variable composition layer for tools and processes."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.6"
