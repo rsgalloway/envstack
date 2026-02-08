@@ -277,3 +277,14 @@ To create a new environment file, use `--set` to declare some variables:
 ```bash
 envstack -s FOO=bar BAR=\${FOO} -o out.env
 ```
+
+### Secrets and encryption
+
+envstack supports optional encryption of environment values to protect sensitive
+data when serialized to disk or shared as artifacts.
+
+Encryption is explicit and reversible at activation time, and keys are supplied
+via the environment or via environment stacks.
+
+envstack intentionally does not attempt to manage secrets beyond environment
+variable semantics.

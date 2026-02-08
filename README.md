@@ -109,10 +109,22 @@ $ envstack -- node index.js
 Hello prod
 ```
 
+## Secrets and encryption
+
+envstack supports optional encryption of environment values when writing
+environment files, allowing sensitive configuration to be safely stored,
+committed, or distributed.
+
+Encryption protects values **at rest** and integrates with environment stacks and
+includes. envstack does not attempt to be a full secret management system.
+
+See `docs/secrets.md` for details.
+
 ## Documentation
 
 - Design & philosophy → `docs/design.md`
 - Examples & patterns → `docs/examples.md`
 - Tool comparisons → `docs/comparison.md`
+- Secrets and encryption → `docs/secrets.md`
 - FAQ & gotchas → `docs/faq.md`
 - API docs → `docs/api.md`
