@@ -131,7 +131,7 @@ class EnvshellWrapper(Wrapper):
         if os.name == "nt":
             return ("PROMPT", "$E[32m(${ENV:=${STACK}})$E[0m $P$G ")
         else:
-            return ("PS1", "\[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ ")
+            return ("PS1", r"\[\e[32m\](${ENV:=${STACK}})\[\e[0m\] \w\$ ")
 
     def get_subprocess_env(self):
         """

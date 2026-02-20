@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-02-08
+
+### Fixed
+- SyntaxWarning: invalid escape sequence in envstack shell
+
+---
+
 ## [1.0.0] - 2026-02-08
 
 ### Added
