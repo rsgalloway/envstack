@@ -44,9 +44,15 @@ from envstack.logger import log
 # cryptography and _rust dependency may not be available everywhere
 # ImportError: DLL load failed while importing _rust: Module not found.
 Fernet = None
+InvalidToken = type("InvalidToken", (Exception,), {})
+InvalidTag = type("InvalidTag", (Exception,), {})
+padding = None
+Cipher = None
+algorithms = None
+modes = None
 try:
-    import cryptography.exceptions
     from cryptography.fernet import Fernet, InvalidToken
+    from cryptography.exceptions import InvalidTag
     from cryptography.hazmat.primitives import padding
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 except ImportError as err:
@@ -217,7 +223,7 @@ class AESGCMEncryptor(object):
             results = compact_store(encrypted_data)
         except binascii.Error as e:
             log.error("invalid base64 encoding: %s", e)
-        except cryptography.exceptions.InvalidTag:
+        except InvalidTag:
             log.error("invalid encryption key")
         except ValueError as e:
             log.error("invalid value: %s", e)
@@ -237,7 +243,7 @@ class AESGCMEncryptor(object):
             return decrypted.decode()
         except binascii.Error as e:
             log.debug("invalid base64 encoding: %s", e)
-        except cryptography.exceptions.InvalidTag:
+        except InvalidTag:
             log.debug("invalid encryption key")
         except ValueError as e:
             log.debug("invalid value: %s", e)

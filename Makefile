@@ -41,6 +41,11 @@ test:
 	$(ENVSTACK_CMD) -- ls -al
 	${ENVSTACK_CMD} -- which python
 
+# Run the pytest suite from an editable install, matching CI behavior
+pytest:
+	python -m pip install -e .
+	pytest tests -q
+
 # Install dryrun target to simulate installation
 dryrun:
 	$(ENVSTACK_CMD) -- dist --dryrun
@@ -51,4 +56,4 @@ install: build
 	dist --force --yes
 
 # Phony targets
-.PHONY: build dryrun install clean
+.PHONY: build dryrun install clean test pytest
