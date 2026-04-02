@@ -38,19 +38,40 @@ import binascii
 import os
 import secrets
 from base64 import b64decode, b64encode
+from functools import wraps
 
 from envstack.logger import log
 
 # cryptography and _rust dependency may not be available everywhere
 # ImportError: DLL load failed while importing _rust: Module not found.
+CRYPTOGRAPHY_AVAILABLE = False
 Fernet = None
+InvalidToken = type("InvalidToken", (Exception,), {})
+InvalidTag = type("InvalidTag", (Exception,), {})
+padding = None
+Cipher = None
+algorithms = None
+modes = None
 try:
-    import cryptography.exceptions
     from cryptography.fernet import Fernet, InvalidToken
+    from cryptography.exceptions import InvalidTag
     from cryptography.hazmat.primitives import padding
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    CRYPTOGRAPHY_AVAILABLE = True
 except ImportError as err:
     log.debug("cryptography module not available: %s", err)
+
+
+def require_cryptography(func):
+    """Guard crypto-backed functions when cryptography is unavailable."""
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not CRYPTOGRAPHY_AVAILABLE:
+            raise RuntimeError("cryptography support is not available")
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 class Base64Encryptor(object):
@@ -84,6 +105,7 @@ class FernetEncryptor(object):
             self.key = self.get_key(env)
 
     @classmethod
+    @require_cryptography
     def generate_key(csl):
         """Generate a new 256-bit encryption key."""
         if Fernet:
@@ -104,6 +126,7 @@ class FernetEncryptor(object):
             return Fernet(key)
         return key
 
+    @require_cryptography
     def encrypt(self, data: str):
         """Encrypt a secret using Fernet.
 
@@ -121,9 +144,9 @@ class FernetEncryptor(object):
             log.error("invalid value: %s", e)
         except Exception as e:
             log.error("unhandled error: %s", e)
-        finally:
-            return results
+        return results
 
+    @require_cryptography
     def decrypt(self, data: str):
         """Decrypt a secret using Fernet.
 
@@ -153,6 +176,7 @@ class AESGCMEncryptor(object):
             self.key = self.get_key(env)
 
     @classmethod
+    @require_cryptography
     def generate_key(csl):
         """Generate a new 256-bit encryption key."""
         key = secrets.token_bytes(32)
@@ -171,6 +195,7 @@ class AESGCMEncryptor(object):
                 raise ValueError("invalid base64 encoding: %s" % e)
         return key
 
+    @require_cryptography
     def encrypt_data(self, secret: str):
         """Encrypt a secret using AES-GCM.
 
@@ -189,6 +214,7 @@ class AESGCMEncryptor(object):
             "tag": b64encode(encryptor.tag).decode(),
         }
 
+    @require_cryptography
     def decrypt_data(self, encrypted_data: dict):
         """Decrypt a secret using AES-GCM.
 
@@ -218,14 +244,13 @@ class AESGCMEncryptor(object):
             results = compact_store(encrypted_data)
         except binascii.Error as e:
             log.error("invalid base64 encoding: %s", e)
-        except cryptography.exceptions.InvalidTag:
+        except InvalidTag:
             log.error("invalid encryption key")
         except ValueError as e:
             log.error("invalid value: %s", e)
         except Exception as e:
             log.error("unhandled error: %s", e)
-        finally:
-            return results
+        return results
 
     def decrypt(self, data: str):
         """Convenience function to decrypt a secret using AES-GCM.
@@ -239,7 +264,7 @@ class AESGCMEncryptor(object):
             return decrypted.decode()
         except binascii.Error as e:
             log.debug("invalid base64 encoding: %s", e)
-        except cryptography.exceptions.InvalidTag:
+        except InvalidTag:
             log.debug("invalid encryption key")
         except ValueError as e:
             log.debug("invalid value: %s", e)
@@ -248,6 +273,7 @@ class AESGCMEncryptor(object):
         return data
 
 
+@require_cryptography
 def pad_data(data: str):
     """Pad data to be block-aligned for AES encryption.
 
@@ -258,6 +284,7 @@ def pad_data(data: str):
     return padder.update(str(data).encode()) + padder.finalize()
 
 
+@require_cryptography
 def unpad_data(data: dict):
     """Unpad data after decryption.
 

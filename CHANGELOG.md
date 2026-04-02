@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.2] - 2026-04-01
+
+### Changed
+- add a self-contained `make test` target that installs `pytest` and the package in editable mode before running the test suite
+- mark `all` as a phony Make target to avoid filename collisions
+
+### Fixed
+- remove `return` statements from `finally` blocks in encryption helpers to avoid newer Python `SyntaxWarning`s
+- harden optional `cryptography` imports with a decorator-based availability guard so missing crypto dependencies raise a clear runtime error instead of `NoneType` failures
+
+---
+
 ## [1.0.1] - 2026-02-08
 
 ### Fixed
