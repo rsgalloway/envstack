@@ -36,13 +36,9 @@ build: clean
 # Combined target to build for both platforms
 all: build
 
-# Test target to verify the build
-test:
-	$(ENVSTACK_CMD) -- ls -al
-	${ENVSTACK_CMD} -- which python
-
 # Run the pytest suite from an editable install, matching CI behavior
-pytest:
+test:
+	python -m pip install pytest
 	python -m pip install -e .
 	pytest tests -q
 
@@ -56,4 +52,4 @@ install: build
 	dist --force --yes
 
 # Phony targets
-.PHONY: build dryrun install clean test pytest
+.PHONY: all build dryrun install clean test pytest
