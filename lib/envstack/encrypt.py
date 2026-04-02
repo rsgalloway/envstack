@@ -121,8 +121,7 @@ class FernetEncryptor(object):
             log.error("invalid value: %s", e)
         except Exception as e:
             log.error("unhandled error: %s", e)
-        finally:
-            return results
+        return results
 
     def decrypt(self, data: str):
         """Decrypt a secret using Fernet.
@@ -224,8 +223,7 @@ class AESGCMEncryptor(object):
             log.error("invalid value: %s", e)
         except Exception as e:
             log.error("unhandled error: %s", e)
-        finally:
-            return results
+        return results
 
     def decrypt(self, data: str):
         """Convenience function to decrypt a secret using AES-GCM.
