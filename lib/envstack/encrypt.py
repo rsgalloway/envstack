@@ -57,6 +57,7 @@ try:
     from cryptography.exceptions import InvalidTag
     from cryptography.hazmat.primitives import padding
     from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
     CRYPTOGRAPHY_AVAILABLE = True
 except ImportError as err:
     log.debug("cryptography module not available: %s", err)
