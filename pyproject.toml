@@ -12,7 +12,8 @@ license = { text = "BSD 3-Clause License" }
 authors = [{ name = "Ryan Galloway", email = "ryan@rsgalloway.com" }]
 dependencies = [
   "PyYAML>=5.1.2",
-  "cryptography>=43.0.1",
+  'cryptography>=43.0.1,<47; python_version < "3.9"',
+  'cryptography>=43.0.1; python_version >= "3.9"',
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
