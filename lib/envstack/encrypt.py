@@ -37,6 +37,7 @@ import base64
 import binascii
 import os
 import secrets
+import warnings
 from base64 import b64decode, b64encode
 from functools import wraps
 
@@ -53,10 +54,19 @@ Cipher = None
 algorithms = None
 modes = None
 try:
-    from cryptography.fernet import Fernet, InvalidToken
-    from cryptography.exceptions import InvalidTag
-    from cryptography.hazmat.primitives import padding
-    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+    # cryptography emits a Python 3.8 deprecation warning during import.
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r"Python 3\.8 is no longer supported by the Python core team.*",
+            category=DeprecationWarning,
+            module=r"cryptography(\..*)?$",
+        )
+        from cryptography.fernet import Fernet, InvalidToken
+        from cryptography.exceptions import InvalidTag
+        from cryptography.hazmat.primitives import padding
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
     CRYPTOGRAPHY_AVAILABLE = True
 except ImportError as err:
     log.debug("cryptography module not available: %s", err)

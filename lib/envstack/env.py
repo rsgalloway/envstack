@@ -248,7 +248,7 @@ class EnvVar(string.Template, str):
         >>> v.vars()
         ['FOO', 'BAR']
         """
-        matches = super(EnvVar, self).pattern.findall(str(self.template))
+        matches = type(self).pattern.findall(str(self.template))
         return [key for match in matches for key in match if key]
 
 
