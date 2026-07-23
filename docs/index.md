@@ -71,6 +71,16 @@ envstack is commonly used for:
 - Pipeline and DCC tooling
 - Shared, hierarchical environment configuration
 
+## Project docs
+
+- [API](api.md)
+- [Comparison](comparison.md)
+- [Design](design.md)
+- [Examples](examples.md)
+- [FAQ](faq.md)
+- [Roadmap](roadmap.md)
+- [Secrets](secrets.md)
+
 ## A simple example
 
 ```yaml

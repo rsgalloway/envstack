@@ -58,8 +58,9 @@ try:
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",
-            message="Python 3\\.8 is no longer supported by the Python core team.*",
-            category=Warning,
+            message=r"Python 3\.8 is no longer supported by the Python core team.*",
+            category=DeprecationWarning,
+            module=r"cryptography(\..*)?$",
         )
         from cryptography.fernet import Fernet, InvalidToken
         from cryptography.exceptions import InvalidTag
