@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-07-23
+
+### Changed
+- add Python 3.14 to the GitHub Actions test matrix
+- update published Python version classifiers through 3.14
+- constrain `cryptography` to `<47` on Python 3.8 while allowing newer runtimes to resolve current releases
+- limit pytest discovery to the `tests/` suite and ignore `tmp/` helper files
+
+### Fixed
+- restore Python 3.14 compatibility in `EnvVar.vars()` by avoiding `string.Template` pattern access that now raises under 3.14
+- suppress the `cryptography` Python 3.8 deprecation warning during import so `envstack` subprocess tests and CLI startup remain quiet on supported 3.8 installs
+
+---
+
 ## [1.0.2] - 2026-04-01
 
 ### Changed
