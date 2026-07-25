@@ -39,14 +39,14 @@ from unittest.mock import patch
 
 from envstack import config, util
 from envstack.util import (
-    null,
-    encode,
-    evaluate_command,
-    evaluate_modifiers,
     dedupe_list,
     dedupe_paths,
     detect_path,
+    encode,
+    evaluate_command,
+    evaluate_modifiers,
     get_stack_name,
+    null,
     partition_platform_data,
     safe_eval,
     split_paths,
@@ -443,6 +443,7 @@ darwin:
   '<<': '*all'
         """
         import tempfile
+
         from envstack.util import unquote_strings
 
         with tempfile.NamedTemporaryFile(mode="w", delete=False) as temp_file:
@@ -586,9 +587,7 @@ class TestDedupePaths(unittest.TestCase):
             "/some/other/path",
         ]
         result = dedupe_paths(":".join(paths))
-        expected_result = os.pathsep.join(
-            ["/usr/bin", "/usr/local/bin", "/some/other/path"]
-        )
+        expected_result = os.pathsep.join(["/usr/bin", "/usr/local/bin", "/some/other/path"])
         self.assertEqual(result, expected_result)
 
         paths = ["/usr/bin"]
@@ -624,9 +623,7 @@ class TestDedupePaths(unittest.TestCase):
         ]
         path = ":".join(paths)
         result = dedupe_paths(path, platform="windows")
-        self.assertEqual(
-            result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin"
-        )
+        self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin")
 
         # mixed paths
         path = "//tools/pipe/prod/env;//tools/pipe/prod/env;/home/user/envstack/env"
@@ -634,13 +631,9 @@ class TestDedupePaths(unittest.TestCase):
         self.assertEqual(result, "//tools/pipe/prod/env;/home/user/envstack/env")
 
         # mixed paths with duplicate
-        path = (
-            "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin:/usr/local/bin"
-        )
+        path = "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin:/usr/local/bin"
         result = dedupe_paths(path, platform="windows")
-        self.assertEqual(
-            result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin"
-        )
+        self.assertEqual(result, "C:\\Program Files\\Python;D:/path2;E:/path3;/usr/local/bin")
 
 
 class TestSafeEval(unittest.TestCase):

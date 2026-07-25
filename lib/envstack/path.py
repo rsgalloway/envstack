@@ -189,9 +189,7 @@ class Path(str):
             from_env = _load_resolved_stack(stack, platform=self.platform, scope=scope)
             to_env = _load_resolved_stack(stack, platform=platform, scope=scope)
         except Exception as err:
-            raise InvalidPath(
-                f"Failed to load stack '{stack}' for platform conversion: {err}"
-            )
+            raise InvalidPath(f"Failed to load stack '{stack}' for platform conversion: {err}")
 
         from_root = from_env.get(root_var)
         to_root = to_env.get(root_var)
@@ -335,15 +333,11 @@ def extract_fields(
     try:
         p = Path(filepath, platform=platform)
         if isinstance(template, str):
-            template = get_template(
-                template, stack=stack, platform=platform, scope=p.scope()
-            )
+            template = get_template(template, stack=stack, platform=platform, scope=p.scope())
         return template.get_fields(filepath)
 
     except InvalidPath:  # noqa
-        logger.log.debug(
-            "path does not match template: {0} {1}".format(template, filepath)
-        )
+        logger.log.debug("path does not match template: {0} {1}".format(template, filepath))
         return {}
 
     except Exception as err:

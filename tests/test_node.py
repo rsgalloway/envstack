@@ -121,9 +121,7 @@ class TestEncryptedNode(unittest.TestCase):
         os.environ[AESGCMEncryptor.KEY_VAR_NAME] = key1
         value = "super_secret_password"
         encrypted = AESGCMEncryptor().encrypt(value)
-        node = EncryptedNode.from_yaml(
-            None, yaml.ScalarNode(EncryptedNode.yaml_tag, encrypted)
-        )
+        node = EncryptedNode.from_yaml(None, yaml.ScalarNode(EncryptedNode.yaml_tag, encrypted))
         key2 = AESGCMEncryptor.generate_key()
         os.environ[AESGCMEncryptor.KEY_VAR_NAME] = key2
         resolved = node.resolve()
@@ -142,9 +140,7 @@ class TestEncryptedNode(unittest.TestCase):
         os.environ[AESGCMEncryptor.KEY_VAR_NAME] = key
         value = "super_secret_password"
         encrypted = AESGCMEncryptor().encrypt(value)
-        node = EncryptedNode.from_yaml(
-            None, yaml.ScalarNode(EncryptedNode.yaml_tag, encrypted)
-        )
+        node = EncryptedNode.from_yaml(None, yaml.ScalarNode(EncryptedNode.yaml_tag, encrypted))
         self.assertEqual(node.value, encrypted)
         resolved = node.resolve()
         self.assertEqual(resolved, value)
@@ -275,12 +271,8 @@ class TestSecretsEnv(unittest.TestCase):
     def setUp(self):
         """set up the test environment"""
         self.root = tempfile.mkdtemp()
-        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = (
-            "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
-        )
-        os.environ[FernetEncryptor.KEY_VAR_NAME] = (
-            "v4-Ry7uKSOBEXMDv9x_crBBpi0eo2WCYNAIlSB1t4VE="
-        )
+        os.environ[AESGCMEncryptor.KEY_VAR_NAME] = "jHLNsFrhs9JsjuPkNhYX5ubwLpId2ZSxcFXAkHyMjOU="
+        os.environ[FernetEncryptor.KEY_VAR_NAME] = "v4-Ry7uKSOBEXMDv9x_crBBpi0eo2WCYNAIlSB1t4VE="
 
     def tearDown(self):
         """tear down the test environment"""

@@ -37,44 +37,16 @@ import os
 import shutil
 import sys
 import unittest
-import tempfile
+
+from helpers import create_test_root, update_env_file
 
 import envstack
-from envstack.env import Env, EnvVar, Scope, Source
 from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
+from envstack.env import Env, EnvVar, Scope, Source
 from envstack.util import dict_diff
 
 # path to the env directory
 envpath = os.path.join(os.path.dirname(__file__), "fixtures", "env")
-
-
-def create_test_root():
-    """Creates a temporary directory with the contents of the "env" folder."""
-
-    # create a temporary directory
-    root = tempfile.mkdtemp()
-
-    for env in ("prod", "dev"):
-        shutil.copytree(envpath, os.path.join(root, env, "env"))
-
-    return root
-
-
-def update_env_file(file_path: str, key: str, value: str):
-    """Updates a key in a YAML file with a new value."""
-    import yaml
-
-    # read the YAML file
-    with open(file_path, "r") as f:
-        data = yaml.safe_load(f)
-
-    for _, env_config in data.items():
-        if isinstance(env_config, dict) and key in env_config:
-            env_config[key] = value
-
-    # write the modified data back to the file
-    with open(file_path, "w") as f:
-        yaml.safe_dump(data, f, sort_keys=False)
 
 
 class TestEnvVar(unittest.TestCase):
@@ -382,7 +354,7 @@ class TestResolveEnviron(unittest.TestCase):
         os.environ["CUSTOM"] = "/var/tmp"
         env = {"FOO": "${CUSTOM}/foo"}
         resolved = resolve_environ(env)
-        self.assertEqual(resolved["FOO"], f"/var/tmp/foo")
+        self.assertEqual(resolved["FOO"], "/var/tmp/foo")
 
     def test_simple(self):
         """Tests resolving a simple environment."""
@@ -738,7 +710,7 @@ class TestEncryptEnviron(unittest.TestCase):
 
     def encrypt_environ(self, stack_name):
         """Tests load_environ with encryption (Base64 only)."""
-        from envstack.env import load_environ, encrypt_environ
+        from envstack.env import encrypt_environ, load_environ
         from envstack.node import EncryptedNode
 
         env = load_environ(stack_name)
@@ -817,8 +789,8 @@ class TestEncryptEnviron(unittest.TestCase):
 
     def resolve_encrypted_environ(self, stack_name):
         """Tests resolve_environ with encrypted environ."""
-        from envstack.env import encrypt_environ, load_environ, resolve_environ
         from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
+        from envstack.env import encrypt_environ, load_environ, resolve_environ
 
         env = load_environ(stack_name)  # unresolved values
         resolved = resolve_environ(env)  # resolved values
@@ -839,18 +811,14 @@ class TestEncryptEnviron(unittest.TestCase):
                 continue
             encrypted_value = encrypted[key]  # encrypted value
             resolved_value = resolved[key]  # resolved value
-            encrypted_resolved_value = encrypted_resolved[
-                key
-            ]  # resolved encrypted value
+            encrypted_resolved_value = encrypted_resolved[key]  # resolved encrypted value
             self.assertNotEqual(encrypted_value, None)
             self.assertNotEqual(resolved_value, None)
             self.assertNotEqual(encrypted_resolved_value, None)
             self.assertNotEqual(encrypted_value, value)
             self.assertNotEqual(encrypted_value, resolved_value)
             # self.assertEqual(resolved_value, encrypted_resolved_value)
-            if isinstance(resolved_value, str) and isinstance(
-                encrypted_resolved_value, str
-            ):
+            if isinstance(resolved_value, str) and isinstance(encrypted_resolved_value, str):
                 self.assertTrue(
                     resolved_value.startswith(encrypted_resolved_value),
                     f"{encrypted_resolved_value} not prefix of {resolved_value}",
@@ -1040,7 +1008,7 @@ class TestIssues(unittest.TestCase):
 
         The STACK name and the test env file name should be the same.
         """
-        from envstack.env import load_environ, Env
+        from envstack.env import Env, load_environ
 
         # update default.env to point to test root
         default_env_file = os.path.join(self.root, "prod", "env", "default.env")
@@ -1102,7 +1070,7 @@ class TestIssues(unittest.TestCase):
             BAZ: ${BAZ}
             NUM: ${NUM:=0}
         """
-        from envstack.env import load_environ, resolve_environ, Source
+        from envstack.env import Source, load_environ, resolve_environ
 
         # create grandparent.env that sets a value for FOO
         grandparent = {

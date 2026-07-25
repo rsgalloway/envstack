@@ -134,9 +134,7 @@ class TestMatchTemplate(unittest.TestCase):
             SEQDIR="${ROOT}/projects/{seq}",
         )
         with patch("envstack.path._load_resolved_stack", return_value=env):
-            t = match_template(
-                "${ROOT}/projects/aa", stack="fps", scope="/tmp", expand=False
-            )
+            t = match_template("${ROOT}/projects/aa", stack="fps", scope="/tmp", expand=False)
             self.assertIsNotNone(t)
             self.assertEqual(str(t), "${ROOT}/projects/{seq}")
 

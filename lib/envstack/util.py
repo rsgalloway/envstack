@@ -45,13 +45,7 @@ from collections import OrderedDict
 import yaml
 
 from envstack import config
-from envstack.node import (
-    AESGCMNode,
-    Base64Node,
-    EncryptedNode,
-    FernetNode,
-    CustomLoader,
-)
+from envstack.node import AESGCMNode, Base64Node, CustomLoader, EncryptedNode, FernetNode
 
 # default memoization cache timeout in seconds
 CACHE_TIMEOUT = 5
@@ -63,9 +57,7 @@ null = ""
 drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
 
 # regular expression pattern for bash-like variable expansion
-variable_pattern = re.compile(
-    r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([-=?])((?:\$\{[^}]+\}|[^}])*))?\}"
-)
+variable_pattern = re.compile(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([-=?])((?:\$\{[^}]+\}|[^}])*))?\}")
 
 # regular expression pattern for command substitution
 cmdsub_pattern = re.compile(r"^\s*\$\((?P<cmd>.*)\)\s*$", re.DOTALL)
@@ -172,9 +164,7 @@ def split_windows_paths(path_str: str):
             result += [
                 p
                 for part in modified.split("|")
-                for p in re.split(
-                    r"(?<![A-Z]):", part
-                )  # capture colons not in drive letters
+                for p in re.split(r"(?<![A-Z]):", part)  # capture colons not in drive letters
                 if p
             ]
         else:
@@ -271,9 +261,7 @@ def dict_diff(dict1: dict, dict2: dict):
     """
     added = {k: dict2[k] for k in dict2 if k not in dict1}
     removed = {k: dict1[k] for k in dict1 if k not in dict2}
-    changed = {
-        k: (dict1[k], dict2[k]) for k in dict1 if k in dict2 and dict1[k] != dict2[k]
-    }
+    changed = {k: (dict1[k], dict2[k]) for k in dict1 if k in dict2 and dict1[k] != dict2[k]}
     unchanged = {k: dict1[k] for k in dict1 if k in dict2 and dict1[k] == dict2[k]}
 
     return {
@@ -296,9 +284,7 @@ def encode(env: dict):
     return dict((c(k), c(v)) for k, v in env.items())
 
 
-def get_paths_from_var(
-    var: str = "PYTHONPATH", pathsep: str = os.pathsep, reverse: bool = True
-):
+def get_paths_from_var(var: str = "PYTHONPATH", pathsep: str = os.pathsep, reverse: bool = True):
     """Returns a list of paths from a given pathsep separated environment
     variable.
 
@@ -361,11 +347,7 @@ def evaluate_modifiers(
         resolving = set()
 
     def sanitize_value(value):
-        if (
-            isinstance(value, str)
-            and value.endswith("}")
-            and not value.startswith("${")
-        ):
+        if isinstance(value, str) and value.endswith("}") and not value.startswith("${"):
             # trim a dangling '}' when there's no matching '{'
             if value.count("{") == 0 and value.count("}") == 1:
                 return value.rstrip("}")
@@ -393,9 +375,7 @@ def evaluate_modifiers(
         argument = match.group(3)  # may be None
         parent_value = parent.get(var_name, "")
         override = os.getenv(var_name, parent_value)
-        current = str(
-            environ.get(var_name, parent_value or "")
-        )  # current value we have
+        current = str(environ.get(var_name, parent_value or ""))  # current value we have
         varstr = "${%s}" % var_name
 
         # cycle / self-reference guard
@@ -501,9 +481,7 @@ def evaluate_modifiers(
         elif isinstance(expression, list):
             result = [evaluate_modifiers(v, environ, parent) for v in expression]
         elif isinstance(expression, dict):
-            result = {
-                k: evaluate_modifiers(v, environ, parent) for k, v in expression.items()
-            }
+            result = {k: evaluate_modifiers(v, environ, parent) for k, v in expression.items()}
         else:
             result = expression
 
@@ -539,9 +517,7 @@ def evaluate_command(command: str):
     return command
 
 
-def load_sys_path(
-    var: str = "PYTHONPATH", pathsep: str = os.pathsep, reverse: bool = True
-):
+def load_sys_path(var: str = "PYTHONPATH", pathsep: str = os.pathsep, reverse: bool = True):
     """
     Add paths from the given environment variable to sys.path.
 

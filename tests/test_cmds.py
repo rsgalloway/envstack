@@ -35,17 +35,17 @@ Contains unit tests for running commands.
 
 import os
 import platform
-import pytest
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
 
+import pytest
+from helpers import create_test_root, update_env_file
+
 import envstack
 from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
-
-from test_env import create_test_root, update_env_file
 
 pytestmark = pytest.mark.skipif(
     sys.platform != "linux",
@@ -99,9 +99,7 @@ STACK=default
 """
             % self.root
         )
-        output = subprocess.check_output(
-            self.envstack_bin, shell=True, universal_newlines=True
-        )
+        output = subprocess.check_output(self.envstack_bin, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_dev(self):
@@ -231,7 +229,7 @@ STACK=ZGVmYXVsdA==
 
     def test_hello_command_echo(self):
         """Tests that resolved and encrypted values resolve in subprocesses."""
-        expected_output = f"""goodbye\n"""
+        expected_output = "goodbye\n"
         command = "%s thing -r HELLO -e -- echo {HELLO}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
@@ -310,8 +308,7 @@ ROOT={self.root}
 STACK=project
 """
         command = (
-            "ENV=blah ROOT=/var/tmp %s project -r DEPLOY_ROOT HELLO ROOT STACK"
-            % self.envstack_bin
+            "ENV=blah ROOT=/var/tmp %s project -r DEPLOY_ROOT HELLO ROOT STACK" % self.envstack_bin
         )
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
@@ -426,9 +423,7 @@ windows:
 
     def test_thing(self):
         """Tests baking the thing stack with depth of 1."""
-        command = make_command(
-            self.envstack_bin, self.filename, "thing", "--depth", "1"
-        )
+        command = make_command(self.envstack_bin, self.filename, "thing", "--depth", "1")
         expected_output = r"""#!/usr/bin/env envstack
 include: [default]
 all: &all
