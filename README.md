@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/envstack-cropped.png" alt="envstack logo" width="560">
+  <img src="docs/assets/envstack.png" alt="envstack logo" width="560">
 </p>
 
 envstack
