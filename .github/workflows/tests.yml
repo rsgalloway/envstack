@@ -12,8 +12,8 @@ jobs:
           python-version: "3.12"
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
-      - run: black --check lib tests bin/envstack bin/whichenv bin/hello
-      - run: isort --check-only lib tests bin/envstack bin/whichenv bin/hello
+      - run: black --check lib tests bin/
+      - run: isort --check-only lib tests bin/
       - run: flake8 lib tests bin
 
   test:
