@@ -1,8 +1,6 @@
 <p align="left">
-  <img src="assets/envstack.png" alt="envstack logo" width="520">
+  <img src="assets/envstack.png" alt="envstack logo" width="400">
 </p>
-
-# envstack
 
 envstack is an **environment variable composition and activation layer** for
 tools and processes.
@@ -65,7 +63,7 @@ that tells you what it did.
 ## Install
 
 ```bash
-pip install envstack
+pip install -U envstack
 ```
 
 ## Quickstart
@@ -85,7 +83,7 @@ envstack -r DEPLOY_ROOT
 Run a command inside the active stack:
 
 ```bash
-envstack -- echo {DEPLOY_ROOT}
+envstack -- echo {VAR}
 ```
 
 Trace where a variable comes from:

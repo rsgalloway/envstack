@@ -1,4 +1,4 @@
-## Python API
+# Python API
 
 To initialize the environment stack in Python, use the `init` function:
 
