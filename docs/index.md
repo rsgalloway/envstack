@@ -1,300 +1,105 @@
+<p align="center">
+  <img src="assets/envstack.png" alt="envstack logo" width="520">
+</p>
+
 # envstack
 
-envstack is a **stacked environment configuration and activation layer** for tools
-and processes.
+envstack is an **environment variable composition and activation layer** for
+tools and processes.
 
-It provides a deterministic way to **activate environments and compose
-configuration hierarchically**, using explicit layering, inheritance, and
-overrides.
+It is built for cases where environments are hierarchical, shared, and
+context-dependent, and where a flat `.env` file stops being enough.
 
-At its core, envstack is about:
-- Environment activation
-- Configuration layering
-- Policy and precedence
-- Making sure tools run with the correct environment
+```bash
+export ENVPATH=studio/base:show/foo:tool/nuke/14
+envstack -- nuke
+```
 
-## The problem envstack solves
+## Why envstack
 
-Real environments are not flat.
+envstack is a lightweight CLI and Python library for composing, tracing,
+exporting, and reproducing environment variables using a PATH-like model
+called `ENVPATH`.
 
-They are:
-- Hierarchical (base → env → project → task)
-- Contextual (dev, prod, CI, local)
-- Layered over time
-- Full of defaults, overrides, and exceptions
+### Compose
 
-Flat `.env` files don’t model this well. envstack treats environment
-configuration as a **stack**: ordered, inspectable, and reproducible.
+- Hierarchical environment layers
+- Ordered precedence and overrides
+- Cross-platform environment activation
 
-## Core concepts
+### Explain
 
-### Environment stacks
-An environment stack is one or more named environments combined in order.
-Stacks define **precedence**: variables flow from higher scope to lower scope,
-with explicit overrides.
+- Trace variable origins
+- Inspect unresolved values
+- Debug stack ordering and overrides
 
-### Hierarchy and inheritance
-Environments can inherit from other environments, forming a hierarchy.
-Downstream environments may refine or override upstream values without
-duplication.
+### Export
 
-### Includes
-Environment definitions may include other environments declaratively,
-allowing shared base configuration to be reused consistently.
+- Bake resolved environments
+- Export to shell formats
+- Reproduce environments deterministically
 
-### Resolution
-Variables can reference other variables, define defaults, or require values
-to be set. Resolution is explicit and inspectable before execution.
+## ENVPATH
 
-## What envstack is (and is not)
+`ENVPATH` defines **where** environment fragments are discovered and **in what
+order** they apply, similar to `PATH`, but for full environments.
 
-**envstack is:**
-- A configuration layer for environment variables
-- An environment activation mechanism
-- A system for hierarchical configuration composition
+```bash
+export ENVPATH=prod/base:prod/show/foo:prod/tools/nuke14
+envstack -- nuke
+```
 
-**envstack is not:**
-- A dependency resolver
+Later entries can layer on top of earlier ones through includes, hierarchy, and
+explicit precedence rules.
+
+## envstack is not
+
+- A dependency solver
 - A package manager
-- A runtime isolation tool by default
+- A virtualenv replacement
+- A build system
 
-envstack focuses on **how environments are composed and activated**, not how
-dependencies are installed.
+It is intentionally boring: explicit inputs, deterministic outputs, and tooling
+that tells you what it did.
 
-## Typical uses
-
-envstack is commonly used for:
-- CLI tools
-- Services
-- CI/CD pipelines
-- Developer workstations
-- Pipeline and DCC tooling
-- Shared, hierarchical environment configuration
-
-## Project docs
-
-- [API](api.md)
-- [Comparison](comparison.md)
-- [Design](design.md)
-- [Examples](examples.md)
-- [FAQ](faq.md)
-- [Roadmap](roadmap.md)
-- [Secrets](secrets.md)
-
-## A simple example
-
-```yaml
-ROOT: /mnt/pipe
-ENV: ${ENV:=prod}
-DEPLOY_ROOT: ${ROOT}/${ENV}
-```
+## Install
 
 ```bash
-$ envstack -r DEPLOY_ROOT
-DEPLOY_ROOT=/mnt/pipe/prod
-```
-```bash
-$ envstack -- echo {DEPLOY_ROOT}
-/mnt/pipe/prod
+pip install envstack
 ```
 
-## Philosophy
+## Quickstart
 
-"You want envstack. It’s what .env files wish they were when they grew up."
-
-envstack is intentionally opinionated:
-
-- Explicit over implicit
-- Layered over flat
-- Inspectable over magical
-
-## Basic Usage
-
-To see the unresolved environment for one or more environment stacks (values are
-defined in the stacks from left to right):
+Inspect the unresolved environment:
 
 ```bash
-$ envstack [STACK [STACK ...]] -u
+envstack -u
 ```
 
-To resolve one or more environment vars for a given stack:
+Resolve a specific variable:
 
 ```bash
-$ envstack [STACK] -r [VAR [VAR ...]]
+envstack -r DEPLOY_ROOT
 ```
 
-To trace where one or more environment vars is being set:
+Run a command inside the active stack:
 
 ```bash
-$ envstack [STACK] -t [VAR [VAR ...]]
+envstack -- echo {DEPLOY_ROOT}
 ```
 
-To run commands in an environment stack:
+Trace where a variable comes from:
 
 ```bash
-$ envstack [STACK] -- [COMMAND]
+envstack -t PATH
 ```
 
-To get the list of source files for a given stack:
+## Learn More
 
-```bash
-$ envstack [STACK] --sources
-```
-
-## Running Commands
-
-To run any command line executable inside of an environment stack, where
-`[COMMAND]` is the command to run:
-
-```bash
-$ envstack [STACK] -- [COMMAND]
-```
-
-For example:
-
-```bash 
-$ envstack -- echo {HELLO}
-world
-```
-
-Running a node command:
-
-```bash
-$ echo "console.log('Hello ' + process.env.HELLO)" > index.js
-$ node index.js 
-Hello undefined
-$ envstack hello -- node index.js 
-Hello world
-```
-
-Running Python commands in the default stack:
-
-```bash
-$ envstack -- python -c "import os; print(os.environ['LOG_LEVEL'])"
-INFO
-```
-
-Overriding values in the stack:
-
-```bash
-$ LOG_LEVEL=DEBUG envstack -- python -c "import os; print(os.environ['LOG_LEVEL'])"
-DEBUG
-```
-
-## Resolving Values
-
-To resolve an environment stack or a variable use `--resolve/-r [VAR]`. 
-
-```bash
-$ envstack -r ENV
-ENV=prod
-$ envstack -r DEPLOY_ROOT
-DEPLOY_ROOT=/mnt/pipe/prod
-```
-
-## Setting Values
-
-envstack uses bash-like variable expansion modifiers. Setting `$VAR` to a fixed
-value means `$VAR` will always use that value. Using an expansion modifier
-allows you to override the value:
-
-| Value | Description |
-|---------------------|-------------|
-| value |  'value' |
-| ${VAR:=default} | VAR = VAR or 'default' |
-| ${VAR:-default} | os.environ.get('VAR', 'default') |
-| ${VAR:?error message} | if not VAR: raise ValueError() |
-
-Without the expansion modifier, values are set and do not change (but can be
-overridden by lower scope stacks, i.e. a lower scope stack file may override
-a higher one). 
-
-If we define `${HELLO}` like this:
-
-```yaml
-HELLO: world
-```
-
-Then the value is set and cannot be modified (except by lower scope stacks):
-
-```bash
-$ envstack -- echo {HELLO}
-world
-$ HELLO=goodbye envstack -- echo {HELLO}
-world
-```
-
-With an expansion modifier, variables have a default value and can also be
-overridden in the environment, or by higher scope stacks:
-
-```yaml
-HELLO: ${HELLO:=world}
-```
-
-Here we show the default value, and how we can override it in the environment:
-
-```bash
-$ envstack -- echo {HELLO}
-world
-$ HELLO=goodbye envstack -- echo {HELLO}
-goodbye
-```
-
-## Using the command-line
-
-Here we can set values using the `envstack` command:
-
-```bash
-$ envstack --set HELLO=world
-HELLO=world
-```
-
-We can also Base64 encode or encrypt values automatically:
-
-```bash
-$ envstack -s HELLO=world -e
-HELLO=d29ybGQ=
-```
-
-Add more variables (note that `$` needs to be escaped in bash or else it will
-be evaluated immediately):
-
-```bash
-$ envstack -s HELLO=world VAR=\${HELLO}
-HELLO=world
-VAR=${HELLO}
-```
-
-To write out the results to an env file, use the `-o` option:
-
-```bash
-envstack -s HELLO=world -o hello.env
-```
-
-Convert existing `.env` files to envstack by piping them into envstack:
-
-```bash
-cat .env | envstack --set -o out.env
-```
-
-## Creating Environments
-
-Several examples or starter stacks are available in the
-[examples](https://github.com/rsgalloway/envstack/tree/master/examples) folder.
-
-To create a new environment file, use `--set` to declare some variables:
-
-```bash
-envstack -s FOO=bar BAR=\${FOO} -o out.env
-```
-
-### Secrets and encryption
-
-envstack supports optional encryption of environment values to protect sensitive
-data when serialized to disk or shared as artifacts.
-
-Encryption is explicit and reversible at activation time, and keys are supplied
-via the environment or via environment stacks.
-
-envstack intentionally does not attempt to manage secrets beyond environment
-variable semantics.
+- [Design](design.md): mental model, hierarchy, and precedence
+- [Examples](examples.md): common patterns and stack layouts
+- [Secrets](secrets.md): encrypted values and key handling
+- [Comparison](comparison.md): how envstack differs from adjacent tools
+- [FAQ](faq.md): operational details and gotchas
+- [API](api.md): Python and CLI reference material
+- [Roadmap](roadmap.md): planned improvements and future work

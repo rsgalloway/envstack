@@ -3,6 +3,7 @@ import shutil
 import tempfile
 
 envpath = os.path.join(os.path.dirname(__file__), "fixtures", "env")
+examples_root = os.path.join(os.path.dirname(os.path.dirname(__file__)), "examples")
 
 
 def create_test_root():
@@ -28,3 +29,26 @@ def update_env_file(file_path: str, key: str, value: str):
 
     with open(file_path, "w") as f:
         yaml.safe_dump(data, f, sort_keys=False)
+
+
+def create_examples_env_root():
+    """Create a temporary envstack root populated from examples fixtures."""
+    root = tempfile.mkdtemp()
+    prod_env = os.path.join(root, "prod", "env")
+    dev_env = os.path.join(root, "dev", "env")
+
+    os.makedirs(prod_env)
+    os.makedirs(dev_env)
+
+    shutil.copy2(os.path.join(examples_root, "default", "default.env"), prod_env)
+    shutil.copy2(os.path.join(examples_root, "default", "test.env"), prod_env)
+    shutil.copy2(os.path.join(examples_root, "default", "data.env"), prod_env)
+    shutil.copy2(os.path.join(examples_root, "default", "dev.env"), dev_env)
+
+    shutil.copy2(os.path.join(examples_root, "encryption", "keys.env"), prod_env)
+    shutil.copy2(os.path.join(examples_root, "encryption", "secrets.env"), prod_env)
+
+    shutil.copy2(os.path.join(examples_root, "project", "project.env"), prod_env)
+    shutil.copy2(os.path.join(examples_root, "wrappers", "hello.env"), prod_env)
+
+    return root
