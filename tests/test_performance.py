@@ -10,7 +10,7 @@ import shutil
 import time
 import unittest
 
-from helpers import create_examples_env_root
+from helpers import create_fixture_env_root
 
 from envstack import util
 from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
@@ -21,7 +21,7 @@ class PerformanceTests(unittest.TestCase):
     """Coarse-grained performance guardrails for envstack hotspots."""
 
     def setUp(self):
-        self.root = create_examples_env_root()
+        self.root = create_fixture_env_root()
         self.old_env = os.environ.copy()
         self.old_cache_timeout = util.CACHE_TIMEOUT
 
