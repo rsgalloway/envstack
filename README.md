@@ -1,9 +1,13 @@
 <p align="center">
-  <img src="docs/assets/envstack.png" alt="envstack logo" width="560">
+  <img src="docs/assets/envstack-cropped.png" alt="envstack logo" width="560">
 </p>
 
 envstack
 ========
+
+[![PyPI](https://img.shields.io/pypi/v/envstack.svg)](https://pypi.org/project/envstack/)
+[![CI](https://github.com/rsgalloway/envstack/actions/workflows/tests.yml/badge.svg)](https://github.com/rsgalloway/envstack/actions/workflows/tests.yml)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
 Environment variable composition and activation layer for tools and processes.
 
