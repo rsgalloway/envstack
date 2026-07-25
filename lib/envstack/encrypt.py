@@ -53,6 +53,7 @@ padding = None
 Cipher = None
 algorithms = None
 modes = None
+default_backend = None
 try:
     # cryptography emits a Python 3.8 deprecation warning during import.
     with warnings.catch_warnings():
@@ -62,8 +63,9 @@ try:
             category=DeprecationWarning,
             module=r"cryptography(\..*)?$",
         )
-        from cryptography.fernet import Fernet, InvalidToken
         from cryptography.exceptions import InvalidTag
+        from cryptography.fernet import Fernet, InvalidToken
+        from cryptography.hazmat.backends import default_backend
         from cryptography.hazmat.primitives import padding
         from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
@@ -214,7 +216,7 @@ class AESGCMEncryptor(object):
         :return: Dictionary containing nonce, ciphertext, and tag.
         """
         nonce = os.urandom(12)  # GCM requires a 12-byte nonce
-        cipher = Cipher(algorithms.AES(self.key), modes.GCM(nonce))
+        cipher = Cipher(algorithms.AES(self.key), modes.GCM(nonce), backend=default_backend())
         encryptor = cipher.encryptor()
         padded_data = pad_data(secret)
         ciphertext = encryptor.update(padded_data) + encryptor.finalize()
@@ -235,7 +237,11 @@ class AESGCMEncryptor(object):
         nonce = b64decode(encrypted_data["nonce"])
         ciphertext = b64decode(encrypted_data["ciphertext"])
         tag = b64decode(encrypted_data["tag"])
-        cipher = Cipher(algorithms.AES(self.key), modes.GCM(nonce, tag))
+        cipher = Cipher(
+            algorithms.AES(self.key),
+            modes.GCM(nonce, tag),
+            backend=default_backend(),
+        )
         decryptor = cipher.decryptor()
         padded_data = decryptor.update(ciphertext) + decryptor.finalize()
         return unpad_data(padded_data)

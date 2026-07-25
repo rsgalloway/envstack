@@ -35,12 +35,12 @@ Contains unit tests for the wrapper.py module.
 
 import os
 import sys
-import pytest
 from types import SimpleNamespace
 
-import envstack.wrapper as wrapper_mod
-from envstack.wrapper import Wrapper, CommandWrapper, run_command, capture_output
+import pytest
 
+import envstack.wrapper as wrapper_mod
+from envstack.wrapper import CommandWrapper, Wrapper, capture_output, run_command
 
 IS_WINDOWS = sys.platform.startswith("win")
 
@@ -78,9 +78,7 @@ def test_wrapper_shell_true_allows_command_string(stub_env, capfd):
     rc = w.launch()
     out, err = capfd.readouterr()
     assert rc == 0
-    assert out.strip() == (
-        "C:\\tmp\\envstack-root" if IS_WINDOWS else "/tmp/envstack-root"
-    )
+    assert out.strip() == ("C:\\tmp\\envstack-root" if IS_WINDOWS else "/tmp/envstack-root")
 
 
 def test_commandwrapper_runs_argv_without_shell(stub_env, capfd):

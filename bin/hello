@@ -43,11 +43,13 @@ Usage:
 """
 
 import sys
+
 from envstack.wrapper import Wrapper
 
 
 class HelloWrapper(Wrapper):
     """A simple wrapper that prints the value of an environment variable."""
+
     def __init__(self, *args, **kwargs):
         super(HelloWrapper, self).__init__(*args, **kwargs)
         self.shell = True

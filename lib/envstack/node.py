@@ -306,9 +306,7 @@ class CustomDumper(yaml.SafeDumper):
 
         # set basekey for the node
         if self.depth == 2:
-            assert isinstance(node, yaml.ScalarNode), (
-                "yaml node not a string: %s" % node
-            )
+            assert isinstance(node, yaml.ScalarNode), "yaml node not a string: %s" % node
             self.basekey = str(node.value)
             node.value = self.basekey
 

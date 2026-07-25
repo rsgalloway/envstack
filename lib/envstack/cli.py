@@ -42,11 +42,11 @@ from typing import List
 
 from envstack import __version__, config
 from envstack.env import (
-    bake_environ,
     Env,
+    bake_environ,
     encrypt_environ,
-    export_env_to_shell,
     export,
+    export_env_to_shell,
     load_environ,
     resolve_environ,
     trace_var,
@@ -394,9 +394,7 @@ def main():
             if args.depth:
                 print("error: --depth is not valid with --resolve")
                 return 2
-            resolved = resolve_environ(
-                load_environ(args.namespace, platform=args.platform)
-            )
+            resolved = resolve_environ(load_environ(args.namespace, platform=args.platform))
             if args.set:
                 resolved.update(_parse_keyvals(args.set))
             if args.encrypt:
@@ -456,9 +454,7 @@ def main():
                 print(source.path)
 
         elif args.unresolved:
-            env = load_environ(
-                args.namespace, platform=args.platform, encrypt=args.encrypt
-            )
+            env = load_environ(args.namespace, platform=args.platform, encrypt=args.encrypt)
             for k, v in sorted(env.items(), key=lambda x: str(x[0])):
                 print(f"{k}={v}")
 

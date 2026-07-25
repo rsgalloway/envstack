@@ -43,12 +43,7 @@ import yaml  # noqa
 
 from envstack import config, logger, path, util
 from envstack.exceptions import *  # noqa
-from envstack.node import (
-    BaseNode,
-    EncryptedNode,
-    custom_node_types,
-    get_keys_from_env,
-)
+from envstack.node import BaseNode, EncryptedNode, custom_node_types, get_keys_from_env
 
 # value delimiter pattern (splits values by os.pathsep)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
@@ -468,9 +463,7 @@ def get_sources(
                 logger.log.warning(f"Error accessing {potential_file}")
                 continue
         if not found_files and not ignore_missing:
-            raise TemplateNotFound(  # noqa
-                f"{file_basename} not found in ENVPATH or scope."
-            )
+            raise TemplateNotFound(f"{file_basename} not found in ENVPATH or scope.")  # noqa
         return found_files
 
     def _load_file(file_basename):
@@ -787,9 +780,7 @@ def bake_environ(
     return load_environ(name, scope=scope).bake(filename, depth, encrypt)
 
 
-def encrypt_environ(
-    env: dict, node_class: BaseNode = EncryptedNode, encrypt: bool = True
-):
+def encrypt_environ(env: dict, node_class: BaseNode = EncryptedNode, encrypt: bool = True):
     """Encrypts all values in a given environment, returning a new environment.
     Looks for encryption keys in the environment.
 

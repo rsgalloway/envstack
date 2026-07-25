@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "envstack"
-version = "1.0.3"
+version = "1.0.4"
 description = "Environment variable composition layer for tools and processes."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.6"
@@ -56,8 +56,33 @@ Documentation = "https://github.com/rsgalloway/envstack/tree/master/docs"
 envstack = "envstack.cli:main"
 whichenv = "envstack.cli:whichenv"
 
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "flake8==7.1.1",
+  "mccabe==0.7.0",
+  "isort==5.13.2",
+  "black==24.8.0",
+]
+
 [tool.setuptools]
 zip-safe = false
 
 [tool.setuptools.packages.find]
 where = ["lib"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+
+[tool.black]
+line-length = 100
+target-version = ["py38"]
+
+[tool.pytest.ini_options]
+markers = [
+  "integration: tests that run real subprocesses (slower / OS-dependent)",
+]
+testpaths = ["tests"]
+norecursedirs = ["tmp"]

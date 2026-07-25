@@ -1,0 +1,21 @@
+[flake8]
+max-line-length = 100
+max-complexity = 35
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    build,
+    dist,
+    baseline
+extend-ignore =
+    E203,
+    E501,
+    W503
+per-file-ignores =
+    lib/envstack/cli.py:C901
+    lib/envstack/env.py:F405
+    lib/envstack/path.py:F405
+    lib/envstack/util.py:C901
+    tests/test_cmds.py:W291

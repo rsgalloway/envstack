@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/envstack.png" alt="envstack logo" width="560">
+</p>
+
 envstack
 ========
 

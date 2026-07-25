@@ -34,13 +34,8 @@ Contains unit tests for the encrypt.py module.
 """
 
 import unittest
-from unittest.mock import patch
 
-from envstack.encrypt import (
-    AESGCMEncryptor,
-    Base64Encryptor,
-    FernetEncryptor,
-)
+from envstack.encrypt import AESGCMEncryptor, Base64Encryptor, FernetEncryptor
 
 
 class TestBase64Encryptor(unittest.TestCase):

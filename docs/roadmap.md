@@ -14,8 +14,9 @@ The following items are active candidates for near-term roadmap work:
 
 ## Performance and benchmarking
 
-envstack does not yet have dedicated benchmark tooling or performance
-regression coverage.
+envstack now has lightweight performance regression coverage, but it does not
+yet have dedicated A/B benchmark tooling that compares base and candidate
+changes on the same runner.
 
 This is likely worth adding soon, especially before larger changes to
 environment resolution, shell startup, or subprocess wrapping.
@@ -38,3 +39,7 @@ Future benchmark work should ideally cover both:
 
 - one-off profiling for targeted optimization work
 - regression checks that help catch performance drift across releases
+
+The next benchmark milestone should be same-VM branch-vs-base comparisons,
+similar to the workflow used in `pyseq`, so we can catch smaller regressions in
+the `5-10%` range with less runner noise.

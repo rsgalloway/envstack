@@ -286,15 +286,13 @@ def capture_output(
     except FileNotFoundError as e:
         # no process ran; synthesize a bash-like error and code
         # 127 is the conventional "command not found" code in shells
-        missing = e.filename or (
-            cmd[0] if isinstance(cmd, list) and cmd else str(command)
-        )
+        missing = e.filename or (cmd[0] if isinstance(cmd, list) and cmd else str(command))
         return 127, "", f"{missing}: command not found"
     except OSError as e:
         # Other OS-level execution errors (permission, exec format, etc.)
         rc = 126 if getattr(e, "errno", None) in (errno.EACCES,) else 1
         return rc, "", str(e)
-    except subprocess.TimeoutExpired as e:
+    except subprocess.TimeoutExpired:
         return 124, "", f"Command timed out after {timeout} seconds"
 
 
