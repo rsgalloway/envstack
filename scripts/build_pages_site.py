@@ -104,7 +104,7 @@ def write_layout(output_dir: Path):
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% if page.title %}{{ page.title }} | {% endif %}{{ site.title }}</title>
     <meta name="description" content="{{ site.description }}">
-    <link rel="stylesheet" href="{{ '/assets/site.css' | relative_url }}">
+    <link rel="stylesheet" href="/assets/site.css">
     <script type="module">
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
       mermaid.initialize({ startOnLoad: true, theme: "dark" });
@@ -113,14 +113,14 @@ def write_layout(output_dir: Path):
   <body>
     <div class="site-shell">
       <header class="site-header">
-        <a class="site-brand" href="{{ '/' | relative_url }}">{{ site.title }}</a>
+        <a class="site-brand" href="/">{{ site.title }}</a>
         <nav class="site-nav">
-          <a href="{{ '/' | relative_url }}">Home</a>
-          <a href="{{ '/docs/api/' | relative_url }}">API</a>
-          <a href="{{ '/docs/design/' | relative_url }}">Design</a>
-          <a href="{{ '/docs/examples/' | relative_url }}">Examples</a>
-          <a href="{{ '/docs/secrets/' | relative_url }}">Secrets</a>
-          <a href="{{ '/docs/faq/' | relative_url }}">FAQ</a>
+          <a href="/">Home</a>
+          <a href="/docs/api/">API</a>
+          <a href="/docs/design/">Design</a>
+          <a href="/docs/examples/">Examples</a>
+          <a href="/docs/secrets/">Secrets</a>
+          <a href="/docs/faq/">FAQ</a>
           <a href="https://github.com/rsgalloway/envstack">GitHub</a>
           <a href="https://pypi.org/project/envstack/">PyPI</a>
         </nav>
