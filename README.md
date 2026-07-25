@@ -1,4 +1,4 @@
-<p align="center">
+<p align="left">
   <img src="docs/assets/envstack.png" alt="envstack logo" width="560">
 </p>
 

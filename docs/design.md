@@ -1,4 +1,4 @@
-# envstack — Design and Philosophy
+# Design and Philosophy
 
 This document describes the core design principles, mental model, and
 non-goals of envstack.
