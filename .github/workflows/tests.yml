@@ -1,6 +1,22 @@
 name: tests
 
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - ".github/workflows/tests.yml"
+      - ".flake8"
+      - "bin/**"
+      - "lib/**"
+      - "tests/**"
+      - "pyproject.toml"
+  pull_request:
+    paths:
+      - ".github/workflows/tests.yml"
+      - ".flake8"
+      - "bin/**"
+      - "lib/**"
+      - "tests/**"
+      - "pyproject.toml"
 
 jobs:
   lint:

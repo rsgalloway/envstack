@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-07-25
+
+### Added
+- add a `dev` extra with `pytest`, `black`, `isort`, and `flake8` for one-command local setup
+- add lightweight performance regression tests using example-based environment fixtures
+- add a GitHub Pages docs publishing workflow and a generated docs-site builder
+
+### Changed
+- move pytest configuration into `pyproject.toml`
+- broaden CI lint checks to cover the full `bin/` directory
+- simplify the docs landing page so the published site acts more like a lightweight home page that links to deeper documentation
+
+### Fixed
+- restore AES-GCM compatibility on Python 3.8/current `cryptography` by passing an explicit backend where required
+- restore the missing `envstack.wrapper` module to release artifacts by cleaning up release/build hygiene
+- make plain `pytest tests -q` work reliably via test-suite bootstrap and shared test helpers
+
+---
+
 ## [1.0.3] - 2026-07-23
 
 ### Changed
@@ -18,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - restore Python 3.14 compatibility in `EnvVar.vars()` by avoiding `string.Template` pattern access that now raises under 3.14
 - suppress the `cryptography` Python 3.8 deprecation warning during import so `envstack` subprocess tests and CLI startup remain quiet on supported 3.8 installs
+
+### Notes
+- The `1.0.3` PyPI release published on July 23, 2026 was yanked because the distributed wheel/sdist omitted `envstack.wrapper`, which breaks CLI startup after `pip install envstack`.
+- Use `1.0.4` or newer instead.
 
 ---
 
