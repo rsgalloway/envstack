@@ -118,6 +118,7 @@ def write_layout(output_dir: Path):
         <nav class="site-nav">
           <a href="/">Home</a>
           <a href="/docs/api/">API</a>
+          <a href="/docs/comparison/">Comparison</a>
           <a href="/docs/design/">Design</a>
           <a href="/docs/examples/">Examples</a>
           <a href="/docs/secrets/">Secrets</a>
