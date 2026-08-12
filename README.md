@@ -146,7 +146,8 @@ See [docs/secrets.md](https://github.com/rsgalloway/envstack/blob/master/docs/se
 ## Documentation
 
 - [Design & philosophy](https://github.com/rsgalloway/envstack/blob/master/docs/design.md)
-- [Examples & patterns](https://github.com/rsgalloway/envstack/blob/master/docs/examples.md)
+- [Examples](https://github.com/rsgalloway/envstack/blob/master/docs/examples/README.md)
+- [Wrappers](https://github.com/rsgalloway/envstack/blob/master/docs/examples/wrappers.md)
 - [Tool comparisons](https://github.com/rsgalloway/envstack/blob/master/docs/comparison.md)
 - [Secrets and encryption](https://github.com/rsgalloway/envstack/blob/master/docs/secrets.md)
 - [FAQ & gotchas](https://github.com/rsgalloway/envstack/blob/master/docs/faq.md)

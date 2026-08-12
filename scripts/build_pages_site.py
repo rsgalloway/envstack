@@ -8,44 +8,56 @@
 import argparse
 import re
 import shutil
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 MERMAID_BLOCK_RE = re.compile(r"```mermaid\s*\n(.*?)\n```", re.DOTALL)
 
+def source_doc_url(src_rel: PurePosixPath) -> str:
+    """Return the canonical site URL for a markdown source path under docs/."""
+    if src_rel == PurePosixPath("index.md"):
+        return "/"
+    if src_rel.name == "README.md":
+        return "/" + str(PurePosixPath("docs") / src_rel.parent).strip("/") + "/"
+    return "/" + str(PurePosixPath("docs") / src_rel.with_suffix("")).strip("/") + "/"
 
-def rewrite_links(content: str, page_kind: str) -> str:
+
+def source_to_output_path(src_rel: PurePosixPath) -> Path:
+    """Map a markdown source path under docs/ to its generated site location."""
+    if src_rel == PurePosixPath("index.md"):
+        return Path("index.md")
+    if src_rel.name == "README.md":
+        return Path("docs") / src_rel.parent / "index.md"
+    return Path("docs") / Path(str(src_rel))
+
+
+def rewrite_links(content: str, src_rel: PurePosixPath) -> str:
     """Rewrite local markdown links for generated HTML output."""
 
     def replace(match: re.Match) -> str:
         label = match.group("label")
         target = match.group("target")
 
-        if "://" in target or target.startswith("#") or target.startswith("mailto:"):
+        if (
+            "://" in target
+            or target.startswith("#")
+            or target.startswith("mailto:")
+        ):
             return match.group(0)
 
         if not target.endswith(".md"):
             return match.group(0)
 
-        if page_kind == "root":
-            if target == "README.md":
-                target = "docs/api/"
-            elif target == "docs/index.md":
-                target = "./"
-            elif target.startswith("docs/"):
-                target = target[:-3] + "/"
-            else:
-                target = "docs/" + target[:-3] + "/"
-        else:
-            if target == "README.md":
-                target = "../docs/api/"
-            elif target == "docs/index.md":
-                target = "../"
-            elif target.startswith("docs/"):
-                target = target[len("docs/") : -3] + "/"
-            else:
-                target = target[:-3] + "/"
+        target_rel = PurePosixPath(target)
+        if target_rel.is_absolute():
+            return match.group(0)
 
-        return f"[{label}]({target})"
+        if target.startswith("docs/"):
+            resolved = PurePosixPath(target[len("docs/") :])
+        else:
+            resolved = (src_rel.parent / target_rel)
+
+        normalized = PurePosixPath(*resolved.parts)
+        return f"[{label}]({source_doc_url(normalized)})"
 
     return re.sub(r"\[(?P<label>[^\]]+)\]\((?P<target>[^)]+)\)", replace, content)
 
@@ -73,11 +85,11 @@ def wrap_markdown(content: str, title: str) -> str:
     return f"---\nlayout: default\ntitle: {title}\n---\n\n{content}"
 
 
-def write_markdown_page(src: Path, dst: Path, fallback_title: str, page_kind: str):
+def write_markdown_page(src: Path, dst: Path, fallback_title: str, src_rel: PurePosixPath):
     """Copy a markdown file into the site tree with front matter and fixed links."""
     content = src.read_text(encoding="utf-8")
     title = extract_title(content, fallback_title)
-    content = rewrite_links(content, page_kind=page_kind)
+    content = rewrite_links(content, src_rel=src_rel)
     content = rewrite_mermaid_blocks(content)
     dst.parent.mkdir(parents=True, exist_ok=True)
     dst.write_text(wrap_markdown(content, title), encoding="utf-8")
@@ -351,16 +363,15 @@ def build_site(args):
     write_stylesheet(output_dir)
 
     docs_dir = repo_root / "docs"
-    for src in docs_dir.glob("*.md"):
-        if src.name == "index.md":
-            dst = output_dir / "index.md"
-            fallback = "envstack"
-            page_kind = "root"
-        else:
-            dst = output_dir / "docs" / src.name
-            fallback = src.stem.replace("-", " ").title()
-            page_kind = "docs"
-        write_markdown_page(src, dst, fallback, page_kind=page_kind)
+    for src in sorted(docs_dir.rglob("*.md")):
+        src_rel = PurePosixPath(src.relative_to(docs_dir).as_posix())
+        dst = output_dir / source_to_output_path(src_rel)
+        fallback = (
+            "envstack"
+            if src_rel == PurePosixPath("index.md")
+            else src.stem.replace("-", " ").title()
+        )
+        write_markdown_page(src, dst, fallback, src_rel=src_rel)
 
     if (docs_dir / "assets").exists():
         copy_assets(docs_dir / "assets", output_dir / "assets")

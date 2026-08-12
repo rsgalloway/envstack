@@ -1,26 +1,25 @@
-## Encryption
+# Encryption Example
 
 Supported encryption algorithms include
-[AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode)
-and
-[Fernet](https://github.com/fernet/spec/). These algorithms allow
-you to securely encrypt and decrypt sensitive environment variables.
+[AES-GCM](https://en.wikipedia.org/wiki/Galois/Counter_Mode) and
+[Fernet](https://github.com/fernet/spec/). These allow envstack to securely
+encrypt and decrypt sensitive environment variables.
 
 [Base64](https://en.wikipedia.org/wiki/Base64) encoding is also supported as a
-convenience for encoding data in Base64 (but is not a security encryption).
+convenience, but it is not encryption.
 
-To use AES-GCM or Fernet, and encryption key must be found somewhere in the
-environment. No key is required for Base64 encryption (the default). Encrypted
-nodes look for keys in the following order, favoring AES-GCM over Fernet:
+To use AES-GCM or Fernet, an encryption key must be found somewhere in the
+environment. Encrypted nodes look for keys in the following order, favoring
+AES-GCM over Fernet:
 
 | Algorithm | Key |
-|---------|-------------|
+| --------- | --- |
 | Base64 | (no key required, not encrypted) |
 | AES-GCM | ${ENVSTACK_SYMMETRIC_KEY} |
 | Fernet | ${ENVSTACK_FERNET_KEY} |
 
-If no encryption keys are found in the environment, envstack will default to
-using Base64 encoding:
+If no encryption keys are found in the environment, envstack defaults to
+Base64 encoding:
 
 ```bash
 $ envstack -eu
@@ -35,38 +34,37 @@ ROOT=L21udC9waXBl
 STACK=ZGVmYXVsdA==
 ```
 
-#### Generating Keys
+## Generating Keys
 
 To use AES-GCM or Fernet encryption and serialize to an `encrypted.env` file,
-first generate and source keys in the shell using the `--keygen` option:
+first generate and source keys in the shell using `--keygen`:
 
 ```bash
 $ source <(envstack --keygen --export)
 ```
 
-Once the keys are in the environment, you can encrypt the env stack:
+Once the keys are in the environment, you can encrypt the stack:
 
 ```bash
 $ envstack -o secrets.env --encrypt
 ```
 
-Encrypted variables will resolve as long as the key is in the environment:
+Encrypted variables resolve as long as the key is in the environment:
 
 ```bash
 $ envstack secrets -r HELLO
 HELLO=world
 ```
 
-#### Storing Keys
+## Storing Keys
 
-Keys can be stored in other environment stacks, e.g. a `keys.env` file
-(keys are automatically base64 encoded):
+Keys can be stored in other environment stacks, such as a `keys.env` file:
 
 ```bash
 $ envstack --keygen -o keys.env
 ```
 
-Then use `keys.env` to encrypt any other environment files:
+Then use `keys.env` to encrypt other environment files:
 
 ```bash
 $ ./keys.env -- envstack -eo secrets.env
@@ -92,7 +90,7 @@ Or automatically include `keys`:
 include: [keys]
 ```
 
-Variables will automatically decrypt when resolved:
+Variables automatically decrypt when resolved:
 
 ```bash
 $ ./secrets.env -r HELLO

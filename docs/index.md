@@ -161,9 +161,10 @@ cat .env | envstack --set -o out.env
 ## Learn More
 
 - [Design](design.md): mental model, hierarchy, and precedence
-- [Examples](examples.md): common patterns and stack layouts
-- [Secrets](secrets.md): encrypted values and key handling
 - [Comparison](comparison.md): how envstack differs from adjacent tools
+- [Examples](examples/README.md): canonical example guides and patterns
+- [Wrappers](examples/wrappers.md): executable launchers built on top of envstack
+- [Secrets](secrets.md): encrypted values and key handling
 - [FAQ](faq.md): operational details and gotchas
 - [API](api.md): Python and CLI reference material
 - [Roadmap](roadmap.md): planned improvements and future work

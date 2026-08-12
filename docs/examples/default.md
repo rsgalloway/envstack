@@ -18,7 +18,8 @@ data.env \
 https://raw.githubusercontent.com/rsgalloway/envstack/master/examples/default/data.env
 ```
 
-See the unresolved environment variable values for the `default.env` environment:
+See the unresolved environment variable values for the `default.env`
+environment:
 
 ```shell
 $ envstack -u
@@ -33,7 +34,7 @@ ROOT=/mnt/pipe
 STACK=default
 ```
 
-Running `envstack` will launch a new shell session with the resolved environment:
+Running `envstack` launches a new shell session with the resolved environment:
 
 ```shell
 $ envstack
@@ -44,12 +45,13 @@ $ envstack
 
 ## Includes
 
-Environment stack files can include other namespaced environments (you should
-probably always include the `default` stack):
+Environment stack files can include other namespaced environments:
 
 ```yaml
 include: [default, test]
 ```
+
+In practice, most derived stacks should include `default`.
 
 ## Loading Environments With Inheritance
 
@@ -70,8 +72,8 @@ STACK=dev
 
 Note how `ROOT` is undefined in `dev.env`, and inherited from `default.env`.
 The `dev.env` environment also overrides some of the values in `default.env`,
-including `PYTHONPATH`, and `PATH`. Here, we explicitly give dev paths precedence
-over prod paths:
+including `PYTHONPATH` and `PATH`. Here, dev paths take precedence over prod
+paths:
 
 ```shell
 $ envstack dev
@@ -82,8 +84,8 @@ $ envstack dev
 
 ## Storing Data Types
 
-You can store complex data types in envstack, including `dict` and `list` types.
-Values can be other `VARS`, for example:
+You can store complex data types in envstack, including `dict` and `list`
+types. Values can themselves reference other vars:
 
 ```shell
 $ envstack data -u
@@ -102,7 +104,7 @@ CHAR_LIST=['a', 'b', 'c', 'world']
 ```
 
 Data types are also automatically converted using `safe_eval` when loading
-environments using Python:
+environments in Python:
 
 ```python
 >>> import envstack
@@ -131,6 +133,37 @@ $ ./test.env --export
 export FOO=bar
 export STACK=test
 ```
+
+## Command Substitution and Derived Values
+
+The `test.env` example shows how a stack can derive a value from a command at
+resolution time:
+
+```yaml
+PYVERSION: $(python -c "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')")
+PYTHONPATH: ${DEPLOY_ROOT}/lib/python${PYVERSION}
+NUKESCRIPT: ${ROOT}/projects/{seq}/{shot}/comp/{show}_{seq}_{shot}.{version}.nk
+```
+
+This is useful when a path or tool setting depends on the local runtime. For
+example, `PYTHONPATH` can follow the active interpreter's major/minor version
+without hard-coding it into every stack file.
+
+To inspect it:
+
+```bash
+$ envstack test -u
+PYVERSION=$(python -c "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}')")
+PYTHONPATH=${DEPLOY_ROOT}/lib/python${PYVERSION}
+NUKESCRIPT=${ROOT}/projects/{seq}/{shot}/comp/{show}_{seq}_{shot}.{version}.nk
+```
+
+```bash
+$ envstack test -r PYVERSION
+```
+
+That returns the major/minor interpreter version detected on the local
+machine, and `PYTHONPATH` resolves using that value.
 
 ## More Details
 
