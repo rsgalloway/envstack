@@ -89,6 +89,54 @@ resolves it, and launches the subprocess with those values in its environment.
 This makes wrappers a good fit for tool launchers, bootstrap scripts, and
 small command shims around shared environments.
 
+## Wrapping other executables
+
+The same pattern works for far more than a demo `hello` command. In practice,
+you can wrap almost any executable so it always runs inside a composed
+environment stack.
+
+Common use cases:
+
+- DCC launchers such as `nuke`, `maya`, or `houdini`
+- Project tools that need a specific `PATH`, `PYTHONPATH`, or license setup
+- Build and render commands that should inherit a known deployment root
+- Internal CLIs that should run with stack-selected config by default
+
+At the command line, the simplest form is already:
+
+```bash
+envstack dev -- python -m pytest
+envstack project -- nuke
+envstack showA -- /usr/local/bin/custom-tool --flag value
+```
+
+If you want a stable executable entrypoint instead of asking users to prefix
+every command with `envstack`, create a wrapper script around that executable.
+
+For an argv-style executable, the underlying `Wrapper` base class can return a
+resolved path such as `${TOOL_ROOT}/bin/tool`, and the subprocess inherits the
+fully resolved stack environment before launch.
+
+For example:
+
+```python
+import sys
+
+from envstack.wrapper import Wrapper
+
+
+class ToolWrapper(Wrapper):
+    def executable(self):
+        return "${TOOL_ROOT}/bin/tool"
+
+
+if __name__ == "__main__":
+    sys.exit(ToolWrapper("project", sys.argv[1:]).launch())
+```
+
+That is the main value of wrappers: any executable can be made to feel
+"pre-configured" by binding it to a named environment stack.
+
 ## Related files
 
 - [`examples/wrappers/hello.env`](https://github.com/rsgalloway/envstack/blob/master/examples/wrappers/hello.env)

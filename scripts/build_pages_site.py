@@ -101,6 +101,12 @@ def write_site_config(output_dir: Path):
 description: Environment variable composition and activation layer
 markdown: kramdown
 permalink: pretty
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  syntax_highlighter_opts:
+    css_class: highlight
 """
     (output_dir / "_config.yml").write_text(config, encoding="utf-8")
 
@@ -285,6 +291,64 @@ pre code {
   padding: 0;
   background: transparent;
 }
+
+.highlight {
+  margin: 0;
+}
+
+.highlight pre,
+pre.highlight {
+  overflow-x: auto;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--code);
+}
+
+.highlight .hll { background: rgba(255,255,255,0.05); }
+.highlight .c,
+.highlight .cm,
+.highlight .c1,
+.highlight .cs { color: #7f8ea3; font-style: italic; }
+.highlight .k,
+.highlight .kd,
+.highlight .kn,
+.highlight .kp,
+.highlight .kr,
+.highlight .nt { color: #7cc7ff; }
+.highlight .s,
+.highlight .sa,
+.highlight .sb,
+.highlight .sc,
+.highlight .dl,
+.highlight .sd,
+.highlight .s2 { color: #9be38c; }
+.highlight .si,
+.highlight .se,
+.highlight .sh,
+.highlight .sx { color: #ffd580; }
+.highlight .m,
+.highlight .mb,
+.highlight .mf,
+.highlight .mh,
+.highlight .mi,
+.highlight .mo { color: #ffb86b; }
+.highlight .na,
+.highlight .nb,
+.highlight .bp,
+.highlight .nc,
+.highlight .nf,
+.highlight .fm,
+.highlight .ne,
+.highlight .nn { color: #f7d774; }
+.highlight .nv,
+.highlight .vc,
+.highlight .vg,
+.highlight .vi { color: #ff9ecb; }
+.highlight .o,
+.highlight .ow { color: #ff8f70; }
+.highlight .p,
+.highlight .w { color: #d9e2f2; }
 
 hr {
   border: 0;
