@@ -55,7 +55,7 @@ The difference is **policy vs solver**.
 envstack itself does not version dependencies.
 
 Versioning is handled by:
-- Deployment tooling (e.g. distman)
+- Deployment tooling (e.g. [distman](https://distman.dev))
 - Directory layout
 - Revision control systems
 - Higher-precedence overrides
@@ -165,6 +165,7 @@ Some things to be aware of:
 
 - envstack is explicit by design; it will not guess intent
 - Order matters - precedence is determined by stack order
+- `ENVPATH` order matters too - earlier directories have higher precedence
 - Misordered stacks can produce surprising results
 - Shared environments require discipline and conventions
 - Debugging configuration still requires thought (envstack just makes it visible)
