@@ -37,6 +37,21 @@ or:
 envstack does not attempt to infer intent or solve dependency graphs. All
 composition is declared explicitly.
 
+The shortest useful rule is:
+
+> **Files identify stacks; directories identify scope; `ENVPATH` defines precedence.**
+
+For example, these files all describe the same stack in different scopes:
+
+```text
+/studio/prod/env/mytool.env
+/studio/dev/env/mytool.env
+/studio/project/foo/env/mytool.env
+```
+
+`mytool.env` identifies the tool or stack being configured. The containing
+directory identifies the scope in which that definition applies.
+
 ## Environment stacks
 
 An *environment stack* is an ordered collection of environment definitions.
@@ -103,16 +118,141 @@ ENVPATH=/mnt/tools/dev/env:/mnt/tools/prod/env
 
 Resolution follows these rules:
 - Directories are searched left to right
-- Later entries override earlier ones
+- Earlier paths have higher precedence
 - Filesystem layout defines hierarchy and scope
 - Changes take effect at activation time
 
 `ENVPATH` is intentionally simple and filesystem-backed. It allows:
 - Shared, network-deployed environments
-- Hierarchical overrides (e.g. prod → dev → project)
+- Hierarchical overrides by putting highest-priority scopes first
 - Late binding of configuration without rebuilds
 
 `ENVPATH` plays the same role for envstack that `PATH` plays for executables.
+
+For example:
+
+```bash
+export ENVPATH=/studio/project/foo/env:/studio/prod/env
+envstack mytool
+```
+
+In that case envstack resolves `mytool.env` from both directories, but the
+project-scoped definition has higher precedence because its directory appears
+first in `ENVPATH`.
+
+## Configuration ownership and revision control
+
+envstack deliberately separates configuration composition from source control
+and deployment.
+
+Recommended practice:
+
+> **Environment definitions should be revision-controlled with the system or scope that owns them. Their deployed filesystem location defines scope, while `ENVPATH` defines precedence.**
+
+That usually means there is not one repository containing every version of a
+stack such as `mytool.env`.
+
+An application repository may own its canonical definition:
+
+```text
+mytool.git/
+    env/
+        mytool.env
+```
+
+A facility or site configuration repository may own organization-wide policy:
+
+```text
+studio-config.git/
+    env/
+        mytool.env
+        maya.env
+```
+
+After deployment, those files might live at:
+
+```text
+/studio/prod/env/mytool.env
+```
+
+A project configuration repository can then add project-specific overrides:
+
+```text
+foo-config.git/
+    env/
+        mytool.env
+```
+
+deployed to:
+
+```text
+/studio/project/foo/env/mytool.env
+```
+
+At runtime:
+
+```bash
+export ENVPATH=/studio/project/foo/env:/studio/prod/env
+envstack mytool
+```
+
+The project-scoped definition overrides the facility-scoped definition without
+requiring either repository to own the other's history.
+
+### Stack and scope are different dimensions
+
+Names such as `mytool` and scopes such as `prod`, `dev`, or `project/foo`
+represent different concerns.
+
+```text
+                  stack
+                   |
+/studio/prod/env/mytool.env
+        |
+       scope
+```
+
+envstack does not prescribe a fixed hierarchy. What matters is that scopes are
+represented by directories and combined explicitly through `ENVPATH`.
+
+### Avoid environment branches as the primary model
+
+As a general operating model, it is usually better not to represent runtime
+scopes primarily as Git branches such as `prod`, `dev`, or `project-foo`.
+
+That pattern tends to couple application revision and runtime configuration too
+tightly, makes it harder to run the same application revision under different
+contexts, and blurs ownership of configuration history.
+
+This is a recommendation, not a prohibition. envstack does not require any
+particular repository layout.
+
+### Relationship to deployment tools
+
+envstack is not a Git client, package manager, or deployment system.
+
+Revision-controlled environment definitions still need to be published to the
+filesystem locations referenced by `ENVPATH`. That publication can happen
+manually, through CI/CD, via configuration management, or through a deployment
+tool such as [distman](https://distman.dev).
+
+Conceptually:
+
+```text
+Git repository
+    |
+    v
+deployment or distribution system
+    |
+    v
+scoped env directories
+    |
+    v
+ENVPATH ordering
+    |
+    v
+envstack activation
+```
 
 ## Includes
 

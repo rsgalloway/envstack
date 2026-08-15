@@ -9,8 +9,8 @@ It is built for cases where environments are hierarchical, shared, and
 context-dependent, and where a flat `.env` file stops being enough.
 
 ```bash
-export ENVPATH=studio/base:show/foo:tool/nuke/14
-envstack -- nuke
+export ENVPATH=/studio/project/foo/env:/studio/prod/env
+envstack mytool
 ```
 
 ## Why envstack
@@ -43,12 +43,33 @@ called `ENVPATH`.
 order** they apply, similar to `PATH`, but for full environments.
 
 ```bash
-export ENVPATH=prod/base:prod/show/foo:prod/tools/nuke14
-envstack -- nuke
+export ENVPATH=/studio/project/foo/env:/studio/prod/env
+envstack mytool
 ```
 
-Later entries can layer on top of earlier ones through includes, hierarchy, and
-explicit precedence rules.
+envstack searches `ENVPATH` from left to right. Earlier paths have higher
+precedence.
+
+That gives envstack a compact mental model:
+
+> Files identify stacks; directories identify scope; `ENVPATH` defines precedence.
+
+For example:
+
+```text
+/studio/prod/env/mytool.env
+/studio/project/foo/env/mytool.env
+```
+
+`mytool.env` identifies the stack being configured. The containing directories
+describe scope. With:
+
+```bash
+export ENVPATH=/studio/project/foo/env:/studio/prod/env
+```
+
+the project-scoped `mytool.env` has higher priority because its directory comes
+first.
 
 ## envstack is not
 
@@ -147,8 +168,15 @@ they should be discovered, much like `PATH` for executables.
 export ENVPATH=/path/to/prod/env:/path/to/dev/env
 ```
 
-In that case, stacks found under `/path/to/dev/env` can layer on top of the
-shared base definitions in `/path/to/prod/env`.
+To give development overrides higher priority than shared production defaults,
+put the development directory first:
+
+```bash
+export ENVPATH=/path/to/dev/env:/path/to/prod/env
+```
+
+envstack searches from left to right, so `/path/to/dev/env` takes precedence
+over `/path/to/prod/env`.
 
 ## Converting `.env` files
 

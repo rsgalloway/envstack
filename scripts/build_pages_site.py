@@ -128,6 +128,22 @@ def write_layout(output_dir: Path):
       import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
       mermaid.initialize({ startOnLoad: true, theme: "dark" });
     </script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        for (const heading of document.querySelectorAll(".site-main h2, .site-main h3")) {
+          if (!heading.id || heading.querySelector(".header-anchor")) {
+            continue;
+          }
+
+          const anchor = document.createElement("a");
+          anchor.className = "header-anchor";
+          anchor.href = `#${heading.id}`;
+          anchor.setAttribute("aria-label", `Link to section: ${heading.textContent.trim()}`);
+          anchor.textContent = "#";
+          heading.appendChild(anchor);
+        }
+      });
+    </script>
   </head>
   <body>
     <div class="site-shell">
@@ -251,6 +267,27 @@ h3 {
   font-size: 1.08rem;
   margin-top: 28px;
   margin-bottom: 10px;
+}
+
+.site-main h2,
+.site-main h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-anchor {
+  color: var(--accent-2);
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.site-main h2:hover .header-anchor,
+.site-main h2:focus-within .header-anchor,
+.site-main h3:hover .header-anchor,
+.site-main h3:focus-within .header-anchor {
+  opacity: 1;
 }
 
 p, li {

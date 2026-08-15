@@ -73,7 +73,7 @@ STACK=dev
 Note how `ROOT` is undefined in `dev.env`, and inherited from `default.env`.
 The `dev.env` environment also overrides some of the values in `default.env`,
 including `PYTHONPATH` and `PATH`. Here, dev paths take precedence over prod
-paths:
+paths because `dev.env` sets `ENVPATH` with the higher-priority directory first:
 
 ```shell
 $ envstack dev

@@ -12,6 +12,7 @@ often work best together.
 
 | Tool                  | Per-user envs | Shared envs | Portable | Network-friendly | Complexity |
 | --------------------- | - | - | - | - | - |
+| **dotenv**            | ✅ Yes | ❌ No | ✅ Yes | ❌ No | ✅ Low |
 | **virtualenv / venv** | ✅ Yes | ❌ No | ❌ No | ❌ No | ✅ Low|
 | **conda**             | ✅ Yes | ⚠️ Not really | ⚠️ Weak | ⚠️ Mixed | ⚠️ Medium |
 | **rez**               | ❌ No | ✅ Yes | ✅ Yes | ✅ Yes | ⚠️ Heavy |
@@ -145,8 +146,8 @@ curated workflows.
 
 ## envstack + distman
 
-envstack is often paired with **distman** to form a lightweight, explicit
-environment system.
+envstack is often paired with [distman](https://distman.dev) to form a lightweight,
+explicit environment system.
 
 ### distman
 distman provides:

@@ -21,8 +21,8 @@ Environment variable composition and activation layer for tools and processes.
 - Shared, policy-driven environments
 - Inspectable and deterministic behavior
 
-envstack environments are layered hierarchically, with later layers inheriting
-from and overriding earlier ones.
+envstack environments are layered explicitly. Stack files identify what is being
+configured, directories identify scope, and ordering determines precedence.
 
 ```mermaid
 flowchart LR
@@ -31,8 +31,10 @@ flowchart LR
   prod --> test[test.env]
 ```
 
-Later layers override earlier ones. Use envstack -t VAR to trace where a value
-comes from. envstack focuses on **configuration and activation**, not dependency
+Later layers override earlier ones within the resolved stack. Across
+directories, envstack searches `ENVPATH` from left to right, so earlier paths
+have higher precedence. Use `envstack -t VAR` to trace where a value comes
+from. envstack focuses on **configuration and activation**, not dependency
 resolution.
 
 For the core concepts, see
@@ -95,8 +97,14 @@ envstack discovers environment definitions via the `ENVPATH` environment variabl
 ```bash
 ENVPATH=/path/to/dev/env:/path/to/prod/env
 ```
-In this case, environments in dev override or layer on top of environments in
-prod.
+
+envstack searches these directories from left to right. Earlier paths have
+higher precedence, so a stack found in `/path/to/dev/env` overrides the same
+stack found in `/path/to/prod/env`.
+
+As a rule of thumb:
+
+> Files identify stacks; directories identify scope; `ENVPATH` defines precedence.
 
 ## Converting `.env` files
 
