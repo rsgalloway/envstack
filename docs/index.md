@@ -47,8 +47,7 @@ export ENVPATH=/studio/project/foo/env:/studio/prod/env
 envstack mytool
 ```
 
-envstack searches `ENVPATH` from left to right. Earlier paths have higher
-precedence.
+`ENVPATH` is ordered; earlier paths have higher precedence than later ones.
 
 That gives envstack a compact mental model:
 
@@ -175,8 +174,8 @@ put the development directory first:
 export ENVPATH=/path/to/dev/env:/path/to/prod/env
 ```
 
-envstack searches from left to right, so `/path/to/dev/env` takes precedence
-over `/path/to/prod/env`.
+Because earlier `ENVPATH` entries have higher precedence, `/path/to/dev/env`
+takes precedence over `/path/to/prod/env`.
 
 ## Converting `.env` files
 

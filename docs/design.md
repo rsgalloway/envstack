@@ -109,15 +109,14 @@ variable.
 `ENVPATH` is an ordered, colon-separated list of directories that envstack
 searches when resolving environment names.
 
-envstack searches `ENVPATH` left-to-right; earlier entries win when the same env
-name exists in multiple locations:
+Earlier `ENVPATH` entries win when the same env name exists in multiple
+locations:
 
 ```bash
 ENVPATH=/mnt/tools/dev/env:/mnt/tools/prod/env
 ```
 
 Resolution follows these rules:
-- Directories are searched left to right
 - Earlier paths have higher precedence
 - Filesystem layout defines hierarchy and scope
 - Changes take effect at activation time

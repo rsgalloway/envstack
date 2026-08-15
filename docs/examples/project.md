@@ -29,8 +29,8 @@ Here the stack name identifies the file, while the directory identified by
 ${ROOT}/${ENV}/env/project.env
 ```
 
-Because `ENVPATH` is ordered left to right, the scoped directory is searched
-before `${ROOT}/prod/env`.
+Because earlier `ENVPATH` entries have higher precedence, the scoped directory
+takes precedence over `${ROOT}/prod/env`.
 
 So any stack name in the `envstack` command becomes the higher-priority scope:
 

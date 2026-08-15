@@ -32,9 +32,9 @@ flowchart LR
 ```
 
 Later layers override earlier ones within the resolved stack. Across
-directories, envstack searches `ENVPATH` from left to right, so earlier paths
-have higher precedence. Use `envstack -t VAR` to trace where a value comes
-from. envstack focuses on **configuration and activation**, not dependency
+directories, `ENVPATH` ordering defines precedence: earlier paths win when the
+same stack exists in multiple locations. Use `envstack -t VAR` to trace where a
+value comes from. envstack focuses on **configuration and activation**, not dependency
 resolution.
 
 For the core concepts, see
@@ -98,9 +98,9 @@ envstack discovers environment definitions via the `ENVPATH` environment variabl
 ENVPATH=/path/to/dev/env:/path/to/prod/env
 ```
 
-envstack searches these directories from left to right. Earlier paths have
-higher precedence, so a stack found in `/path/to/dev/env` overrides the same
-stack found in `/path/to/prod/env`.
+`ENVPATH` ordering defines precedence. Earlier paths win when the same stack
+exists in multiple locations, so a stack found in `/path/to/dev/env` overrides
+the same stack found in `/path/to/prod/env`.
 
 As a rule of thumb:
 

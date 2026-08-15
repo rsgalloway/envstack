@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 
 MERMAID_BLOCK_RE = re.compile(r"```mermaid\s*\n(.*?)\n```", re.DOTALL)
 
+
 def source_doc_url(src_rel: PurePosixPath) -> str:
     """Return the canonical site URL for a markdown source path under docs/."""
     if src_rel == PurePosixPath("index.md"):
@@ -37,11 +38,7 @@ def rewrite_links(content: str, src_rel: PurePosixPath) -> str:
         label = match.group("label")
         target = match.group("target")
 
-        if (
-            "://" in target
-            or target.startswith("#")
-            or target.startswith("mailto:")
-        ):
+        if "://" in target or target.startswith("#") or target.startswith("mailto:"):
             return match.group(0)
 
         if not target.endswith(".md"):
@@ -54,7 +51,7 @@ def rewrite_links(content: str, src_rel: PurePosixPath) -> str:
         if target.startswith("docs/"):
             resolved = PurePosixPath(target[len("docs/") :])
         else:
-            resolved = (src_rel.parent / target_rel)
+            resolved = src_rel.parent / target_rel
 
         normalized = PurePosixPath(*resolved.parts)
         return f"[{label}]({source_doc_url(normalized)})"
@@ -137,7 +134,7 @@ def write_layout(output_dir: Path):
 
           const anchor = document.createElement("a");
           anchor.className = "header-anchor";
-          anchor.href = `#${heading.id}`;
+          anchor.href = `#${encodeURIComponent(heading.id)}`;
           anchor.setAttribute("aria-label", `Link to section: ${heading.textContent.trim()}`);
           anchor.textContent = "#";
           heading.appendChild(anchor);
