@@ -1,5 +1,5 @@
 <p align="left">
-  <img src="assets/envstack.png" alt="envstack logo" width="400">
+  <img src="assets/envstack.png" alt="envstack logo" width="300">
 </p>
 
 envstack is an **environment variable composition and activation layer** for
