@@ -32,14 +32,16 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install mkpages
+        run: python -m pip install --upgrade pip mkpages
+
       - name: Build Jekyll source tree
-        run: |
-          python scripts/build_pages_site.py --output _site_src
+        run: mkpages build docs/ --output .mkpages
 
       - name: Build site with Jekyll
         uses: actions/jekyll-build-pages@v1
         with:
-          source: _site_src
+          source: ./.mkpages
           destination: _site
 
       - name: Upload Pages artifact
