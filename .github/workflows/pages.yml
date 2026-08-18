@@ -1,4 +1,4 @@
-name: publish-docs
+name: Pages
 
 on:
   push:
@@ -50,11 +50,11 @@ jobs:
           path: _site
 
   deploy:
+    needs: build
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-24.04
-    needs: build
 
     steps:
       - name: Deploy to GitHub Pages
