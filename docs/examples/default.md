@@ -210,3 +210,7 @@ Resolves to:
 $ envstack -r
 FOO=baz
 ```
+
+For the complete expansion syntax reference, including `${VAR}`,
+`${VAR:=default}`, `${VAR:-default}`, and `${VAR:?message}`, see
+[Variable expansion](../expansion.md).

@@ -54,6 +54,10 @@ This matches the CLI's resolved mode:
 $ envstack default -r
 ```
 
+For the full expansion grammar, including `${VAR:=default}`,
+`${VAR:-default}`, and `${VAR:?message}`, see
+[Variable expansion](expansion.md).
+
 ## Loading inherited stacks
 
 The `dev` example includes `default`, then overrides a few values:

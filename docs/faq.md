@@ -151,6 +151,15 @@ Yes.
 envstack supports platform-specific configuration and works on Linux, macOS,
 and Windows. Platform differences must still be modeled explicitly.
 
+## Does envstack support Bash-style expansion modifiers?
+
+Yes.
+
+envstack supports `${VAR}`, `${VAR:=default}`, `${VAR:-default}`, and
+`${VAR:?message}`, including nested forms.
+
+See [Variable expansion](expansion.md) for the full reference.
+
 ## Why is envstack opinionated?
 
 Because unopinionated configuration systems tend to accumulate complexity
