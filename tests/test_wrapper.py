@@ -33,6 +33,7 @@
 Contains unit tests for the wrapper.py module.
 """
 
+import json
 import os
 import sys
 from types import SimpleNamespace
@@ -102,6 +103,80 @@ def test_run_command_brace_expands_to_env_value(stub_env, capfd):
     assert rc == 0
     assert "{ROOT}" not in out
     assert "envstack-root" in out
+
+
+@pytest.mark.parametrize("shell", ["cmd", "cmd.exe"])
+def test_cli_windows_powershell_path_with_spaces(stub_env, monkeypatch, shell):
+    from envstack import cli
+
+    path = r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs\Startup\example.ps1"
+    monkeypatch.setattr(wrapper_mod.config, "SHELL", shell)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "envstack",
+            "project",
+            "--",
+            "powershell",
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            path,
+        ],
+    )
+    calls = []
+
+    def fake_run(command, **kwargs):
+        calls.append((command, kwargs))
+        return SimpleNamespace(returncode=7)
+
+    monkeypatch.setattr(wrapper_mod.subprocess, "run", fake_run)
+    assert cli.main() == 7
+    command, kwargs = calls[0]
+    assert command == (
+        f'{shell} /s /c "powershell -NoProfile -ExecutionPolicy Bypass -File "{path}""'
+    )
+    assert kwargs["shell"] is False
+
+
+def test_cmdwrapper_quotes_executable_and_arguments(stub_env, monkeypatch):
+    monkeypatch.setattr(wrapper_mod.config, "SHELL", "cmd")
+    command = wrapper_mod.CmdWrapper(
+        "hello", [r"C:\Program Files\tool.exe", "", "two words", "C:\\space dir\\"]
+    ).get_subprocess_command({})
+    assert command == (
+        'cmd /s /c ""C:\\Program Files\\tool.exe" "" "two words" "C:\\space dir\\\\""'
+    )
+
+
+@pytest.mark.skipif(not IS_WINDOWS, reason="Requires Windows cmd.exe")
+@pytest.mark.parametrize("shell", ["cmd", "cmd.exe"])
+def test_windows_command_argument_roundtrip(stub_env, monkeypatch, tmp_path, capfd, shell):
+    monkeypatch.setattr(wrapper_mod.config, "SHELL", shell)
+    script = tmp_path / "script with spaces.py"
+    script.write_text("import json, sys; print(json.dumps(sys.argv[1:]))\n")
+    args = ["two words", "", "C:\\space dir\\", "O'Brien"]
+    assert run_command([sys.executable, str(script)] + args, namespace="hello") == 0
+    out, err = capfd.readouterr()
+    assert json.loads(out) == args
+
+
+@pytest.mark.skipif(not IS_WINDOWS, reason="Requires Windows PowerShell")
+def test_windows_powershell_script_path_with_spaces(stub_env, tmp_path, capfd):
+    script = tmp_path / "Start Menu" / "Programs" / "Startup" / "example.ps1"
+    script.parent.mkdir(parents=True)
+    script.write_text("Write-Output 'script ran'\nexit 7\n")
+    assert (
+        run_command(
+            ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)],
+            namespace="hello",
+        )
+        == 7
+    )
+    out, err = capfd.readouterr()
+    assert out.strip() == "script ran"
 
 
 @pytest.mark.skipif(not IS_WINDOWS, reason="Windows only")

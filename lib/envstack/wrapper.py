@@ -219,11 +219,15 @@ class CmdWrapper(CommandWrapper):
         self.shell = False
         self._cmd_exe = config.SHELL  # expected: "cmd" or "cmd.exe"
 
-        # Join the intended argv into one command-line string for /c
-        cmdline = shell_join(self.cmd)
+        # Preserve argv boundaries using Windows quoting, not POSIX shlex.
+        cmdline = subprocess.list2cmdline(self.cmd)
 
-        # cmd.exe /c <command>
-        self._subprocess_argv = [self._cmd_exe, "/c", cmdline]
+        # /s removes the outer quotes while preserving quoted paths inside /c.
+        # Pass a string: an argv list would make subprocess escape those quotes
+        # a second time using C runtime rules, which cmd.exe does not understand.
+        self._subprocess_command = '{} /s /c "{}"'.format(
+            subprocess.list2cmdline([self._cmd_exe]), cmdline
+        )
 
     def executable(self):
         return self._cmd_exe
@@ -233,7 +237,7 @@ class CmdWrapper(CommandWrapper):
         return []
 
     def get_subprocess_command(self, env):
-        return list(self._subprocess_argv)
+        return self._subprocess_command
 
 
 def capture_output(
@@ -326,7 +330,7 @@ def run_command(command: str, namespace: str = config.DEFAULT_NAMESPACE):
 
         return CommandWrapper(namespace, argv).launch()
 
-    if shellname in ["cmd"]:
+    if shellname in ["cmd", "cmd.exe"]:
         expr = [re.sub(r"\{(\w+)\}", r"%\1%", a) for a in argv]
         return CmdWrapper(namespace, expr).launch()
 

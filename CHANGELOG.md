@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- preserve Windows command argument quoting after `--`, including PowerShell script paths with spaces (#138)
+
+---
+
 ## [1.0.4] - 2026-07-25
 
 ### Added
