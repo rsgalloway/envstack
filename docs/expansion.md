@@ -114,6 +114,44 @@ PATH: ${DEPLOY_ROOT}/bin:${PATH}
 That makes it easy to build derived paths, URLs, prompts, or command lines from
 shared variables.
 
+## Self-References Across Includes
+
+When a stack extends its own variable, `${VAR}` uses the value built by earlier
+sources in load order. The process environment supplies the initial value when
+no earlier source defines it. Shared includes are loaded only once.
+
+For example, with `PYTHONPATH=ORIG` in the shell:
+
+```yaml
+# default.env
+all:
+  PYTHONPATH: /base:${PYTHONPATH}
+
+# toola.env
+include: [default]
+all:
+  PYTHONPATH: ${PYTHONPATH}:/toola
+
+# toolb.env
+include: [default]
+all:
+  PYTHONPATH: ${PYTHONPATH}:/toolb
+
+# app.env
+include: [toola, toolb]
+all:
+  PYTHONPATH: ${PYTHONPATH}:/app
+```
+
+Loading `app` produces `/base:ORIG:/toola:/toolb:/app`. Loading `toola toolb`
+produces `/base:ORIG:/toola:/toolb`. With the shell variable unset or empty,
+the `ORIG` component is omitted. A literal assignment such as
+`PYTHONPATH: /replacement` resets the accumulated value.
+
+References to other variables still use the final stack definitions, allowing
+an application to override a tool root used by an inherited path. Platform
+sections follow the platform selected when loading the environment.
+
 ## Template Tokens Stay Literal
 
 envstack only resolves `${NAME}`-style expressions.

@@ -374,7 +374,7 @@ def evaluate_modifiers(
         operator = match.group(2)  # '=', '-', '?', or None
         argument = match.group(3)  # may be None
         parent_value = parent.get(var_name, "")
-        override = os.getenv(var_name, parent_value)
+        override = parent.get(var_name, os.getenv(var_name, ""))
         current = str(environ.get(var_name, parent_value or ""))  # current value we have
         varstr = "${%s}" % var_name
 

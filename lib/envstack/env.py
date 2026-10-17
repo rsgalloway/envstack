@@ -259,6 +259,7 @@ class Env(dict):
         super(Env, self).__init__(*args, **kwargs)
         self.scope = os.getcwd()
         self.sources = []
+        self.platform = config.PLATFORM
 
     def load_source(self, source: Source, platform=config.PLATFORM):
         """Loads environment from a given Source object. Appends to sources
@@ -267,6 +268,7 @@ class Env(dict):
         :param source: Source object.
         :param platform: name of platform (linux, darwin, windows).
         """
+        self.platform = platform
         self.sources.append(source)
         self.update(source.load(platform=platform))
 
@@ -842,19 +844,6 @@ def resolve_environ(env: Env):
     # copy env to avoid modifying the original
     env_copy = env.copy()
 
-    # evaluate one source environment at a time
-    seen_source_paths = []
-    included = Env()
-    sources = env.sources[:-1]
-    sources.reverse()
-    for source in sources:
-        if source.path in seen_source_paths:
-            continue
-        seen_source_paths.append(source.path)
-        source_environ = resolve_environ(Env(source.load()))
-        for key, value in source_environ.items():
-            included[key] = util.evaluate_modifiers(value, environ=source_environ)
-
     # make a copy that contains the encryption keys
     env_keys = env.copy()
     env_keys.update(get_keys_from_env(os.environ))
@@ -863,6 +852,30 @@ def resolve_environ(env: Env):
     for key, value in list(env_copy.items()):
         if type(value) in custom_node_types:
             env_copy[key] = value.resolve(env=env_keys)
+
+    # Build the value preceding each variable's final definition. A variable
+    # may be inherited unchanged by the last source, so source position alone
+    # cannot tell us which definition is final.
+    layers = []
+    seen_source_paths = set()
+    for source in env.sources:
+        if source.path not in seen_source_paths:
+            layers.append(dict(source.load(platform=env.platform)))
+            seen_source_paths.add(source.path)
+    last_definition = {key: i for i, layer in enumerate(layers) for key in layer}
+    included = Env()
+    for i, layer in enumerate(layers):
+        previous = {}
+        for key, value in layer.items():
+            if i < last_definition[key]:
+                # Other variables remain late-bound to the final stack, while
+                # this variable uses its definition at the current layer.
+                context = env_copy.copy()
+                if type(value) in custom_node_types:
+                    value = value.resolve(env=env_keys)
+                context[key] = value
+                previous[key] = util.evaluate_modifiers(value, environ=context, parent=included)
+        included.update(previous)
 
     # resolve environment variables after decrypting custom nodes
     for key, value in list(env_copy.items()):

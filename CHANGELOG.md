@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- accumulate self-references across included stacks and multiple stack arguments, using the previous stack value before falling back to the shell (#140)
+- preserve the selected platform when resolving inherited stack values
+
+---
+
 ## [1.0.4] - 2026-07-25
 
 ### Added
