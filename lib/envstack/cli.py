@@ -219,15 +219,12 @@ def parse_args():
         help="overlay KEY=VALUE pairs to envstack environments",
     )
     parser.add_argument(
-        "--scope",
-        metavar="SCOPE",
-        help="search scope for environment stack files",
-    )
-    parser.add_argument(
         "-u",
         "--unresolved",
-        action="store_true",
-        help="dump unresolved environment variables to stdout",
+        nargs="*",
+        action=StoreOnce,
+        metavar="VAR",
+        help="show unresolved values for VARs (default: all); put STACKs before -u",
     )
     parser.add_argument(
         "-r",
@@ -453,10 +450,15 @@ def main():
             for source in env.sources:
                 print(source.path)
 
-        elif args.unresolved:
+        elif args.unresolved is not None:
             env = load_environ(args.namespace, platform=args.platform, encrypt=args.encrypt)
-            for k, v in sorted(env.items(), key=lambda x: str(x[0])):
-                print(f"{k}={v}")
+            keys = args.unresolved or env.keys()
+            if args.quiet and len(keys) != 1:
+                print("error: --quiet requires exactly one KEY")
+                return 2
+            for key in sorted(str(k) for k in keys):
+                if key in env:
+                    print(env[key] if args.quiet else f"{key}={env[key]}")
 
         else:
             return envshell(args.namespace, quiet=args.quiet)

@@ -11,7 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- remove the unused CLI `--scope` option (#131). Use `ENVPATH` to select stack search directories; the Python API `scope` parameter remains supported.
+
 - remove the legacy `envstack.path` API (`Path`, `Template`, `get_scope`, `get_template`, `match_template`, and `extract_fields`), its unused `env.Scope` wrapper, and path-only exceptions (#132). Use `pathlib` or `os.path` for filesystem operations and application-owned code for path templating; stack discovery continues to use `ENVPATH` and the current directory or explicit scope.
+
+### Changed
+
+- allow `-u`/`--unresolved` to select zero or more variables, matching `-r`/`--resolve`, with `-q` for a single value. Put stack names before the option: replace `envstack -u dev` with `envstack dev -u`.
 
 ### Added
 
