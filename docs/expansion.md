@@ -134,7 +134,9 @@ shell when there is no preceding definition.
 Default operators apply to the effective value: `${VAR:-default}` returns
 `default` when that value is unset or empty, while `${VAR:=default}` also
 makes the default available to subsequent references during resolution.
-These assignments do not rewrite the original stack definitions.
+These assignments do not rewrite the original stack definitions. A default
+assigned by a self-reference stays local to that definition; other variables
+still see its complete final value, including any appended suffixes.
 
 ## Self-References Across Includes
 

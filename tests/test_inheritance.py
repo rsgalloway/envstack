@@ -349,3 +349,32 @@ def test_empty_assignment_resets_inherited_paths(stacks, monkeypatch, variable, 
     write("app", {variable: "${" + variable + "}:/app"}, ["reset"])
     resolved = resolve_environ(load_environ("app", scope=str(root)))
     assert resolved[variable] == resolved["ALIAS"] == path_separator.join(["/app"])
+
+
+@pytest.mark.parametrize("reverse_keys", [False, True])
+@pytest.mark.parametrize("operator", [":=", ":-"])
+@pytest.mark.parametrize("shell_root", [None, "/shell"])
+def test_inherited_default_preserves_final_root(
+    stacks, monkeypatch, reverse_keys, operator, shell_root
+):
+    root, write = stacks
+    if shell_root is None:
+        monkeypatch.delenv("ROOT", raising=False)
+    else:
+        monkeypatch.setenv("ROOT", shell_root)
+    write("base", {"ROOT": "${ROOT" + operator + "/base}"})
+    write("middle", {"ROOT": "${ROOT}/middle"}, ["base"])
+    values = {"ROOT": "${ROOT}/suffix", "LIB": "${ROOT}/lib", "ALIAS": "${ROOT}"}
+    if reverse_keys:
+        values = dict(reversed(list(values.items())))
+    write("app", values, ["middle"])
+    raw = load_environ("app", scope=str(root))
+    original = dict(raw)
+
+    resolved = resolve_environ(raw)
+
+    expected = (shell_root or "/base") + "/middle/suffix"
+    assert resolved["ROOT"] == resolved["ALIAS"] == expected
+    assert resolved["LIB"] == expected + "/lib"
+    assert dict(raw) == original
+    assert resolve_environ(raw) == resolved

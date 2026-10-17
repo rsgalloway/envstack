@@ -445,3 +445,21 @@ def test_absent_or_self_referencing_variable_uses_shell(monkeypatch, value):
     if value is not None:
         env["A"] = value
     assert resolve_environ(env)["B"] == "shell"
+
+
+@pytest.mark.parametrize("reverse_keys", [False, True])
+@pytest.mark.parametrize("operator", [":=", ":-"])
+def test_embedded_self_default_preserves_final_value(monkeypatch, reverse_keys, operator):
+    monkeypatch.delenv("ROOT", raising=False)
+    env = {"ROOT": "${ROOT" + operator + "/base}/suffix", "LIB": "${ROOT}/lib"}
+    if reverse_keys:
+        env = dict(reversed(list(env.items())))
+    resolved = resolve_environ(env)
+    assert resolved["ROOT"] == "/base/suffix"
+    assert resolved["LIB"] == "/base/suffix/lib"
+
+
+def test_self_assignment_is_available_within_its_definition(monkeypatch):
+    monkeypatch.delenv("A", raising=False)
+    resolved = resolve_environ({"A": "${A:=hello}|${A}", "B": "${A}"})
+    assert resolved["A"] == resolved["B"] == "hello|hello"

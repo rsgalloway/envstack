@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - preserve explicit empty strings when referenced, overriding included and shell values; empty assignments reset accumulated paths
 - retain `:=` assignments for subsequent references to explicitly empty variables
+- keep self-default assignments local to their definition so inherited defaults do not shadow final values
 - respect variables deleted from a loaded environment instead of restoring them from source history
 - accumulate self-references across included stacks and multiple stack arguments, using the previous stack value before falling back to the shell (#140)
 - preserve the selected platform when resolving inherited stack values

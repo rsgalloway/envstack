@@ -52,9 +52,9 @@ def evaluate_modifiers(
     Evaluates Bash-like variable expansion modifiers.
 
     - ${VAR}              → empty string if unset
-    - ${VAR:=default}     → if unset/null, set to default and use it
-    - ${VAR:-default}     → if unset/null, use default (do not set)
-    - ${VAR:?message}     → error if unset/null
+    - ${VAR:=default}     → if unset/empty, set to default and use it
+    - ${VAR:-default}     → if unset/empty, use default (do not set)
+    - ${VAR:?message}     → error if unset/empty
 
     :param expression: The string to evaluate.
     :param environ: The environment variables to use for substitution.
@@ -68,6 +68,7 @@ def evaluate_modifiers(
         resolving = set()
 
     def sanitize_value(value):
+        """Normalize path lists and remove unmatched trailing expansion braces."""
         if isinstance(value, str) and value.endswith("}") and not value.startswith("${"):
             # trim a dangling '}' when there's no matching '{'
             if value.count("{") == 0 and value.count("}") == 1:
@@ -78,18 +79,19 @@ def evaluate_modifiers(
         return value
 
     def is_template(s: str) -> bool:
-        # Check if the string is a template variable like ${VAR}
+        """Return whether a string contains a supported variable expansion."""
         return isinstance(s, str) and bool(variable_pattern.search(s))
 
     def non_empty(s: str) -> bool:
-        # non-empty string, not just whitespace
+        """Return whether the value is a string with at least one character."""
         return isinstance(s, str) and s != ""
 
     def is_literal(s: str) -> bool:
-        # non-empty, does not contain ${...}
+        """Return whether a nonempty string contains no variable expansions."""
         return isinstance(s, str) and s != "" and not is_template(s)
 
     def substitute_variable(match):
+        """Expand one matched reference using the supplied lookup or mappings."""
         if reference is not None:
             return str(reference(match.group(1), match.group(2), match.group(3)))
 
@@ -228,7 +230,14 @@ def evaluate_modifiers(
 
 
 def resolve_environment(env):
-    """Resolve a loaded environment without modifying its source definitions."""
+    """Resolve a loaded environment without modifying its source definitions.
+
+    Decrypt values and collect definition history before evaluating references.
+    Source history follows the platform selected when the environment was loaded.
+
+    :param env: An Env instance with source history, or a plain variable mapping.
+    :returns: A new Env containing resolved values with supported types restored.
+    """
     from envstack.env import Env
     from envstack.node import custom_node_types, get_keys_from_env
 
@@ -284,13 +293,31 @@ class _StackResolver:
     """
 
     def __init__(self, environ, definitions):
+        """Initialize dependency tracking and default-assignment scopes.
+
+        :param environ: The final variable mapping used for expression evaluation.
+        :param definitions: Variable names mapped to definitions in load order,
+            from earliest to latest.
+        """
         self.environ = environ
         self.definitions = definitions
         self.active = []
         self.limits = {}
         self.assigned = {}
+        self.local_assigned = {}
 
     def resolve(self, key, index=None):
+        """Evaluate a definition, falling back through history to break cycles.
+
+        Ordinary dependencies use their final definitions. Recursive dependencies
+        use earlier definitions where available, then the process environment.
+        Self-default assignments are discarded when their definition completes.
+
+        :param key: The variable to resolve.
+        :param index: Definition index, or None for the latest allowed definition.
+            A negative index selects the assignment or shell fallback.
+        :returns: The expanded value before final type conversion.
+        """
         history = self.definitions.get(key, [])
         if index is None:
             index = self.limits.get(key, len(history) - 1)
@@ -313,17 +340,39 @@ class _StackResolver:
             return evaluate_modifiers(history[index], self.environ, reference=self.reference)
         finally:
             self.active.pop()
+            self.local_assigned.pop(frame, None)
 
     def reference(self, key, operator, argument):
-        # Assignments affect subsequent references, not source definitions.
-        value = self.assigned[key] if key in self.assigned else self.resolve(key)
+        """Resolve one reference and apply its optional expansion modifier.
+
+        Assignments from := remain available to subsequent references. A
+        self-assignment stays local to the active definition so it cannot shadow
+        the variable's complete final value in other definitions.
+
+        :param key: The referenced variable name.
+        :param operator: "=", "-", "?", or None for a plain reference.
+        :param argument: The fallback expression or required-value error message.
+        :returns: The referenced value or evaluated fallback.
+        :raises ValueError: If a required value is unset or empty.
+        """
+        # A self-default belongs to the active definition. Keep it available
+        # within that definition, but do not let it shadow the final value
+        # when another variable refers to this one after resolution.
+        frame = next((frame for frame in reversed(self.active) if frame[0] == key), None)
+        assignments = self.local_assigned.setdefault(frame, {}) if frame else self.assigned
+        if key in assignments:
+            value = assignments[key]
+        elif key in self.assigned:
+            value = self.assigned[key]
+        else:
+            value = self.resolve(key)
         if operator in ("=", "-"):
             # resolve() already applies stack precedence and shell fallback.
             # An explicit empty value therefore takes the requested default.
             if not value:
                 value = evaluate_modifiers(argument or "", self.environ, reference=self.reference)
                 if operator == "=":
-                    self.assigned[key] = value
+                    assignments[key] = value
             return value
         if operator == "?" and not value:
             raise ValueError(argument or f"{key} is not set")
