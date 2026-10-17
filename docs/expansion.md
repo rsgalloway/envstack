@@ -114,6 +114,80 @@ PATH: ${DEPLOY_ROOT}/bin:${PATH}
 That makes it easy to build derived paths, URLs, prompts, or command lines from
 shared variables.
 
+## Explicit Empty Values
+
+An empty string deliberately overrides values from included stacks and the shell:
+
+```yaml
+VAR: ""
+OTHER: ${VAR}
+```
+
+Both resolve to an empty string, even if the shell sets `VAR`. An empty
+assignment also resets an accumulated search path. Later stacks can append
+new entries without restoring paths from before the reset.
+
+A variable absent from the stack can still fall back to the shell. A
+self-reference such as `VAR: ${VAR}` uses the preceding definition, or the
+shell when there is no preceding definition.
+
+Default operators apply to the effective value: `${VAR:-default}` returns
+`default` when that value is unset or empty, while `${VAR:=default}` also
+makes the default available to subsequent references during resolution.
+These assignments do not rewrite the original stack definitions. A default
+assigned by a self-reference stays local to that definition; other variables
+still see its complete final value, including any appended suffixes.
+
+## Self-References Across Includes
+
+When a stack extends its own variable, `${VAR}` uses the value built by earlier
+sources in load order. The process environment supplies the initial value when
+no earlier source defines it. Shared includes are loaded only once.
+
+For example, with `PYTHONPATH=ORIG` in the shell:
+
+```yaml
+# default.env
+all:
+  PYTHONPATH: /base:${PYTHONPATH}
+
+# toola.env
+include: [default]
+all:
+  PYTHONPATH: ${PYTHONPATH}:/toola
+
+# toolb.env
+include: [default]
+all:
+  PYTHONPATH: ${PYTHONPATH}:/toolb
+
+# app.env
+include: [toola, toolb]
+all:
+  PYTHONPATH: ${PYTHONPATH}:/app
+```
+
+Loading `app` produces `/base:ORIG:/toola:/toolb:/app`. Loading `toola toolb`
+produces `/base:ORIG:/toola:/toolb`. With the shell variable unset or empty,
+the `ORIG` component is omitted. A literal assignment such as
+`PYTHONPATH: /replacement` resets the accumulated value.
+
+These rules apply to `PATH` and custom variables as well as `PYTHONPATH`. See
+[Tools and inheritance](examples/tools.md) for versioned package
+paths and Windows native-library directories.
+
+References to other variables still use the final stack definitions, allowing
+an application to override a tool root used by an inherited path. Platform
+sections and path delimiters follow the platform selected when loading the
+environment, even when it differs from the host platform.
+
+Aliases also remain late-bound. For example, if a base stack defines
+`FOO: /base` and `BAR: ${FOO}`, and an application stack includes it and overrides
+`FOO: ${BAR}:/app`, both variables resolve to `/base:/app`. The indirect
+self-reference uses the earlier definition of `FOO` to break the cycle.
+Unlike sequential shell assignments, `BAR` does not capture a snapshot of
+`FOO` when it is defined. YAML key order does not determine resolution order.
+
 ## Template Tokens Stay Literal
 
 envstack only resolves `${NAME}`-style expressions.

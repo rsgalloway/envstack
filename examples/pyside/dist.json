@@ -1,0 +1,19 @@
+{
+  "options": {
+    "match": "content"
+  },
+  "targets": {
+    "env": {
+      "source": "*.env",
+      "destination": "{DEPLOY_ROOT}/env/%1.env"
+    },
+    "pyside6": {
+      "source": "staging/pyside6/6.8.3/*",
+      "destination": "{DEPLOY_ROOT}/tools/pyside6/6.8.3/%1"
+    },
+    "hello": {
+      "source": "hello.py",
+      "destination": "{DEPLOY_ROOT}/apps/pyside/hello.py"
+    }
+  }
+}

@@ -45,7 +45,7 @@ from collections import OrderedDict
 import yaml
 
 from envstack import config
-from envstack.node import AESGCMNode, Base64Node, CustomLoader, EncryptedNode, FernetNode
+from envstack.node import CustomLoader
 
 # default memoization cache timeout in seconds
 CACHE_TIMEOUT = 5
@@ -55,9 +55,6 @@ null = ""
 
 # regular expression pattern for matching windows drive letters
 drive_letter_pattern = re.compile(r"(?P<sep>[:;])?(?P<drive>[A-Z]:[/\\])")
-
-# regular expression pattern for bash-like variable expansion
-variable_pattern = re.compile(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?::([-=?])((?:\$\{[^}]+\}|[^}])*))?\}")
 
 # regular expression pattern for command substitution
 cmdsub_pattern = re.compile(r"^\s*\$\((?P<cmd>.*)\)\s*$", re.DOTALL)
@@ -320,178 +317,6 @@ def get_stack_name(name: str = config.DEFAULT_NAMESPACE):
         return os.path.splitext(os.path.basename(name))[0]
     else:
         raise ValueError("Invalid input type. Expected string, tuple, or list.")
-
-
-def evaluate_modifiers(
-    expression: str,
-    environ: dict = os.environ,
-    parent: dict = {},
-    resolving: set = None,
-):
-    """
-    Evaluates Bash-like variable expansion modifiers.
-
-    - ${VAR}              → empty string if unset
-    - ${VAR:=default}     → if unset/null, set to default and use it
-    - ${VAR:-default}     → if unset/null, use default (do not set)
-    - ${VAR:?message}     → error if unset/null
-
-    :param expression: The string to evaluate.
-    :param environ: The environment variables to use for substitution.
-    :param parent: Parent environment variables to use for substitution.
-    :param resolving: A set of currently resolving variables to prevent cycles.
-    :returns: The evaluated string with variables substituted.
-    :raises ValueError: If a variable is not set and a message is provided.
-    """
-    if resolving is None:
-        resolving = set()
-
-    def sanitize_value(value):
-        if isinstance(value, str) and value.endswith("}") and not value.startswith("${"):
-            # trim a dangling '}' when there's no matching '{'
-            if value.count("{") == 0 and value.count("}") == 1:
-                return value.rstrip("}")
-            return value
-        elif isinstance(value, str) and detect_path(value):
-            return dedupe_paths(value)
-        return value
-
-    def is_template(s: str) -> bool:
-        # Check if the string is a template variable like ${VAR}
-        return isinstance(s, str) and bool(variable_pattern.search(s))
-
-    def non_empty(s: str) -> bool:
-        # non-empty string, not just whitespace
-        return isinstance(s, str) and s != ""
-
-    def is_literal(s: str) -> bool:
-        # non-empty, does not contain ${...}
-        return isinstance(s, str) and s != "" and not is_template(s)
-
-    def substitute_variable(match):
-        # extract variable name, operator, and argument from the match
-        var_name = match.group(1)
-        operator = match.group(2)  # '=', '-', '?', or None
-        argument = match.group(3)  # may be None
-        parent_value = parent.get(var_name, "")
-        override = os.getenv(var_name, parent_value)
-        current = str(environ.get(var_name, parent_value or ""))  # current value we have
-        varstr = "${%s}" % var_name
-
-        # cycle / self-reference guard
-        if var_name in resolving:
-            if operator in ("=", "-"):
-                # if os/parent provides a value, that wins over the default
-                if override:
-                    return str(override)
-                default = evaluate_modifiers(argument or "", environ, parent, resolving)
-                if operator == "=":
-                    environ[var_name] = default
-                return str(default)
-            elif operator == "?":
-                msg = argument or f"{var_name} is not set"
-                raise ValueError(msg)
-            else:  # plain ${VAR}
-                return str(override or "")
-
-        resolving.add(var_name)
-        try:
-            # replace literal self-references inside current (best-effort)
-            if current and varstr in current:
-                current = current.replace(varstr, override or "")
-
-            # defaults branch (:=, :-)
-            if operator in ("=", "-"):
-                # 1) explicit env/parent wins if non-empty (bash: considered "set")
-                if non_empty(override):
-                    return str(override)
-
-                # 2) compute the effective value of the current entry
-                if is_template(current):
-                    eff = evaluate_modifiers(current, environ, parent, resolving)
-                else:
-                    eff = current or ""
-
-                # 3) if effective value is non-empty, do NOT take default
-                if non_empty(eff):
-                    return str(eff)
-
-                # 4) unset or null,  use default (and assign for :=)
-                default = evaluate_modifiers(argument or "", environ, parent, resolving)
-                if operator == "=":
-                    environ[var_name] = default
-                return str(default)
-
-            # error branch (:?)
-            elif operator == "?":
-                if not current:
-                    msg = argument or f"{var_name} is not set"
-                    raise ValueError(msg)
-                # resolve if it contains vars
-                return (
-                    evaluate_modifiers(current, environ, parent, resolving)
-                    if variable_pattern.search(current)
-                    else current
-                )
-
-            elif operator is None:
-                # check for command substitution
-                if config.ALLOW_COMMANDS and cmdsub_pattern.match(str(current)):
-                    return str(evaluate_command(current))
-                if is_literal(current):
-                    return current  # file literal wins
-                if is_template(current):
-                    return str(evaluate_modifiers(current, environ, parent, resolving))
-                # current is unset/empty, use parent/os if present, else empty
-                return str(override or "")
-
-            # simple ${VAR}
-            else:
-                value = current or override or ""
-                if variable_pattern.search(value):
-                    value = evaluate_modifiers(value, environ, parent, resolving)
-                return str(value)
-
-        finally:
-            resolving.discard(var_name)
-
-    try:
-        if isinstance(expression, (int, float, bool)):
-            expression = str(expression)
-
-        result = variable_pattern.sub(substitute_variable, expression)
-
-        if variable_pattern.search(result):
-            result = evaluate_modifiers(result, environ, parent, resolving)
-
-    except RecursionError:
-        # treat cycles as empty string instead of crashing (like bash)
-        result = ""
-
-    except TypeError:
-        # node/list/dict handlers
-        if isinstance(expression, AESGCMNode):
-            result = expression.resolve(env=environ)
-        elif isinstance(expression, Base64Node):
-            result = expression.resolve(env=environ)
-        elif isinstance(expression, EncryptedNode):
-            result = expression.resolve(env=environ)
-        elif isinstance(expression, FernetNode):
-            result = expression.resolve(env=environ)
-        elif isinstance(expression, list):
-            result = [evaluate_modifiers(v, environ, parent) for v in expression]
-        elif isinstance(expression, dict):
-            result = {k: evaluate_modifiers(v, environ, parent) for k, v in expression.items()}
-        else:
-            result = expression
-
-    resolved_value = sanitize_value(result)
-
-    # command substitution
-    if config.ALLOW_COMMANDS and isinstance(resolved_value, str):
-        resolved_value = evaluate_command(resolved_value)
-
-    return resolved_value
 
 
 def evaluate_command(command: str):
