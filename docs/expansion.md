@@ -178,7 +178,8 @@ paths and Windows native-library directories.
 
 References to other variables still use the final stack definitions, allowing
 an application to override a tool root used by an inherited path. Platform
-sections follow the platform selected when loading the environment.
+sections and path delimiters follow the platform selected when loading the
+environment, even when it differs from the host platform.
 
 Aliases also remain late-bound. For example, if a base stack defines
 `FOO: /base` and `BAR: ${FOO}`, and an application stack includes it and overrides

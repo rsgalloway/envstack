@@ -1,13 +1,11 @@
 """Check example deployment destinations against their runtime stacks."""
 
 import json
-from functools import partial
 from pathlib import Path
 
 import pytest
 
 from envstack import env as env_module
-from envstack import util
 from envstack.env import load_environ, resolve_environ
 
 
@@ -15,7 +13,6 @@ from envstack.env import load_environ, resolve_environ
 def test_pyside_example(monkeypatch, platform):
     root = Path(__file__).resolve().parents[1] / "examples" / "pyside"
     monkeypatch.setattr(env_module, "seen_stacks", set())
-    monkeypatch.setattr(util, "dedupe_paths", partial(util.dedupe_paths, platform=platform))
     monkeypatch.setenv("ENVPATH", str(root))
     monkeypatch.setenv("ROOT", "/shared")
     monkeypatch.setenv("PYTHONPATH", "/existing/python")

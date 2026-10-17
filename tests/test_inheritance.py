@@ -1,13 +1,11 @@
 """Regression coverage for self-reference accumulation (issue #140)."""
 
 import os
-from functools import partial
 
 import pytest
 import yaml
 
 from envstack import env as env_module
-from envstack import util
 from envstack.env import load_environ, resolve_environ
 
 
@@ -37,14 +35,9 @@ def stacks(tmp_path, monkeypatch):
     return tmp_path, write
 
 
-@pytest.fixture(params=["native", "windows"])
-def path_separator(request, monkeypatch):
-    # Source platform selects YAML data; path normalization uses the host.
-    # Also exercise Windows normalization when the tests run on POSIX.
-    if request.param == "native":
-        return os.pathsep
-    monkeypatch.setattr(util, "dedupe_paths", partial(util.dedupe_paths, platform="windows"))
-    return ";"
+@pytest.fixture
+def path_separator():
+    return os.pathsep
 
 
 @pytest.mark.parametrize("platform", ["linux", "darwin", "windows"])
@@ -58,7 +51,8 @@ def path_separator(request, monkeypatch):
         (["toola", "toolb"], ["toola", "toolb"]),
     ],
 )
-def test_accumulation(stacks, monkeypatch, platform, shell, names, tools, path_separator):
+def test_accumulation(stacks, monkeypatch, platform, shell, names, tools):
+    path_separator = ";" if platform == "windows" else ":"
     root, _ = stacks
     if shell is None:
         monkeypatch.delenv("PYTHONPATH", raising=False)
@@ -87,7 +81,7 @@ def test_literal_reset_and_final_root_override(stacks, monkeypatch, path_separat
     env_module.seen_stacks.clear()
     write("override", {"TOOLA_ROOT": "/custom"}, ["toola"])
     resolved = resolve_environ(load_environ("override", platform="windows", scope=str(root)))
-    assert resolved["PYTHONPATH"] == path_separator.join(["/base", "ORIG", "/custom/windows"])
+    assert resolved["PYTHONPATH"] == ";".join(["/base", "ORIG", "/custom/windows"])
 
 
 @pytest.mark.parametrize("operator", [":=", ":-"])
@@ -100,14 +94,12 @@ def test_defaults_use_nearest_include(stacks, monkeypatch, operator):
     assert resolve_environ(load_environ("third", scope=str(root)))["VALUE"] == "second"
 
 
-def test_root_override_applies_to_accumulated_paths(stacks, monkeypatch, path_separator):
+def test_root_override_applies_to_accumulated_paths(stacks, monkeypatch):
     root, write = stacks
     monkeypatch.setenv("PYTHONPATH", "ORIG")
     write("app", {"TOOLA_ROOT": "/custom", "PYTHONPATH": "${PYTHONPATH}:/app"}, ["toola"])
     resolved = resolve_environ(load_environ("app", platform="windows", scope=str(root)))
-    assert resolved["PYTHONPATH"] == path_separator.join(
-        ["/base", "ORIG", "/custom/windows", "/app"]
-    )
+    assert resolved["PYTHONPATH"] == ";".join(["/base", "ORIG", "/custom/windows", "/app"])
 
 
 @pytest.mark.parametrize("reverse_keys", [False, True])
@@ -156,14 +148,8 @@ def test_self_reference_through_inherited_alias(stacks, monkeypatch, path_separa
 @pytest.mark.parametrize("shell", [None, "", "original"])
 @pytest.mark.parametrize("platform", ["linux", "windows"])
 def test_search_path_variables(stacks, monkeypatch, variable, shell, platform):
-    from functools import partial
-
-    from envstack import util
 
     root, write = stacks
-    # Exercise Windows normalization on POSIX too, without changing filesystem
-    # discovery or pretending to run a Windows executable.
-    monkeypatch.setattr(util, "dedupe_paths", partial(util.dedupe_paths, platform=platform))
     sep = ";" if platform == "windows" else ":"
     base = "C:/shared" if platform == "windows" else "/shared"
     original = "C:/Windows/System32" if platform == "windows" else "/usr/bin"
@@ -187,14 +173,12 @@ def test_search_path_variables(stacks, monkeypatch, variable, shell, platform):
 @pytest.mark.parametrize("python_version", ["3.10", "3.11", "3.12"])
 def test_tools_example(monkeypatch, platform, python_version):
     import json
-    from functools import partial
     from pathlib import Path
 
-    from envstack import config, util, wrapper
+    from envstack import config, wrapper
 
     root = Path(__file__).resolve().parents[1] / "examples" / "tools"
     monkeypatch.setattr(env_module, "seen_stacks", set())
-    monkeypatch.setattr(util, "dedupe_paths", partial(util.dedupe_paths, platform=platform))
     for key in ("PILLOW_ROOT", "OPENEXR_ROOT", "OPENEXR_VERSION", "NUMPY_ROOT", "NUMPY_VERSION"):
         monkeypatch.delenv(key, raising=False)
     monkeypatch.setenv("ENVPATH", str(root))
@@ -378,3 +362,31 @@ def test_inherited_default_preserves_final_root(
     assert resolved["LIB"] == expected + "/lib"
     assert dict(raw) == original
     assert resolve_environ(raw) == resolved
+
+
+@pytest.mark.parametrize("platform", ["linux", "darwin", "windows"])
+def test_selected_platform_controls_path_normalization(stacks, monkeypatch, platform):
+    root, write = stacks
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+    monkeypatch.delenv("MISSING", raising=False)
+    sep = ";" if platform == "windows" else ":"
+    base = "//server/base" if platform == "windows" else "/base"
+    app = "//server/app" if platform == "windows" else "/app"
+    write("base", {"PYTHONPATH": base + sep + base})
+    write(
+        "app",
+        {
+            "PYTHONPATH": "${PYTHONPATH}" + sep + app,
+            "FALLBACK": "${MISSING:-" + base + sep + base + "}",
+            "NESTED": [base + sep + base, {"path": "${PYTHONPATH}"}],
+        },
+        ["base"],
+    )
+
+    resolved = resolve_environ(load_environ("app", platform=platform, scope=str(root)))
+
+    assert resolved["PYTHONPATH"] == sep.join([base, app])
+    assert resolved["FALLBACK"] == base
+    assert resolved["NESTED"] == [base, {"path": sep.join([base, app])}]
+    assert resolved.platform == platform
+    assert resolve_environ(resolved) == resolved

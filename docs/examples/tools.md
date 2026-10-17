@@ -101,10 +101,10 @@ From the repository root, run this one-line check:
 ALLOW_COMMANDS=1 ENVPATH=./examples/tools/ envstack tools -r PYTHONPATH
 ```
 
-For example, on Linux with Python 3.12 and an existing `PYTHONPATH` entry:
+For example, on Linux with Python 3.12 and `PYTHONPATH=/existing/python`:
 
 ```text
-PYTHONPATH=/shared/prod/lib/python:/shared/prod/tools/numpy/2.2.6/linux/python3.12/lib/python:/shared/prod/tools/pillow/12.3.0/linux/lib/python:/shared/prod/tools/openexr/3.4.13/linux/lib/python:/shared/prod/apps/tools/lib/python
+PYTHONPATH=/shared/prod/lib/python:/existing/python:/shared/prod/tools/numpy/2.2.6/linux/python3.12/lib/python:/shared/prod/tools/pillow/12.3.0/linux/lib/python:/shared/prod/tools/openexr/3.4.13/linux/lib/python:/shared/prod/apps/tools/lib/python
 ```
 
 The output retains the shell's existing `PYTHONPATH` and selects the NumPy

@@ -47,6 +47,7 @@ def evaluate_modifiers(
     parent: dict = {},
     resolving: set = None,
     reference=None,
+    platform=config.PLATFORM,
 ):
     """
     Evaluates Bash-like variable expansion modifiers.
@@ -61,6 +62,7 @@ def evaluate_modifiers(
     :param parent: Parent environment variables to use for substitution.
     :param resolving: A set of currently resolving variables to prevent cycles.
     :param reference: Optional lookup for references in a layered environment.
+    :param platform: Platform used to split, deduplicate, and join path values.
     :returns: The evaluated string with variables substituted.
     :raises ValueError: If a variable is not set and a message is provided.
     """
@@ -75,7 +77,7 @@ def evaluate_modifiers(
                 return value.rstrip("}")
             return value
         elif isinstance(value, str) and util.detect_path(value):
-            return util.dedupe_paths(value)
+            return util.dedupe_paths(value, platform=platform)
         return value
 
     def is_template(s: str) -> bool:
@@ -114,7 +116,9 @@ def evaluate_modifiers(
                 # if os/parent provides a value, that wins over the default
                 if override:
                     return str(override)
-                default = evaluate_modifiers(argument or "", environ, parent, resolving, reference)
+                default = evaluate_modifiers(
+                    argument or "", environ, parent, resolving, reference, platform
+                )
                 if operator == "=":
                     environ[var_name] = default
                 return str(default)
@@ -138,7 +142,9 @@ def evaluate_modifiers(
 
                 # 2) compute the effective value of the current entry
                 if is_template(current):
-                    eff = evaluate_modifiers(current, environ, parent, resolving, reference)
+                    eff = evaluate_modifiers(
+                        current, environ, parent, resolving, reference, platform
+                    )
                 else:
                     eff = current or ""
 
@@ -147,7 +153,9 @@ def evaluate_modifiers(
                     return str(eff)
 
                 # 4) unset or null,  use default (and assign for :=)
-                default = evaluate_modifiers(argument or "", environ, parent, resolving, reference)
+                default = evaluate_modifiers(
+                    argument or "", environ, parent, resolving, reference, platform
+                )
                 if operator == "=":
                     environ[var_name] = default
                 return str(default)
@@ -159,7 +167,7 @@ def evaluate_modifiers(
                     raise ValueError(msg)
                 # resolve if it contains vars
                 return (
-                    evaluate_modifiers(current, environ, parent, resolving, reference)
+                    evaluate_modifiers(current, environ, parent, resolving, reference, platform)
                     if variable_pattern.search(current)
                     else current
                 )
@@ -171,7 +179,9 @@ def evaluate_modifiers(
                 if is_literal(current):
                     return current  # file literal wins
                 if is_template(current):
-                    return str(evaluate_modifiers(current, environ, parent, resolving, reference))
+                    return str(
+                        evaluate_modifiers(current, environ, parent, resolving, reference, platform)
+                    )
                 # current is unset/empty, use parent/os if present, else empty
                 return str(override or "")
 
@@ -179,7 +189,9 @@ def evaluate_modifiers(
             else:
                 value = current or override or ""
                 if variable_pattern.search(value):
-                    value = evaluate_modifiers(value, environ, parent, resolving, reference)
+                    value = evaluate_modifiers(
+                        value, environ, parent, resolving, reference, platform
+                    )
                 return str(value)
 
         finally:
@@ -192,7 +204,7 @@ def evaluate_modifiers(
         result = variable_pattern.sub(substitute_variable, expression)
 
         if variable_pattern.search(result):
-            result = evaluate_modifiers(result, environ, parent, resolving, reference)
+            result = evaluate_modifiers(result, environ, parent, resolving, reference, platform)
 
     except RecursionError:
         # treat cycles as empty string instead of crashing (like bash)
@@ -210,11 +222,12 @@ def evaluate_modifiers(
             result = expression.resolve(env=environ)
         elif isinstance(expression, list):
             result = [
-                evaluate_modifiers(v, environ, parent, reference=reference) for v in expression
+                evaluate_modifiers(v, environ, parent, reference=reference, platform=platform)
+                for v in expression
             ]
         elif isinstance(expression, dict):
             result = {
-                k: evaluate_modifiers(v, environ, parent, reference=reference)
+                k: evaluate_modifiers(v, environ, parent, reference=reference, platform=platform)
                 for k, v in expression.items()
             }
         else:
@@ -277,7 +290,8 @@ def resolve_environment(env):
         history = definitions.setdefault(key, [])
         if not history or history[-1] != value:
             history.append(value)
-    resolver = _StackResolver(env_copy, definitions)
+    resolved.platform = env.platform
+    resolver = _StackResolver(env_copy, definitions, platform=env.platform)
     for key in list(env_copy):
         resolved[key] = util.safe_eval(resolver.resolve(key))
     return resolved
@@ -292,14 +306,16 @@ class _StackResolver:
     their values can depend on which definition is currently being resolved.
     """
 
-    def __init__(self, environ, definitions):
+    def __init__(self, environ, definitions, platform=config.PLATFORM):
         """Initialize dependency tracking and default-assignment scopes.
 
         :param environ: The final variable mapping used for expression evaluation.
         :param definitions: Variable names mapped to definitions in load order,
             from earliest to latest.
+        :param platform: Platform used for path normalization.
         """
         self.environ = environ
+        self.platform = platform
         self.definitions = definitions
         self.active = []
         self.limits = {}
@@ -330,14 +346,16 @@ class _StackResolver:
             # alias with no history, use the next variable with history.
             for variable, position in cycle:
                 if position > 0:
-                    nested = _StackResolver(self.environ, self.definitions)
+                    nested = _StackResolver(self.environ, self.definitions, platform=self.platform)
                     nested.limits = dict(self.limits, **{variable: position - 1})
                     nested.assigned = self.assigned
                     return nested.resolve(key)
             return os.getenv(key, "")
         self.active.append(frame)
         try:
-            return evaluate_modifiers(history[index], self.environ, reference=self.reference)
+            return evaluate_modifiers(
+                history[index], self.environ, reference=self.reference, platform=self.platform
+            )
         finally:
             self.active.pop()
             self.local_assigned.pop(frame, None)
@@ -370,7 +388,9 @@ class _StackResolver:
             # resolve() already applies stack precedence and shell fallback.
             # An explicit empty value therefore takes the requested default.
             if not value:
-                value = evaluate_modifiers(argument or "", self.environ, reference=self.reference)
+                value = evaluate_modifiers(
+                    argument or "", self.environ, reference=self.reference, platform=self.platform
+                )
                 if operator == "=":
                     assignments[key] = value
             return value
