@@ -114,6 +114,28 @@ PATH: ${DEPLOY_ROOT}/bin:${PATH}
 That makes it easy to build derived paths, URLs, prompts, or command lines from
 shared variables.
 
+## Explicit Empty Values
+
+An empty string deliberately overrides values from included stacks and the shell:
+
+```yaml
+VAR: ""
+OTHER: ${VAR}
+```
+
+Both resolve to an empty string, even if the shell sets `VAR`. An empty
+assignment also resets an accumulated search path. Later stacks can append
+new entries without restoring paths from before the reset.
+
+A variable absent from the stack can still fall back to the shell. A
+self-reference such as `VAR: ${VAR}` uses the preceding definition, or the
+shell when there is no preceding definition.
+
+Default operators apply to the effective value: `${VAR:-default}` returns
+`default` when that value is unset or empty, while `${VAR:=default}` also
+makes the default available to subsequent references during resolution.
+These assignments do not rewrite the original stack definitions.
+
 ## Self-References Across Includes
 
 When a stack extends its own variable, `${VAR}` uses the value built by earlier
@@ -155,6 +177,13 @@ paths and Windows native-library directories.
 References to other variables still use the final stack definitions, allowing
 an application to override a tool root used by an inherited path. Platform
 sections follow the platform selected when loading the environment.
+
+Aliases also remain late-bound. For example, if a base stack defines
+`FOO: /base` and `BAR: ${FOO}`, and an application stack includes it and overrides
+`FOO: ${BAR}:/app`, both variables resolve to `/base:/app`. The indirect
+self-reference uses the earlier definition of `FOO` to break the cycle.
+Unlike sequential shell assignments, `BAR` does not capture a snapshot of
+`FOO` when it is defined. YAML key order does not determine resolution order.
 
 ## Template Tokens Stay Literal
 

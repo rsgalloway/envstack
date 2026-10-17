@@ -23,7 +23,7 @@ def stacks(tmp_path, monkeypatch):
                 k: v.replace("PLATFORM", platform) if isinstance(v, str) else v
                 for k, v in values.items()
             }
-        (tmp_path / (name + ".env")).write_text(yaml.safe_dump(data))
+        (tmp_path / (name + ".env")).write_text(yaml.safe_dump(data, sort_keys=False))
 
     write("default", {"PYTHONPATH": "/base:${PYTHONPATH}"})
     write(
@@ -108,6 +108,48 @@ def test_root_override_applies_to_accumulated_paths(stacks, monkeypatch, path_se
     assert resolved["PYTHONPATH"] == path_separator.join(
         ["/base", "ORIG", "/custom/windows", "/app"]
     )
+
+
+@pytest.mark.parametrize("reverse_keys", [False, True])
+@pytest.mark.parametrize("root_value", ["${ROOT}", "${ROOT:-/fallback}"])
+def test_inherited_path_uses_self_referencing_root(
+    stacks, monkeypatch, root_value, path_separator, reverse_keys
+):
+    root, write = stacks
+    monkeypatch.delenv("ROOT", raising=False)
+    monkeypatch.delenv("PYTHONPATH", raising=False)
+    values = {"ROOT": "/base", "PYTHONPATH": "${ROOT}/lib:${PYTHONPATH}"}
+    if reverse_keys:
+        values = dict(reversed(list(values.items())))
+    write("base", values)
+    write(
+        "app",
+        {"ROOT": root_value, "PYTHONPATH": "${PYTHONPATH}:/app"},
+        ["base"],
+    )
+
+    resolved = resolve_environ(load_environ("app", scope=str(root)))
+
+    assert resolved["ROOT"] == "/base"
+    assert resolved["PYTHONPATH"] == path_separator.join(["/base/lib", "/app"])
+
+
+@pytest.mark.parametrize("reverse_keys", [False, True])
+def test_self_reference_through_inherited_alias(stacks, monkeypatch, path_separator, reverse_keys):
+    root, write = stacks
+    monkeypatch.delenv("FOO", raising=False)
+    monkeypatch.delenv("BAR", raising=False)
+    values = {"FOO": "/base", "BAR": "${FOO}"}
+    if reverse_keys:
+        values = dict(reversed(list(values.items())))
+    write("base", values)
+    write("app", {"FOO": "${BAR}:/app"}, ["base"])
+
+    resolved = resolve_environ(load_environ("app", scope=str(root)))
+
+    expected = path_separator.join(["/base", "/app"])
+    assert resolved["FOO"] == expected
+    assert resolved["BAR"] == expected
 
 
 @pytest.mark.parametrize("variable", ["PATH", "PYTHONPATH", "PLUGIN_PATH"])
@@ -251,3 +293,59 @@ def test_numpy_example_detects_runtime(monkeypatch):
         "/shared/prod/lib/python",
         f"/shared/prod/tools/numpy/2.2.6/{config.PLATFORM}/python{expected}/lib/python",
     ]
+
+
+@pytest.mark.parametrize("reverse_keys", [False, True])
+def test_late_bound_root_and_alias(stacks, monkeypatch, path_separator, reverse_keys):
+    root, write = stacks
+    for key in ("ROOT", "ALIAS", "PYTHONPATH"):
+        monkeypatch.delenv(key, raising=False)
+    values = {
+        "ROOT": "/base",
+        "ALIAS": "${ROOT}",
+        "PYTHONPATH": "${ALIAS}/lib:${PYTHONPATH}",
+    }
+    if reverse_keys:
+        values = dict(reversed(list(values.items())))
+    write("base", values)
+    write("app", {"ROOT": "/custom", "PYTHONPATH": "${PYTHONPATH}:/app"}, ["base"])
+    raw = load_environ("app", scope=str(root))
+    original = dict(raw)
+    resolved = resolve_environ(raw)
+    assert resolved["ROOT"] == resolved["ALIAS"] == "/custom"
+    assert resolved["PYTHONPATH"] == path_separator.join(["/custom/lib", "/app"])
+    assert dict(raw) == original
+    assert resolve_environ(raw) == resolved
+
+
+@pytest.mark.parametrize("shell_root", [None, "/shell"])
+def test_deleted_variable_is_not_restored_from_sources(stacks, monkeypatch, shell_root):
+    root, write = stacks
+    if shell_root is None:
+        monkeypatch.delenv("ROOT", raising=False)
+    else:
+        monkeypatch.setenv("ROOT", shell_root)
+    write("base", {"ROOT": "/base", "LIB": "${ROOT}/lib"})
+    raw = load_environ("base", scope=str(root))
+    del raw["ROOT"]
+
+    resolved = resolve_environ(raw)
+
+    assert "ROOT" not in raw
+    assert "ROOT" not in resolved
+    assert resolved["LIB"] == (shell_root or "") + "/lib"
+
+
+@pytest.mark.parametrize("variable", ["PATH", "PYTHONPATH", "PLUGIN_PATH"])
+def test_empty_assignment_resets_inherited_paths(stacks, monkeypatch, variable, path_separator):
+    root, write = stacks
+    monkeypatch.setenv(variable, "/shell")
+    write("base", {variable: "/base:${" + variable + "}"})
+    write("reset", {variable: "", "ALIAS": "${" + variable + "}"}, ["base"])
+    resolved = resolve_environ(load_environ("reset", scope=str(root)))
+    assert resolved[variable] == resolved["ALIAS"] == ""
+
+    env_module.seen_stacks.clear()
+    write("app", {variable: "${" + variable + "}:/app"}, ["reset"])
+    resolved = resolve_environ(load_environ("app", scope=str(root)))
+    assert resolved[variable] == resolved["ALIAS"] == path_separator.join(["/app"])

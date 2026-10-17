@@ -44,6 +44,7 @@ import yaml  # noqa
 from envstack import config, logger, path, util
 from envstack.exceptions import *  # noqa
 from envstack.node import BaseNode, EncryptedNode, custom_node_types, get_keys_from_env
+from envstack.resolver import evaluate_modifiers, resolve_environment
 
 # value delimiter pattern (splits values by os.pathsep)
 delimiter_pattern = re.compile("(?![^{]*})[;:]+")
@@ -525,7 +526,7 @@ def expandvars(var: str, env: Env = None, recursive: bool = False):
     if not env:
         env = Env()
     var = EnvVar(var).expand(env, recursive=recursive)
-    return util.evaluate_modifiers(var, os.environ)
+    return evaluate_modifiers(var, os.environ)
 
 
 def clear(
@@ -835,54 +836,7 @@ def resolve_environ(env: Env):
     :param env: unresolved environment.
     :returns: resolved environment.
     """
-    # stores the resolved environment
-    resolved = Env()
-
-    if type(env) is not Env:
-        env = Env(env)
-
-    # copy env to avoid modifying the original
-    env_copy = env.copy()
-
-    # make a copy that contains the encryption keys
-    env_keys = env.copy()
-    env_keys.update(get_keys_from_env(os.environ))
-
-    # decrypt custom nodes
-    for key, value in list(env_copy.items()):
-        if type(value) in custom_node_types:
-            env_copy[key] = value.resolve(env=env_keys)
-
-    # Build the value preceding each variable's final definition. A variable
-    # may be inherited unchanged by the last source, so source position alone
-    # cannot tell us which definition is final.
-    layers = []
-    seen_source_paths = set()
-    for source in env.sources:
-        if source.path not in seen_source_paths:
-            layers.append(dict(source.load(platform=env.platform)))
-            seen_source_paths.add(source.path)
-    last_definition = {key: i for i, layer in enumerate(layers) for key in layer}
-    included = Env()
-    for i, layer in enumerate(layers):
-        previous = {}
-        for key, value in layer.items():
-            if i < last_definition[key]:
-                # Other variables remain late-bound to the final stack, while
-                # this variable uses its definition at the current layer.
-                context = env_copy.copy()
-                if type(value) in custom_node_types:
-                    value = value.resolve(env=env_keys)
-                context[key] = value
-                previous[key] = util.evaluate_modifiers(value, environ=context, parent=included)
-        included.update(previous)
-
-    # resolve environment variables after decrypting custom nodes
-    for key, value in list(env_copy.items()):
-        value = util.evaluate_modifiers(value, environ=env_copy, parent=included)
-        resolved[key] = util.safe_eval(value)
-
-    return resolved
+    return resolve_environment(env)
 
 
 # TODO: make 'name' arg a list (*names)

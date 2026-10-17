@@ -41,7 +41,8 @@ import traceback
 
 from envstack import config, logger
 from envstack.env import load_environ, resolve_environ
-from envstack.util import encode, evaluate_modifiers
+from envstack.resolver import evaluate_modifiers
+from envstack.util import encode
 
 
 def to_args(cmd: str):
