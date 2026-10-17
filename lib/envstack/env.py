@@ -41,7 +41,7 @@ from pathlib import Path
 
 import yaml  # noqa
 
-from envstack import config, logger, path, util
+from envstack import config, logger, util
 from envstack.exceptions import *  # noqa
 from envstack.node import BaseNode, EncryptedNode, custom_node_types, get_keys_from_env
 from envstack.resolver import evaluate_modifiers, resolve_environment
@@ -54,16 +54,6 @@ saved_environ = None
 
 # stores seen stack names when getting sources
 seen_stacks = set()
-
-
-class Scope(path.Path):
-    """Scope class."""
-
-    def __init__(self, path: str = None):
-        """
-        :param path: scope path (default is CWD)
-        """
-        self.path = path or os.getcwd()
 
 
 class Source(object):

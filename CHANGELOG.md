@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- remove the legacy `envstack.path` API (`Path`, `Template`, `get_scope`, `get_template`, `match_template`, and `extract_fields`), its unused `env.Scope` wrapper, and path-only exceptions (#132). Use `pathlib` or `os.path` for filesystem operations and application-owned code for path templating; stack discovery continues to use `ENVPATH` and the current directory or explicit scope.
+
 ### Added
 
 - add NumPy, Pillow, and OpenEXR examples demonstrating accumulated search paths and runtime selection of NumPy builds
