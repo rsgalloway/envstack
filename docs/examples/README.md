@@ -10,6 +10,8 @@ encryption, or wrappers depending on the workflow you need.
 
 - [Default example](default.md): base stacks, inheritance, structured values,
   executable stacks, and command substitution with `test.env`
+- [Accumulating paths](inheritance.md): shared includes and platform-specific
+  tool paths that build on each other
 - [Project example](project.md): project-scoped path layouts driven by the
   active stack name
 - [Encryption example](encryption.md): key generation, encrypted nodes, and
@@ -21,6 +23,8 @@ encryption, or wrappers depending on the workflow you need.
 
 - [`examples/default/`](https://github.com/rsgalloway/envstack/tree/master/examples/default):
   foundational stack examples and derived values
+- [`examples/inheritance/`](https://github.com/rsgalloway/envstack/tree/master/examples/inheritance):
+  accumulating tool paths across shared includes
 - [`examples/project/`](https://github.com/rsgalloway/envstack/tree/master/examples/project):
   project-oriented stack activation
 - [`examples/encryption/`](https://github.com/rsgalloway/envstack/tree/master/examples/encryption):
