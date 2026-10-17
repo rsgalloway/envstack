@@ -1,5 +1,15 @@
 # Variable Expansion
 
+Runtime variables provide context. Parameter modifiers select and compose
+values. YAML tags transform their representation when values are resolved or
+written. These mechanisms work together, but they run at different stages.
+
+For example, a shell-supplied `ROOT` provides context, `${ROOT:-/shared}` selects
+a fallback, and `!base64` marks a stored encoded value for decoding. A tag does
+not change variable precedence or select the active stack.
+
+See [Runtime context](runtime-context.md) for control variables and name collisions.
+
 envstack supports Bash-like variable expansion inside stack values.
 
 This is the syntax behind values such as `${ROOT}/${ENV}`,
@@ -14,13 +24,18 @@ This is the syntax behind values such as `${ROOT}/${ENV}`,
 | `${VAR:-default}` | If `VAR` is unset or empty, use `default` without assigning it |
 | `${VAR:?message}` | Raise an error if `VAR` is unset or empty |
 
+This is the complete supported modifier set. Bash forms such as `${VAR-default}`,
+`${VAR:+alternate}`, `${#VAR}`, substring operations, and pattern replacements
+are not supported. Use the forms above rather than relying on unsupported
+expressions to behave like a shell.
+
 These rules apply both in stack files and when resolving values through the
 Python API.
 
 ## Simple substitution
 
-Direct references are resolved against the current stack and then fall back to
-the parent or process environment:
+Direct references use the final stack definition. A missing variable can fall
+back to the process environment; an explicit empty string does not:
 
 ```yaml
 ROOT: /mnt/pipe
@@ -43,8 +58,8 @@ OPTIONAL_SUFFIX: ${SUFFIX}
 
 ## Defaults With `:=`
 
-Use `:=` when the fallback should become the variable's effective value for the
-rest of the resolution pass:
+Use `:=` when subsequent references should be able to reuse a fallback. A
+self-assignment stays local to the definition being evaluated:
 
 ```yaml
 LOG_LEVEL: ${LOG_LEVEL:=INFO}
@@ -69,9 +84,10 @@ variable itself:
 PROMPT_COLOR: ${PROMPT_COLOR:-green}
 ```
 
-This is helpful when a value should have a display or formatting fallback, but
-you do not want that fallback to become the new resolved value of
-`PROMPT_COLOR`.
+Here `PROMPT_COLOR` itself resolves to `green` when no preceding value exists.
+For a fallback that leaves a separate variable unchanged, use
+`LABEL: ${PROMPT_COLOR:-green}`: `LABEL` gets `green`, but no assignment is made
+to `PROMPT_COLOR`.
 
 ## Required Variables With `:?`
 
@@ -96,8 +112,11 @@ If neither `FOO` nor `BAR` is already set, this resolves to:
 
 ```bash
 FOO=/foo/bar
-BAR=/foo/bar
 ```
+
+The nested `:=` also makes `BAR` available to subsequent references during
+resolution. It does not add an absent `BAR` key to the returned environment or
+to the process environment.
 
 Nested expressions are often the cleanest way to define a chain of fallbacks
 without repeating the final literal value.
@@ -211,16 +230,105 @@ PYVERSION: $(python -c "import sys; print(f'{sys.version_info[0]}.{sys.version_i
 PYTHONPATH: ${DEPLOY_ROOT}/lib/python${PYVERSION}
 ```
 
-Command substitution is separate from modifier syntax and is only evaluated when
-embedded commands are allowed.
+Set `ALLOW_COMMANDS=1` before launching envstack or importing it in Python.
+Command substitution recognizes a whole value of the form `$(...)`; it is not
+shell-style interpolation into arbitrary surrounding text. Successful output is
+stripped of leading and trailing whitespace. Command execution starts with the launching process environment and overlays
+the resolved default stack. Put the intended interpreter on `PATH` before
+starting envstack, and ensure the default stack preserves that selection.
 
-## Resolution Notes
+Loading can resolve values internally to update `ENVPATH`, and dependency lookup
+can evaluate a value more than once. Do not rely on a command running exactly
+once or only when you request that variable with `-r`.
 
-- Empty strings are treated the same as unset values for `:=`, `:-`, and `:?`.
-- Nested expressions are supported in modifier arguments.
-- Cyclical references resolve to an empty string instead of recursing forever.
-- Path-like results such as `PATH` and `PYTHONPATH` are normalized and
-  deduplicated during resolution.
+## YAML Transformation Tags
+
+Built-in tags apply to scalar values. A tag in a file describes the stored
+representation; it is not a parameter modifier.
+
+| Tag | Loading and resolution | Writing YAML |
+| --- | --- | --- |
+| `!base64` | Decode the stored Base64 payload before expanding its contents | Encode a newly constructed `Base64Node`; preserve an unchanged payload loaded from YAML |
+| `!aesgcm` | Decrypt with `ENVSTACK_SYMMETRIC_KEY`, then expand | Encrypt a new `AESGCMNode`; preserve an unchanged loaded payload |
+| `!fernet` | Decrypt with `ENVSTACK_FERNET_KEY`, then expand | Encrypt a new `FernetNode`; preserve an unchanged loaded payload |
+| `!encrypt` | Select AES-GCM, then Fernet, then Base64 according to available keys | Use the same selection for a new `EncryptedNode`; preserve an unchanged loaded payload |
+| `!md5` | Return the stored text; resolution does not compute a hash | Hash the node's current text when serializing |
+
+Base64 is encoding, not encryption. MD5 is a digest, not encryption and not a
+password-storage mechanism. See [Secrets and encryption](secrets.md) for keys
+and encrypted-file workflows. For `!encrypt`, use a key context compatible with
+the one used when writing the payload; the tag does not identify its algorithm.
+
+For example, writing `MD5Node("hello")` produces
+`!md5 '5d41402abc4b2a76b9719d911017c592'`. Loading `!md5 hello` alone does not
+hash `hello`. Serializing that loaded MD5 node hashes its current text again;
+unlike the encryption nodes, it does not preserve an unchanged loaded payload.
+
+### Compose Context, Tags, and Modifiers
+
+Save this as `context.env`:
+
+```yaml
+all:
+  ROOT: ${ROOT:-/shared}
+  ENV: ${ENV:-prod}
+  DEPLOY_ROOT: !base64 JHtST09UfS8ke0VOVn0=
+  LIB: ${DEPLOY_ROOT}/lib/python
+```
+
+The Base64 payload represents the literal expression `${ROOT}/${ENV}`. With
+`ROOT=/studio` and `ENV=dev` in the launching shell:
+
+```bash
+envstack context -r DEPLOY_ROOT LIB
+```
+
+produces:
+
+```text
+DEPLOY_ROOT=/studio/dev
+LIB=/studio/dev/lib/python
+```
+
+Without those shell values, the defaults produce `/shared/prod` and
+`/shared/prod/lib/python`. The tag decodes the expression, the modifiers select
+context values, and ordinary references compose the final paths. Use
+`envstack context -u DEPLOY_ROOT` to inspect the stored payload instead.
+
+## Evaluation Order
+
+1. Read YAML, construct tagged nodes, and process YAML anchors and merge keys.
+   Load included sources in order and select the requested platform section.
+   If that section is absent, use `all`; use `<<: *all` in a platform section
+   when it should inherit an anchored `all` mapping.
+2. Assemble the final stack and retain earlier definitions for self-references.
+   `load_environ()` returns unresolved values, but internally resolves the
+   environment to update `ENVPATH` between requested stacks.
+3. Decode or decrypt top-level tagged values using the available key context.
+   Process-environment encryption keys take precedence over same-named stack
+   keys during resolution.
+4. Resolve dependencies and modifiers on demand. Ordinary references use final
+   definitions; self-references fall back through preceding definitions. An
+   eligible `$(...)` value runs when evaluated if commands are enabled.
+5. Normalize and deduplicate path-like results using the selected platform,
+   then restore supported Python literal types in top-level results.
+6. Apply the result only when requested. `resolve_environ()` returns a new
+   environment; `init()` updates `os.environ` and `sys.path`, while a wrapped
+   command receives its own composed environment.
+
+This is dependency resolution, not sequential execution of YAML assignments.
+Avoid using key order as a way to control effects. `:=` can retain assignments
+for subsequent references, so use explicit variable definitions when several
+independent expressions need the same default.
+
+Lists and dictionaries are traversed for variable expansion. Keep encoded or
+encrypted expressions at the top level when composing tags with modifiers:
+nested tagged values do not follow the same top-level decode-then-expand path.
+
+A cycle uses earlier definitions when possible. Without an earlier or shell
+value, a plain recursive reference contributes an empty string; default and
+required-value operators can instead supply a fallback or raise an error.
+YAML `null` is distinct from `""`; it is not an instruction to unset a variable.
 
 ## See Also
 

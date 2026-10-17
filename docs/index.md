@@ -199,3 +199,8 @@ cat .env | envstack --set -o out.env
   values, and nested modifiers
 - [FAQ](faq.md): operational details and gotchas
 - [API](api.md): Python and CLI reference material
+
+## Expansion and Runtime Context
+
+- [Variable expansion](expansion.md): modifiers, YAML tags, and evaluation order
+- [Runtime context](runtime-context.md): control variables and name collisions

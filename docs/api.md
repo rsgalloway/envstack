@@ -48,7 +48,6 @@ Put stack names before these options: use `envstack dev -u`, not
 `envstack -u dev`. Arguments after `-u` now select variables, just as they do
 after `-r`.
 
-
 ## Resolving a stack into concrete values
 
 To evaluate variable references such as `${ROOT}/${ENV}`, resolve the loaded
@@ -222,14 +221,7 @@ Restore the previous process environment:
 
 ## Configuration variables
 
-The following environment variables affect runtime behavior:
-
-| Name | Description |
-|------|-------------|
-| `ALLOW_COMMANDS` | Allow embedded commands |
-| `COMMAND_TIMEOUT` | Embedded command timeout in seconds |
-| `DEFAULT_NAMESPACE` | Name of the default environment stack (`default`) |
-| `ENVPATH` | Colon-separated paths to search for environment files |
-| `IGNORE_MISSING` | Ignore missing stack files when resolving environments |
-| `INTERACTIVE` | Force shells to run in interactive mode |
-| `STACK` | Stores the name of the current environment stack |
+See [Runtime context](runtime-context.md) for the complete control-variable table,
+when settings are read, and collision behavior. The default-stack environment
+setting is `DEFAULT_NAMESPACE`; `ENVPATH` uses the host platform's path delimiter
+(`:` on POSIX and `;` on Windows).

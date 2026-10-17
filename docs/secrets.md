@@ -30,13 +30,13 @@ decrypt values**.
 
 ---
 
-## Supported encryption algorithms
+## Supported encryption and encoding
 
-envstack supports the following encryption algorithms:
+envstack supports the following encryption and encoding methods:
 
 | Algorithm | Key required | Environment variable |
 |---------|--------------|----------------------|
-| Base64  | No           | (default)            |
+| Base64 encoding (not encryption) | No | (default) |
 | AES-GCM | Yes          | `ENVSTACK_SYMMETRIC_KEY` |
 | Fernet  | Yes          | `ENVSTACK_FERNET_KEY` |
 
@@ -152,3 +152,6 @@ Values will automatically decrypt during resolution.
 - Combine with external secret managers for higher security needs
 
 envstack encryption is intentionally simple, explicit, and inspectable.
+
+For YAML tag syntax and read/write timing, see
+[YAML transformation tags](expansion.md#yaml-transformation-tags).
