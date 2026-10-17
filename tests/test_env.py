@@ -42,7 +42,7 @@ from helpers import create_test_root, update_env_file
 
 import envstack
 from envstack.encrypt import AESGCMEncryptor, FernetEncryptor
-from envstack.env import Env, EnvVar, Scope, Source
+from envstack.env import Env, EnvVar, Source
 from envstack.util import dict_diff
 
 # path to the env directory
@@ -203,12 +203,6 @@ class TestEnv(unittest.TestCase):
         self.assertEqual(env3["BAR"], "bar")
         self.assertEqual(env4["FOO"], "foo")
         self.assertEqual(env4["BAR"], "bar")
-
-
-class TestScope(unittest.TestCase):
-    def test_init(self):
-        s = Scope("/path/to/scope")
-        self.assertEqual(s.path, "/path/to/scope")
 
 
 class TestSource(unittest.TestCase):

@@ -40,18 +40,6 @@ class CyclicalReference(Exception):
     pass
 
 
-class DuplicateFieldValues(Exception):
-    """Exception for template paths with duplicate values for the same field."""
-
-    pass
-
-
-class InvalidPath(Exception):
-    """Exception for paths that do not match a template."""
-
-    pass
-
-
 class InvalidSource(Exception):
     """Exception for invalid .env file."""
 
@@ -64,14 +52,8 @@ class InvalidSyntax(Exception):
     pass
 
 
-class MissingFieldError(Exception):
-    """Custom exception class for missing required field values."""
-
-    pass
-
-
 class TemplateNotFound(Exception):
-    """Custom exception class for missing Templates."""
+    """Exception for environment stacks that cannot be found."""
 
     pass
 
