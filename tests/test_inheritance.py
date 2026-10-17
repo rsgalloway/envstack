@@ -1,9 +1,13 @@
 """Regression coverage for self-reference accumulation (issue #140)."""
 
+import os
+from functools import partial
+
 import pytest
 import yaml
 
 from envstack import env as env_module
+from envstack import util
 from envstack.env import load_environ, resolve_environ
 
 
@@ -33,6 +37,16 @@ def stacks(tmp_path, monkeypatch):
     return tmp_path, write
 
 
+@pytest.fixture(params=["native", "windows"])
+def path_separator(request, monkeypatch):
+    # Source platform selects YAML data; path normalization uses the host.
+    # Also exercise Windows normalization when the tests run on POSIX.
+    if request.param == "native":
+        return os.pathsep
+    monkeypatch.setattr(util, "dedupe_paths", partial(util.dedupe_paths, platform="windows"))
+    return ";"
+
+
 @pytest.mark.parametrize("platform", ["linux", "darwin", "windows"])
 @pytest.mark.parametrize("shell", [None, "", "ORIG"])
 @pytest.mark.parametrize(
@@ -44,7 +58,7 @@ def stacks(tmp_path, monkeypatch):
         (["toola", "toolb"], ["toola", "toolb"]),
     ],
 )
-def test_accumulation(stacks, monkeypatch, platform, shell, names, tools):
+def test_accumulation(stacks, monkeypatch, platform, shell, names, tools, path_separator):
     root, _ = stacks
     if shell is None:
         monkeypatch.delenv("PYTHONPATH", raising=False)
@@ -55,23 +69,25 @@ def test_accumulation(stacks, monkeypatch, platform, shell, names, tools):
     expected = ["/base"] + ([shell] if shell else [])
     expected += ["/app" if tool == "app" else "/" + tool + "/" + platform for tool in tools]
     resolved = resolve_environ(raw)
-    assert resolved["PYTHONPATH"] == ":".join(expected)
+    assert resolved["PYTHONPATH"] == path_separator.join(expected)
     if "ALIAS" in resolved:
         assert resolved["ALIAS"] == resolved["PYTHONPATH"]
     assert dict(raw) == original
     assert resolve_environ(raw) == resolved
 
 
-def test_literal_reset_and_final_root_override(stacks, monkeypatch):
+def test_literal_reset_and_final_root_override(stacks, monkeypatch, path_separator):
     root, write = stacks
     monkeypatch.setenv("PYTHONPATH", "ORIG")
     write("reset", {"PYTHONPATH": "/reset"}, ["toola"])
     write("app", {"PYTHONPATH": "${PYTHONPATH}:/app"}, ["reset"])
-    assert resolve_environ(load_environ("app", scope=str(root)))["PYTHONPATH"] == "/reset:/app"
+    assert resolve_environ(load_environ("app", scope=str(root)))[
+        "PYTHONPATH"
+    ] == path_separator.join(["/reset", "/app"])
     env_module.seen_stacks.clear()
     write("override", {"TOOLA_ROOT": "/custom"}, ["toola"])
     resolved = resolve_environ(load_environ("override", platform="windows", scope=str(root)))
-    assert resolved["PYTHONPATH"] == "/base:ORIG:/custom/windows"
+    assert resolved["PYTHONPATH"] == path_separator.join(["/base", "ORIG", "/custom/windows"])
 
 
 @pytest.mark.parametrize("operator", [":=", ":-"])
@@ -84,12 +100,14 @@ def test_defaults_use_nearest_include(stacks, monkeypatch, operator):
     assert resolve_environ(load_environ("third", scope=str(root)))["VALUE"] == "second"
 
 
-def test_root_override_applies_to_accumulated_paths(stacks, monkeypatch):
+def test_root_override_applies_to_accumulated_paths(stacks, monkeypatch, path_separator):
     root, write = stacks
     monkeypatch.setenv("PYTHONPATH", "ORIG")
     write("app", {"TOOLA_ROOT": "/custom", "PYTHONPATH": "${PYTHONPATH}:/app"}, ["toola"])
     resolved = resolve_environ(load_environ("app", platform="windows", scope=str(root)))
-    assert resolved["PYTHONPATH"] == "/base:ORIG:/custom/windows:/app"
+    assert resolved["PYTHONPATH"] == path_separator.join(
+        ["/base", "ORIG", "/custom/windows", "/app"]
+    )
 
 
 @pytest.mark.parametrize("variable", ["PATH", "PYTHONPATH", "PLUGIN_PATH"])
