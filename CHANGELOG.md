@@ -9,9 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- add NumPy, Pillow, and OpenEXR examples demonstrating accumulated search paths and runtime selection of NumPy builds
+- add a standalone PySide6 example with a small GUI application
+- add installation guides and distman manifests aligned with the examples' deployment paths
+- add regression coverage for shared includes, tool-root overrides, and accumulation of `PATH`, `PYTHONPATH`, and custom search variables
+
 ### Fixed
+
 - accumulate self-references across included stacks and multiple stack arguments, using the previous stack value before falling back to the shell (#140)
 - preserve the selected platform when resolving inherited stack values
+- fix inheritance test expectations for Windows path delimiters and exercise Windows normalization on other hosts
 
 ---
 
