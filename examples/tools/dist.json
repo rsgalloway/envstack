@@ -1,0 +1,23 @@
+{
+  "options": {
+    "match": "content"
+  },
+  "targets": {
+    "env": {
+      "source": "*.env",
+      "destination": "{DEPLOY_ROOT}/env/%1.env"
+    },
+    "numpy": {
+      "source": "staging/numpy/2.2.6/*/*",
+      "destination": "{DEPLOY_ROOT}/tools/numpy/2.2.6/%1/%2"
+    },
+    "pillow": {
+      "source": "staging/pillow/12.3.0/*",
+      "destination": "{DEPLOY_ROOT}/tools/pillow/12.3.0/%1"
+    },
+    "openexr": {
+      "source": "staging/openexr/3.4.13/*",
+      "destination": "{DEPLOY_ROOT}/tools/openexr/3.4.13/%1"
+    }
+  }
+}

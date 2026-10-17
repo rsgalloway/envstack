@@ -148,6 +148,10 @@ produces `/base:ORIG:/toola:/toolb`. With the shell variable unset or empty,
 the `ORIG` component is omitted. A literal assignment such as
 `PYTHONPATH: /replacement` resets the accumulated value.
 
+These rules apply to `PATH` and custom variables as well as `PYTHONPATH`. See
+[Tools and inheritance](examples/tools.md) for versioned package
+paths and Windows native-library directories.
+
 References to other variables still use the final stack definitions, allowing
 an application to override a tool root used by an inherited path. Platform
 sections follow the platform selected when loading the environment.
