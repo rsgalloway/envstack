@@ -17,9 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- use `DEFAULT_NAMESPACE` as the environment setting for the default stack name
+
 - allow `-u`/`--unresolved` to select zero or more variables, matching `-r`/`--resolve`, with `-q` for a single value. Put stack names before the option: replace `envstack -u dev` with `envstack dev -u`.
 
 ### Added
+
+- document expansion, YAML transformation timing, runtime controls, and current name-collision behavior, with a composed example (#125)
 
 - add NumPy, Pillow, and OpenEXR examples demonstrating accumulated search paths and runtime selection of NumPy builds
 - add a standalone PySide6 example with a small GUI application

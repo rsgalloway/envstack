@@ -61,7 +61,7 @@ def detect_shell():
 DEBUG = os.getenv("DEBUG")
 
 # default namespace
-DEFAULT_NAMESPACE = os.getenv("DEFAULT_ENV_STACK", "default")
+DEFAULT_NAMESPACE = os.getenv("DEFAULT_NAMESPACE", "default")
 
 # allow embedded commands
 ALLOW_COMMANDS = os.getenv("ALLOW_COMMANDS", "0") in ("1", "true", "True", "TRUE")
