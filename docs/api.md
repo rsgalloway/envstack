@@ -33,6 +33,22 @@ This is the programmatic equivalent of:
 $ envstack default -u
 ```
 
+Select raw values without expanding their references:
+
+```bash
+envstack default -u PATH PYTHONPATH
+envstack default -u PYTHONPATH -q
+```
+
+Both `-u`/`--unresolved` and `-r`/`--resolve` accept zero or more variable
+names. Without names they show all values; `-q` prints only the value of one
+selected variable. Unknown variable names are omitted.
+
+Put stack names before these options: use `envstack dev -u`, not
+`envstack -u dev`. Arguments after `-u` now select variables, just as they do
+after `-r`.
+
+
 ## Resolving a stack into concrete values
 
 To evaluate variable references such as `${ROOT}/${ENV}`, resolve the loaded

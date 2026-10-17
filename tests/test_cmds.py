@@ -76,7 +76,7 @@ class TestUnresolved(unittest.TestCase):
     """Tests unresolved environment variables from the cli."""
 
     def setUp(self):
-        self.envstack_bin = "envstack -u"
+        self.envstack_bin = "envstack"
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -99,7 +99,9 @@ STACK=default
 """
             % self.root
         )
-        output = subprocess.check_output(self.envstack_bin, shell=True, universal_newlines=True)
+        output = subprocess.check_output(
+            self.envstack_bin + " -u", shell=True, universal_newlines=True
+        )
         self.assertEqual(output, expected_output)
 
     def test_dev(self):
@@ -117,7 +119,7 @@ STACK=dev
 """
             % self.root
         )
-        command = "%s dev" % self.envstack_bin
+        command = "%s dev -u" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -137,7 +139,7 @@ STACK=hello
 """
             % self.root
         )
-        command = "%s hello" % self.envstack_bin
+        command = "%s hello -u" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -160,7 +162,7 @@ STACK=thing
 TRUE=1
 YES=1
 """
-        command = "%s thing" % self.envstack_bin
+        command = "%s thing -u" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -169,7 +171,7 @@ class TestEncrypt(unittest.TestCase):
     """Tests encrypting environment variables from the cli."""
 
     def setUp(self):
-        self.envstack_bin = "envstack -u"
+        self.envstack_bin = "envstack"
         self.root = {
             "linux": "/mnt/pipe",
             "win32": "//tools/pipe",
@@ -198,7 +200,7 @@ PYTHONPATH=JHtERVBMT1lfUk9PVH0vbGliL3B5dGhvbjoke1BZVEhPTlBBVEh9
 ROOT=L21udC9waXBl
 STACK=ZGVmYXVsdA==
 """
-        command = "%s --encrypt" % self.envstack_bin
+        command = "%s -u --encrypt" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -207,7 +209,7 @@ STACK=ZGVmYXVsdA==
         encrypted values change every time."""
         os.environ[AESGCMEncryptor.KEY_VAR_NAME] = AESGCMEncryptor.generate_key()
         expected_output = f"""{self.root}/prod\n"""
-        command = "%s -e -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        command = "%s -u -e -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(
             command, shell=True, env=os.environ, universal_newlines=True
         )
@@ -216,21 +218,21 @@ STACK=ZGVmYXVsdA==
     def test_default_resolve(self):
         """Get and encrypt default stack values, and test they are resolved in a subprocess."""
         expected_output = f"""{self.root}/prod\n"""
-        command = "%s --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        command = "%s -u --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_default_command_echo(self):
         """Tests that the default stack works with encrypted values."""
         expected_output = f"""{self.root}/prod\n"""
-        command = "%s --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        command = "%s -u --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_hello_command_echo(self):
         """Tests that resolved and encrypted values resolve in subprocesses."""
         expected_output = "goodbye\n"
-        command = "%s thing -r HELLO -e -- echo {HELLO}" % self.envstack_bin
+        command = "%s thing -u -r HELLO -e -- echo {HELLO}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
@@ -247,14 +249,14 @@ PYTHONPATH=JHtST09UfS9kZXYvbGliL3B5dGhvbjoke1JPT1R9L3Byb2QvbGliL3B5dGhvbjoke1BZV
 ROOT=L21udC9waXBl
 STACK=ZGV2
 """
-        command = "%s dev --encrypt" % self.envstack_bin
+        command = "%s dev -u --encrypt" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 
     def test_dev_command(self):
         """Tests that encrypted values resolve in subprocess in the dev stack."""
         expected_output = f"""{self.root}/dev\n"""
-        command = "%s dev --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
+        command = "%s dev -u --encrypt -- echo {DEPLOY_ROOT}" % self.envstack_bin
         output = subprocess.check_output(command, shell=True, universal_newlines=True)
         self.assertEqual(output, expected_output)
 

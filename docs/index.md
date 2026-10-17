@@ -104,6 +104,9 @@ $ envstack
 prod
 ```
 
+To inspect selected raw values, use `envstack default -u PATH PYTHONPATH`.
+Put stack names before `-u`, as with `-r`; omit variable names to show all values.
+
 Inspect the unresolved environment:
 
 ```bash
